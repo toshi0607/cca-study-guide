@@ -4,10 +4,12 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "assets:generate": "node scripts/generate-assets.mjs",
     "dev": "astro dev",
     "build": "astro check && astro build",
     "preview": "astro preview",
     "test": "vitest run",
+    "test:no-analytics": "PUBLIC_GA_MEASUREMENT_ID= astro build && node scripts/check-no-analytics.mjs",
     "test:e2e": "playwright test",
     "test:watch": "vitest"
   },
@@ -21,6 +23,8 @@
     "@astrojs/check": "^0.9.4",
     "@axe-core/playwright": "^4.12.1",
     "@playwright/test": "^1.61.1",
+    "png-to-ico": "^3.0.2",
+    "sharp": "^0.35.3",
     "typescript": "^5.8.3",
     "vitest": "^3.2.4"
   },

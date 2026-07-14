@@ -44,7 +44,7 @@ function Blueprint({ reviews }: { reviews: Record<string, ReviewState> }) {
   );
 }
 
-function App() {
+function App({ analyticsEnabled = false }: { analyticsEnabled?: boolean }) {
   const [view, setView] = useState<View>('today');
   const [data, setData] = useState<StudyData>({ version: 1, reviews: {} });
   const [ready, setReady] = useState(false);
@@ -172,13 +172,13 @@ function App() {
       </section>}
 
       {view === 'progress' && <section class="progress-view" aria-labelledby="progress-title">
-        <header class="page-header"><p class="eyebrow">LOCAL ONLY / NO ACCOUNT</p><h2 id="progress-title">進捗と資料</h2><p>学習データはこのブラウザのlocalStorageだけに保存され、サーバーへ送信されません。</p></header>
+        <header class="page-header"><p class="eyebrow">STUDY DATA: LOCAL ONLY</p><h2 id="progress-title">進捗と資料</h2><p>学習データはこのブラウザのlocalStorageだけに保存され、サーバーへ送信されません。</p></header>
         <section class="progress-panel" aria-labelledby="by-domain"><h3 id="by-domain">領域別の着手</h3>{domains.map((domain) => {
           const list = cards.filter((card) => card.domainId === domain.id);
           const done = list.filter((card) => data.reviews[card.id]).length;
           return <div class="progress-row"><span>D{domain.number} {domain.titleJa}</span><progress value={done} max={list.length}>{done}/{list.length}</progress><strong>{done}/{list.length}</strong></div>;
         })}</section>
-        <section class="data-panel" aria-labelledby="data-title"><div><h3 id="data-title">ローカルデータ</h3><p>端末間の同期はありません。ブラウザデータを消す前にJSONを書き出してください。</p></div><div class="data-actions"><button onClick={exportData}>進捗をJSONで書き出す</button><button class="danger" onClick={resetData}>この端末の進捗を削除</button></div></section>
+        <section class="data-panel" aria-labelledby="data-title"><div><h3 id="data-title">ローカルデータ</h3><p>端末間の同期はありません。ブラウザデータを消す前にJSONを書き出してください。</p>{analyticsEnabled && <p class="analytics-disclosure">許可した場合のみ、基本的なページ閲覧情報をGoogle Analyticsへ送信します。学習内容や進捗は対象外です。</p>}</div><div class="data-actions"><button onClick={exportData}>進捗をJSONで書き出す</button>{analyticsEnabled && <button onClick={() => window.dispatchEvent(new CustomEvent('cca:open-analytics-consent'))}>アクセス解析の設定</button>}<button class="danger" onClick={resetData}>この端末の進捗を削除</button></div></section>
         <section class="sources-panel" aria-labelledby="sources-title"><div><p class="eyebrow">SOURCE REGISTER</p><h3 id="sources-title">公式資料</h3><p>説明は公開資料の要約です。仕様変更に備え、学習時はリンク先の最新版も確認してください。</p></div><div class="source-register">{sources.map((source) => <article><code>{source.id}</code><div><a href={source.url} target="_blank" rel="noreferrer">{source.title} ↗</a><p>{source.publisher} · 最終確認 {source.verifiedAt}</p></div></article>)}</div></section>
         <section class="disclaimer" aria-labelledby="disclaimer-title"><h3 id="disclaimer-title">非公式・Anthropicとは提携していません</h3><p>本サイトは個人の学習用ノートです。Anthropicによる承認・後援・提携を示すものではありません。練習カードは公開資料から独自に作成したもので、実試験問題、受験者が記憶した問題、非公開教材、漏えい資料を収録・募集しません。</p><p>出題範囲の最終確認：{VERIFIED_AT}。誤りやリンク切れは <a href="https://github.com/toshi0607/cca-study-guide/issues" target="_blank" rel="noreferrer">GitHub Issues ↗</a> でお知らせください。</p></section>
       </section>}

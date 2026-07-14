@@ -65,3 +65,19 @@ Design and build a Japanese study-guide web app for the current Claude Certified
 - `pnpm build`: passed with 0 Astro errors, warnings, or hints.
 - Independent test runner additionally checked the responsive breakpoint neighborhood at 761, 768, 800, 900, 1000, 1001, 1100, 1120, and 1121px with no overflow.
 - Independent reviewer found no P0 legal or security blocker. Its traceability, storage-validation, terminology, client-date, persistence-failure, and automated-browser-test findings were addressed before release.
+
+## Active Enhancement: Social Metadata and Analytics
+
+- [x] Add a 1200×630 OGP image and complete Open Graph/Twitter metadata.
+- [x] Add favicon assets and icon metadata that match the field-notes visual system.
+- [x] Add privacy-conscious Google Analytics loading via a validated public measurement ID.
+- [x] Add regression tests for metadata and generated public assets.
+- [ ] Deploy and verify production metadata, icons, and analytics configuration.
+
+### Enhancement Verification
+
+- `pnpm test`: 17/17 passed.
+- `pnpm test:e2e`: 10/10 passed with a test measurement ID, including no requests before consent, deny persistence, grant/reload, revoke/cookie cleanup, axe, metadata/assets, and responsive layout.
+- `pnpm test:no-analytics`: passed; the no-ID build contains no Google loader, consent UI, storage key, or analytics settings control.
+- OGP: opaque 1200×630 PNG; favicon: SVG plus 16/32/48px ICO; Apple icon: opaque 180×180 PNG.
+- Independent reviewer approved OGP/favicon release and required a real GA4 measurement ID before production analytics can be marked active.

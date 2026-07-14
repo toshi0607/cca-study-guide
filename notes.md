@@ -48,3 +48,14 @@
 - `toshi0607.com` uses Cloudflare nameservers (`cloe.ns.cloudflare.com`, `roan.ns.cloudflare.com`). `cca.toshi0607.com` is currently unassigned.
 - Recommended MVP hosting: Vercel Hobby, suitable for a personal/non-commercial static app. Attach the custom subdomain in Vercel, then add the requested CNAME in Cloudflare DNS.
 - Cloudflare Pages is also sufficient (500 builds/month, 20,000 files, 100 custom domains; static asset requests free/unlimited), but using it now would require a new interactive login. Vercel avoids that setup and remains portable because the app is a standard static build.
+
+## Social metadata and analytics enhancement
+
+- Existing `index.astro` has only charset, viewport, description, theme color, and title. There are no canonical, Open Graph, Twitter Card, favicon, manifest, or analytics tags, and no `public/` assets.
+- The Open Graph protocol requires `og:title`, `og:type`, `og:image`, and `og:url`; it also recommends a concise description. Source: https://ogp.me/
+- Production site origin is `https://cca.toshi0607.com`. Set Astro's `site` value and emit absolute canonical/OG URLs in the statically rendered head.
+- Translate the established drafting-paper palette (`#f4f7f9`, `#173447`, `#087e9b`) and five-domain blueprint into deterministic SVG assets, then render committed PNG variants. Avoid generated illustration because exact wordmark typography and small-size legibility matter more than pictorial novelty.
+- Google recommends placing the Google tag in the head on every measured page, using the GA4 `G-...` measurement ID in both the loader URL and `gtag('config', ...)`. Source: https://developers.google.com/tag-platform/gtagjs
+- GA4's default implementation stores a first-party `_ga` client ID cookie and collects basic visit/session/device information. Source: https://support.google.com/analytics/answer/11593727
+- Privacy design: do not load `gtag.js` or send data until the visitor opts in; store only the visitor's consent choice locally. Disable advertising personalization signals. Never send card content, search terms, ratings, or local progress as custom events.
+- No `G-...` ID exists in tracked files, local repo configuration, or Vercel project environment variables. The integration must be conditional and production activation requires an ID from a GA4 web data stream.
