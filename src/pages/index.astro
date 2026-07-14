@@ -1,0 +1,22 @@
+---
+import App from '../components/App';
+import { contentStats } from '../content/validate';
+import '../styles/global.css';
+void contentStats;
+---
+
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width" />
+    <meta name="description" content="Claude Certified Architect – Foundations の公開出題範囲を学ぶ非公式ガイドと復習カード" />
+    <meta name="theme-color" content="#173447" />
+    <title>CCA Field Notes — 非公式学習ガイド</title>
+  </head>
+  <body>
+    <a class="skip-link" href="#main-content">本文へ移動</a>
+    <App client:only="preact" />
+    <noscript>この学習ノートのカード表示と進捗保存にはJavaScriptが必要です。</noscript>
+  </body>
+</html>
