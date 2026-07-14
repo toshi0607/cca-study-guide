@@ -10,7 +10,7 @@ Add production-ready OGP metadata and imagery, a complete favicon set, and opt-i
 - [x] Phase 2: Confirm current official metadata and Google Analytics integration requirements
 - [x] Phase 3: Create visual assets and implement head/analytics integration
 - [x] Phase 4: Add regression checks and verify rendered assets, metadata, and production build
-- [ ] Phase 5: Review, deploy, and verify the production hostname
+- [x] Phase 5: Review, deploy, and verify the production hostname
 
 ## Key Questions
 
@@ -31,7 +31,8 @@ Add production-ready OGP metadata and imagery, a complete favicon set, and opt-i
 
 - A combined tests/config/docs patch expected the technical-architecture sentence in `DESIGN.md` to be a bullet, but it is a paragraph. The patch was rejected atomically; split the changes by file and match the current text exactly.
 - Playwright's `--device="iPhone 13"` screenshot selected an uninstalled WebKit runtime after the desktop Chromium capture succeeded. Re-ran the mobile visual check with the installed Chromium runtime and an explicit 390×844 viewport.
+- The first production consent smoke check imported the transitive `playwright` package directly, which is not exposed by pnpm. Re-ran it through the installed `@playwright/test` package.
 
 ## Status
 
-**Currently in Phase 5** — OGP/favicon and the dormant GA integration are ready for release. Production analytics activation still requires a real GA4 `G-...` measurement ID.
+**Complete** — OGP/favicon are live, the production GA4 measurement ID is configured, consent gating is active, and the production hostname/assets/metadata were verified.

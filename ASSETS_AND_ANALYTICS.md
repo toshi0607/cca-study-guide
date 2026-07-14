@@ -24,4 +24,4 @@
 
 Recommended GA4 property settings: keep Google Signals off, do not link Google Ads, disable Enhanced Measurement if only page views are desired, and use the shortest suitable retention period.
 
-Production activation remains pending until a real GA4 Web data stream measurement ID is added to Vercel's Production environment and the site is redeployed.
+Production activation completed on 2026-07-14. The GA4 measurement ID is stored in Vercel's Production environment; the built page exposes it as expected for a public Google tag. A production smoke check confirmed zero Google requests before consent and one tag-loader request after opt-in.

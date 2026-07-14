@@ -72,7 +72,7 @@ Design and build a Japanese study-guide web app for the current Claude Certified
 - [x] Add favicon assets and icon metadata that match the field-notes visual system.
 - [x] Add privacy-conscious Google Analytics loading via a validated public measurement ID.
 - [x] Add regression tests for metadata and generated public assets.
-- [ ] Deploy and verify production metadata, icons, and analytics configuration.
+- [x] Deploy and verify production metadata, icons, and analytics configuration.
 
 ### Enhancement Verification
 
@@ -81,3 +81,5 @@ Design and build a Japanese study-guide web app for the current Claude Certified
 - `pnpm test:no-analytics`: passed; the no-ID build contains no Google loader, consent UI, storage key, or analytics settings control.
 - OGP: opaque 1200×630 PNG; favicon: SVG plus 16/32/48px ICO; Apple icon: opaque 180×180 PNG.
 - Independent reviewer approved OGP/favicon release and required a real GA4 measurement ID before production analytics can be marked active.
+- Production: `PUBLIC_GA_MEASUREMENT_ID` configured for Vercel Production; `cca.toshi0607.com` returned HTTP 200 with the expected ID, consent panel, OGP metadata, and all icon assets.
+- Production consent smoke check: zero Google requests before consent and one `gtag.js` request after opt-in.
