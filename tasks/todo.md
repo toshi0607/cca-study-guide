@@ -49,14 +49,15 @@ Design and build a Japanese study-guide web app for the current Claude Certified
 
 ## Status
 
-**Implementation and deployment complete.** The Vercel project is live and `cca.toshi0607.com` is attached. Cloudflare still needs the one DNS record listed below before the custom hostname resolves.
+**Implementation and deployment complete.** The Vercel project is live at `cca.toshi0607.com`; Cloudflare DNS, Vercel domain verification, and HTTPS certificate issuance are complete.
 
 ## Review
 
 - GitHub: https://github.com/toshi0607/cca-study-guide
 - Production alias: https://cca-study-guide-two.vercel.app
 - Attached custom hostname: https://cca.toshi0607.com
-- Required Cloudflare DNS record: `CNAME cca 7ebf0f3434199a88.vercel-dns-017.com` with proxy disabled (DNS only).
+- Cloudflare DNS: `CNAME cca 7ebf0f3434199a88.vercel-dns-017.com` with proxy disabled (DNS only), verified by Vercel on 2026-07-14.
+- HTTPS: Vercel certificate issued for `cca.toshi0607.com`; an HTTPS request returned HTTP 200 with the expected app title.
 - Content validation: 5 domains, 30 objectives, 16 independently authored practice cards; every claim has an official claim-specific source.
 - Link validation: all 27 registered official URLs returned HTTP 200 on 2026-07-14.
 - `pnpm test`: 12/12 passed.
