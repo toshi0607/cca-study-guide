@@ -10,8 +10,8 @@ Design and build a Japanese study-guide web app for the current Claude Certified
 - [x] Phase 2: Define information architecture, learning model, visual direction, and hosting choice
 - [x] Phase 3: Scaffold and implement the web app with sourced starter content
 - [x] Phase 4: Verify content traceability, UX, accessibility, responsive layout, tests, and production build
-- [ ] Phase 5: Create/configure the repository and deploy when credentials and DNS access allow
-- [ ] Phase 6: Review and document the result
+- [x] Phase 5: Create/configure the repository and deploy when credentials and DNS access allow
+- [x] Phase 6: Review and document the result
 
 ## Key Questions
 
@@ -49,8 +49,18 @@ Design and build a Japanese study-guide web app for the current Claude Certified
 
 ## Status
 
-**Currently in Phase 5** — content, unit, browser, accessibility, responsive, and production-build checks pass; preparing the GitHub and Vercel release.
+**Implementation and deployment complete.** The Vercel project is live and `cca.toshi0607.com` is attached. Cloudflare still needs the one DNS record listed below before the custom hostname resolves.
 
 ## Review
 
-Pending.
+- GitHub: https://github.com/toshi0607/cca-study-guide
+- Production alias: https://cca-study-guide-two.vercel.app
+- Attached custom hostname: https://cca.toshi0607.com
+- Required Cloudflare DNS record: `CNAME cca 7ebf0f3434199a88.vercel-dns-017.com` with proxy disabled (DNS only).
+- Content validation: 5 domains, 30 objectives, 16 independently authored practice cards; every claim has an official claim-specific source.
+- Link validation: all 27 registered official URLs returned HTTP 200 on 2026-07-14.
+- `pnpm test`: 12/12 passed.
+- `pnpm test:e2e`: 8/8 passed, including keyboard reveal/rating/persistence, axe WCAG A/AA checks, and horizontal-overflow checks at 375, 768, 1000, 1120, 1121, and 1440px.
+- `pnpm build`: passed with 0 Astro errors, warnings, or hints.
+- Independent test runner additionally checked the responsive breakpoint neighborhood at 761, 768, 800, 900, 1000, 1001, 1100, 1120, and 1121px with no overflow.
+- Independent reviewer found no P0 legal or security blocker. Its traceability, storage-validation, terminology, client-date, persistence-failure, and automated-browser-test findings were addressed before release.
