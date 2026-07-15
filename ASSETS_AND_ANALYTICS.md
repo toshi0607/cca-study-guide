@@ -16,12 +16,13 @@
 ## Analytics
 
 - Configuration: optional `PUBLIC_GA_MEASUREMENT_ID` in `G-...` form.
-- Missing ID: no consent panel, Google script, cookie, or analytics request.
-- Before opt-in: no Google tag is loaded and no consent ping is sent.
-- After opt-in: load `gtag.js`, deny advertising-related storage/personalization, and configure the default page view.
+- Missing ID: no Google script, cookie, analytics request, or analytics-specific disclosure.
+- Configured ID: load `gtag.js` normally and configure the default page view.
+- Advertising storage, advertising user data, advertising personalization, Google Signals, and ad-personalization signals are disabled in app configuration.
+- `cookie_domain: 'none'` keeps GA cookies host-only instead of sharing them with sibling subdomains.
 - The app emits no custom events for card IDs/content, search terms, ratings, review state, exported data, or other study progress. GA4 Enhanced Measurement can add events such as outbound clicks at the property layer; disable it in the Web data stream to enforce page-view-only collection.
-- Consent choice is stored locally under `cca-analytics-consent:v1` and can be changed from the Progress view.
+- The Progress view summarizes the analytics behavior and the app-wide footer links to `/privacy/` for details and opt-out information.
 
 Recommended GA4 property settings: keep Google Signals off, do not link Google Ads, disable Enhanced Measurement if only page views are desired, and use the shortest suitable retention period.
 
-Production activation completed on 2026-07-14. The GA4 measurement ID is stored in Vercel's Production environment; the built page exposes it as expected for a public Google tag. A production smoke check confirmed zero Google requests before consent and one tag-loader request after opt-in.
+Production activation completed on 2026-07-14. The GA4 measurement ID is stored in Vercel's Production environment; the built page exposes it as expected for a public Google tag. Consent gating was removed by user choice on 2026-07-15 in favor of immediate loading plus a dedicated disclosure page.

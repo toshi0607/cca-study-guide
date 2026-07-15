@@ -435,35 +435,51 @@ main {
 .data-actions .danger { border-color: var(--danger); background: var(--surface); color: var(--danger); }
 .data-actions .danger:hover { background: #fff0ef; border-color: var(--danger); }
 .analytics-disclosure { padding-left: 12px; border-left: 3px solid var(--cyan); font-size: .9rem; }
+.site-footer {
+  width: min(1180px, 100%);
+  margin: 42px auto 0;
+  padding: 18px 0 0;
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  border-top: 1px solid var(--grid-strong);
+  color: var(--ink-soft);
+  font: .72rem/1.6 var(--mono);
+}
+.site-footer nav { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 10px 20px; }
 
-.analytics-consent {
-  position: fixed;
-  z-index: 90;
-  right: 24px;
-  bottom: 24px;
-  width: min(430px, calc(100vw - 48px));
-  padding: 24px;
-  border: 1px solid var(--grid-strong);
-  border-top: 5px solid var(--cyan);
-  background: var(--surface);
-  box-shadow: 0 24px 70px rgb(23 52 71 / 20%);
+.privacy-page { min-height: 100vh; }
+.privacy-header {
+  padding: 24px clamp(20px, 5vw, 72px);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  border-bottom: 1px solid #0a2738;
+  background: var(--ink);
+  color: #eef8fb;
 }
-.analytics-consent[hidden] { display: none; }
-.analytics-consent h2 { margin: 0 0 10px; font: 700 1.55rem/1.2 var(--display); }
-.analytics-consent > p:not(.eyebrow) { margin: 0; color: var(--ink-soft); font-size: .9rem; }
-.analytics-consent-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
-.analytics-consent-actions button {
-  min-height: 46px;
-  padding: 0 18px;
-  border: 1px solid var(--grid-strong);
-  border-radius: 3px;
-  background: var(--surface);
-  cursor: pointer;
-  font-weight: 700;
+.privacy-header a { color: inherit; }
+.privacy-header > a:last-child { font: .78rem var(--mono); }
+.privacy-main {
+  width: min(820px, calc(100% - 36px));
+  min-height: auto;
+  margin: 0 auto;
+  padding: clamp(38px, 7vw, 76px) 0 80px;
 }
-.analytics-consent-actions button:hover { border-color: var(--cyan); background: var(--cyan-pale); }
-.analytics-consent-actions .primary { border-color: var(--cyan); background: var(--cyan); color: #fff; }
-.analytics-consent-actions .primary:hover { border-color: var(--cyan-dark); background: var(--cyan-dark); }
+.privacy-article {
+  padding: clamp(26px, 5vw, 52px);
+  border: 1px solid var(--grid-strong);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+.privacy-article h1 { margin: 0; font: 700 clamp(2.4rem, 7vw, 4.5rem)/1 var(--display); letter-spacing: -.035em; }
+.privacy-article .lead { margin: 18px 0 38px; color: var(--ink-soft); font-size: 1.05rem; }
+.privacy-article section { padding: 26px 0; border-top: 1px solid var(--grid); }
+.privacy-article h2 { margin: 0 0 10px; font: 700 1.55rem var(--display); }
+.privacy-article p, .privacy-article li { color: var(--ink-soft); }
+.privacy-article ul { padding-left: 1.3em; }
+.privacy-updated { margin: 26px 0 0; font: .7rem var(--mono); color: var(--ink-soft); }
 .sources-panel { display: grid; grid-template-columns: minmax(220px, .7fr) minmax(0, 1.3fr); gap: 50px; }
 .sources-panel > div:first-child p:last-child { color: var(--ink-soft); }
 .source-register { border-top: 1px solid var(--grid); }
@@ -549,8 +565,8 @@ main {
   .progress-row progress { grid-column: 1 / -1; grid-row: 2; }
   .source-register article { grid-template-columns: 1fr; gap: 7px; }
   .data-actions { min-width: 0; }
-  .analytics-consent { right: 14px; bottom: 110px; width: calc(100vw - 28px); padding: 20px; }
-  .analytics-consent-actions { display: grid; grid-template-columns: 1fr 1fr; }
+  .site-footer { align-items: flex-start; flex-direction: column; }
+  .site-footer nav { justify-content: flex-start; }
   .bottom-nav {
     position: fixed;
     z-index: 40;
@@ -583,7 +599,7 @@ main {
 }
 
 @media print {
-  .rail, .mobile-header, .bottom-nav, .persistent-disclaimer, .filter-panel, .reveal-button, .rating, .analytics-consent { display: none !important; }
+  .rail, .mobile-header, .bottom-nav, .persistent-disclaimer, .filter-panel, .reveal-button, .rating { display: none !important; }
   main { margin: 0; padding: 0; }
   body { background: #fff; }
 }

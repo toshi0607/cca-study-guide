@@ -178,10 +178,17 @@ function App({ analyticsEnabled = false }: { analyticsEnabled?: boolean }) {
           const done = list.filter((card) => data.reviews[card.id]).length;
           return <div class="progress-row"><span>D{domain.number} {domain.titleJa}</span><progress value={done} max={list.length}>{done}/{list.length}</progress><strong>{done}/{list.length}</strong></div>;
         })}</section>
-        <section class="data-panel" aria-labelledby="data-title"><div><h3 id="data-title">ローカルデータ</h3><p>端末間の同期はありません。ブラウザデータを消す前にJSONを書き出してください。</p>{analyticsEnabled && <p class="analytics-disclosure">許可した場合のみ、基本的なページ閲覧情報をGoogle Analyticsへ送信します。学習内容や進捗は対象外です。</p>}</div><div class="data-actions"><button onClick={exportData}>進捗をJSONで書き出す</button>{analyticsEnabled && <button onClick={() => window.dispatchEvent(new CustomEvent('cca:open-analytics-consent'))}>アクセス解析の設定</button>}<button class="danger" onClick={resetData}>この端末の進捗を削除</button></div></section>
+        <section class="data-panel" aria-labelledby="data-title"><div><h3 id="data-title">ローカルデータ</h3><p>端末間の同期はありません。ブラウザデータを消す前にJSONを書き出してください。</p>{analyticsEnabled && <p class="analytics-disclosure">Google Analyticsで基本的なページ閲覧情報を収集します。学習カード、検索語、評価、進捗データは独自イベントとして送信しません。<a href="/privacy/">詳細を見る</a></p>}</div><div class="data-actions"><button onClick={exportData}>進捗をJSONで書き出す</button><button class="danger" onClick={resetData}>この端末の進捗を削除</button></div></section>
         <section class="sources-panel" aria-labelledby="sources-title"><div><p class="eyebrow">SOURCE REGISTER</p><h3 id="sources-title">公式資料</h3><p>説明は公開資料の要約です。仕様変更に備え、学習時はリンク先の最新版も確認してください。</p></div><div class="source-register">{sources.map((source) => <article><code>{source.id}</code><div><a href={source.url} target="_blank" rel="noreferrer">{source.title} ↗</a><p>{source.publisher} · 最終確認 {source.verifiedAt}</p></div></article>)}</div></section>
         <section class="disclaimer" aria-labelledby="disclaimer-title"><h3 id="disclaimer-title">非公式・Anthropicとは提携していません</h3><p>本サイトは個人の学習用ノートです。Anthropicによる承認・後援・提携を示すものではありません。練習カードは公開資料から独自に作成したもので、実試験問題、受験者が記憶した問題、非公開教材、漏えい資料を収録・募集しません。</p><p>出題範囲の最終確認：{VERIFIED_AT}。誤りやリンク切れは <a href="https://github.com/toshi0607/cca-study-guide/issues" target="_blank" rel="noreferrer">GitHub Issues ↗</a> でお知らせください。</p></section>
       </section>}
+      <footer class="site-footer">
+        <span>CCA Field Notes · 非公式学習ノート</span>
+        <nav aria-label="サイト情報">
+          {analyticsEnabled && <a href="/privacy/">アクセス解析について</a>}
+          <a href="https://github.com/toshi0607/cca-study-guide" target="_blank" rel="noreferrer">GitHub<span class="sr-only">（新しいタブで開く）</span> ↗</a>
+        </nav>
+      </footer>
     </main>
 
     <nav class="bottom-nav" aria-label="メインナビゲーション">{(Object.keys(labels) as View[]).map((key) => <button key={key} aria-current={view === key ? 'page' : undefined} onClick={() => navigate(key)}><span aria-hidden="true">{icons[key]}</span>{labels[key]}</button>)}</nav>

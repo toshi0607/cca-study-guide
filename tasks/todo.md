@@ -74,7 +74,9 @@ Design and build a Japanese study-guide web app for the current Claude Certified
 - [x] Add regression tests for metadata and generated public assets.
 - [x] Deploy and verify production metadata, icons, and analytics configuration.
 
-### Enhancement Verification
+### Enhancement Verification (superseded on 2026-07-15)
+
+The following records describe the original consent-gated release and are retained as historical verification only. The active enhancement below replaces that runtime behavior.
 
 - `pnpm test`: 17/17 passed.
 - `pnpm test:e2e`: 10/10 passed with a test measurement ID, including no requests before consent, deny persistence, grant/reload, revoke/cookie cleanup, axe, metadata/assets, and responsive layout.
@@ -83,3 +85,16 @@ Design and build a Japanese study-guide web app for the current Claude Certified
 - Independent reviewer approved OGP/favicon release and required a real GA4 measurement ID before production analytics can be marked active.
 - Production: `PUBLIC_GA_MEASUREMENT_ID` configured for Vercel Production; `cca.toshi0607.com` returned HTTP 200 with the expected ID, consent panel, OGP metadata, and all icon assets.
 - Production consent smoke check: zero Google requests before consent and one `gtag.js` request after opt-in.
+
+## Active Enhancement: Simplify Analytics Disclosure
+
+- [x] Plan the consent-removal change and preserve privacy constraints.
+- [x] Trace consent-specific UI, storage, settings controls, tests, and documentation.
+- [x] Remove consent-specific UI, storage, and settings controls.
+- [x] Add a concise analytics disclosure page and persistent footer link.
+- [x] Update tests and documentation.
+- [ ] Run independent review, full verification, deployment, and production smoke checks.
+
+### Enhancement Review
+
+- Pending implementation and verification.

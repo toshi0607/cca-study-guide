@@ -14,7 +14,7 @@ export default defineConfig({
   webServer: {
     command: 'PUBLIC_GA_MEASUREMENT_ID=G-TEST123456 pnpm build && pnpm preview --host 127.0.0.1 --port 4325',
     url: 'http://127.0.0.1:4325',
-    reuseExistingServer: true,
+    reuseExistingServer: false,
     timeout: 120_000,
   },
 });

@@ -5,111 +5,21 @@ const measurementId = parseGoogleAnalyticsId(import.meta.env.PUBLIC_GA_MEASUREME
 ---
 
 {measurementId && <>
-  <aside id="analytics-consent" class="analytics-consent" aria-labelledby="analytics-consent-title" hidden>
-    <p class="eyebrow">PRIVACY CHOICE</p>
-    <h2 id="analytics-consent-title" tabindex="-1">アクセス解析を許可しますか？</h2>
-    <p>サイト改善のため、Google Analyticsへ基本的な閲覧状況を送信します。学習カード、検索語、評価、進捗データは送信しません。</p>
-    <div class="analytics-consent-actions">
-      <button type="button" data-analytics-consent="denied">許可しない</button>
-      <button type="button" class="primary" data-analytics-consent="granted">許可する</button>
-    </div>
-  </aside>
+  <script is:inline async src={`https://www.googletagmanager.com/gtag/js?id=${measurementId}`}></script>
   <script is:inline define:vars={{ measurementId }}>
-    (() => {
-      const storageKey = 'cca-analytics-consent:v1';
-      const panel = document.getElementById('analytics-consent');
-      const title = document.getElementById('analytics-consent-title');
-      const disableKey = `ga-disable-${measurementId}`;
-      let returnFocus = null;
-
-      const readConsent = () => {
-        try {
-          const value = localStorage.getItem(storageKey);
-          return value === 'granted' || value === 'denied' ? value : null;
-        } catch {
-          return null;
-        }
-      };
-
-      const storeConsent = (value) => {
-        try { localStorage.setItem(storageKey, value); } catch { /* Browsing can continue without persistence. */ }
-      };
-
-      const removeAnalyticsCookies = () => {
-        document.cookie.split(';').map((item) => item.split('=')[0].trim()).filter((name) => name === '_ga' || name.startsWith('_ga_')).forEach((name) => {
-          document.cookie = `${name}=; Max-Age=0; path=/; SameSite=Lax`;
-          document.cookie = `${name}=; Max-Age=0; path=/; domain=cca.toshi0607.com; SameSite=Lax`;
-        });
-      };
-
-      const ensureGtag = () => {
-        window.dataLayer = window.dataLayer || [];
-        window.gtag = window.gtag || function () { window.dataLayer.push(arguments); };
-        return window.gtag;
-      };
-
-      const grantAnalytics = () => {
-        window[disableKey] = false;
-        const gtag = ensureGtag();
-        gtag('consent', 'default', {
-          analytics_storage: 'denied',
-          ad_storage: 'denied',
-          ad_user_data: 'denied',
-          ad_personalization: 'denied',
-        });
-        gtag('consent', 'update', { analytics_storage: 'granted' });
-        gtag('set', { allow_ad_personalization_signals: false });
-
-        if (!document.getElementById('cca-google-tag')) {
-          const script = document.createElement('script');
-          script.id = 'cca-google-tag';
-          script.async = true;
-          script.src = `https://www.googletagmanager.com/gtag/js?id=${encodeURIComponent(measurementId)}`;
-          document.head.append(script);
-          gtag('js', new Date());
-        }
-        gtag('config', measurementId, {
-          allow_ad_personalization_signals: false,
-          cookie_domain: 'cca.toshi0607.com',
-        });
-      };
-
-      const denyAnalytics = () => {
-        window[disableKey] = true;
-        if (window.gtag) {
-          window.gtag('consent', 'update', {
-            analytics_storage: 'denied',
-            ad_storage: 'denied',
-            ad_user_data: 'denied',
-            ad_personalization: 'denied',
-          });
-        }
-        removeAnalyticsCookies();
-      };
-
-      const choose = (value) => {
-        storeConsent(value);
-        if (value === 'granted') grantAnalytics();
-        else denyAnalytics();
-        panel.hidden = true;
-        if (returnFocus instanceof HTMLElement) returnFocus.focus();
-        returnFocus = null;
-      };
-
-      panel.querySelectorAll('[data-analytics-consent]').forEach((button) => {
-        button.addEventListener('click', () => choose(button.dataset.analyticsConsent));
-      });
-
-      window.addEventListener('cca:open-analytics-consent', () => {
-        returnFocus = document.activeElement;
-        panel.hidden = false;
-        requestAnimationFrame(() => title.focus());
-      });
-
-      const consent = readConsent();
-      if (consent === 'granted') grantAnalytics();
-      else if (consent === 'denied') denyAnalytics();
-      else panel.hidden = false;
-    })();
+    window.dataLayer = window.dataLayer || [];
+    window.gtag = window.gtag || function () { window.dataLayer.push(arguments); };
+    window.gtag('consent', 'default', {
+      analytics_storage: 'granted',
+      ad_storage: 'denied',
+      ad_user_data: 'denied',
+      ad_personalization: 'denied',
+    });
+    window.gtag('js', new Date());
+    window.gtag('config', measurementId, {
+      allow_google_signals: false,
+      allow_ad_personalization_signals: false,
+      cookie_domain: 'none',
+    });
   </script>
 </>}

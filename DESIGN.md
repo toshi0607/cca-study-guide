@@ -18,7 +18,7 @@ The site must never imply Anthropic endorsement and must not contain, reconstruc
 - Filters by domain and state; card search.
 - Progress summary, JSON export, and local reset.
 - A source and disclaimer section with the blueprint verification date.
-- No login, API, database, or user-generated content. Optional aggregate usage analytics loads only after explicit visitor consent; the app emits no custom events for study content or progress.
+- No login, API, database, or user-generated content. Optional aggregate usage analytics loads when configured, with advertising storage and signals disabled; the app emits no custom events for study content or progress and links to a dedicated disclosure page.
 
 Out of scope for the first release: device sync, community submissions, paid content, an exam simulator that claims to reproduce the live test, and pass-probability estimates.
 
@@ -122,7 +122,7 @@ Content validation must fail the build for duplicate IDs, invalid domain totals,
 - Playwright/axe for the critical reveal/rating/persistence/keyboard/mobile flow when browser binaries are available.
 - Standard static output deployable unchanged to Vercel or Cloudflare Workers Static Assets.
 
-No server secret is required. An optional build-time `PUBLIC_GA_MEASUREMENT_ID` enables consent-gated GA4; when absent, analytics markup and UI are omitted entirely.
+No server secret is required. An optional build-time `PUBLIC_GA_MEASUREMENT_ID` enables GA4 and its linked disclosure; when absent, analytics scripts and analytics-specific disclosure are omitted entirely.
 
 ## Hosting decision
 

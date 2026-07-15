@@ -43,11 +43,11 @@ const analyticsEnabled = Boolean(parseGoogleAnalyticsId(import.meta.env.PUBLIC_G
     <meta name="twitter:image" content={socialImageUrl} />
     <meta name="twitter:image:alt" content="CCA Field Notesの設計図風カバー" />
     <title>{title}</title>
+    <GoogleAnalytics />
   </head>
   <body>
     <a class="skip-link" href="#main-content">本文へ移動</a>
     <App analyticsEnabled={analyticsEnabled} client:only="preact" />
-    <GoogleAnalytics />
     <noscript>この学習ノートのカード表示と進捗保存にはJavaScriptが必要です。</noscript>
   </body>
 </html>

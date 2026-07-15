@@ -57,5 +57,13 @@
 - Translate the established drafting-paper palette (`#f4f7f9`, `#173447`, `#087e9b`) and five-domain blueprint into deterministic SVG assets, then render committed PNG variants. Avoid generated illustration because exact wordmark typography and small-size legibility matter more than pictorial novelty.
 - Google recommends placing the Google tag in the head on every measured page, using the GA4 `G-...` measurement ID in both the loader URL and `gtag('config', ...)`. Source: https://developers.google.com/tag-platform/gtagjs
 - GA4's default implementation stores a first-party `_ga` client ID cookie and collects basic visit/session/device information. Source: https://support.google.com/analytics/answer/11593727
-- Privacy design: do not load `gtag.js` or send data until the visitor opts in; store only the visitor's consent choice locally. Disable advertising personalization signals. Never send card content, search terms, ratings, or local progress as custom events.
+- Superseded privacy design (2026-07-14): the original release delayed `gtag.js` until opt-in. Replaced by the user-selected immediate-load plus disclosure model on 2026-07-15. Advertising signals remain disabled, and card content, search terms, ratings, and local progress are still excluded from custom events.
 - No `G-...` ID exists in tracked files, local repo configuration, or Vercel project environment variables. The integration must be conditional and production activation requires an ID from a GA4 web data stream.
+# Analytics Disclosure Simplification — 2026-07-15
+
+- Consent-specific runtime logic is isolated to `src/components/GoogleAnalytics.astro`; it can be replaced by deterministic immediate initialization when a valid ID exists.
+- `App.tsx` only needs the existing `analyticsEnabled` prop for truthful conditional disclosure. The settings button and custom consent event can be deleted.
+- Keep `ad_storage`, `ad_user_data`, and `ad_personalization` denied. Set `allow_google_signals` and `allow_ad_personalization_signals` to false. No custom study events are emitted.
+- A dedicated `/privacy/` page best matches the requested replacement. Link it from an app-wide footer and keep the shorter Progress-panel summary.
+- No-ID builds must continue to omit the Google loader, ID, and analytics-specific disclosure.
+- Old `cca-analytics-consent:v1` localStorage values are inert and do not require migration code.
