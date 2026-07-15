@@ -4,10 +4,18 @@ import { domains } from './domains';
 import { sources } from './sources';
 
 const date = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
+const localizedStringSchema = z.object({
+  ja: z.string().trim().min(1),
+  en: z.string().trim().min(1),
+}).strict();
+const localizedStringArraySchema = z.object({
+  ja: z.array(z.string().trim().min(1)).min(1),
+  en: z.array(z.string().trim().min(1)).min(1),
+}).strict();
 const sourceSchema = z.object({ id: z.string().min(1), title: z.string().min(1), publisher: z.enum(['Anthropic', 'MCP Project']), url: z.string().url(), official: z.literal(true), verifiedAt: date });
-const objectiveSchema = z.object({ id: z.string().min(1), title: z.string().min(1), titleJa: z.string().min(1), summary: z.string().min(1), mustKnow: z.array(z.string().min(1)).min(1), sourceIds: z.array(z.string().min(1)).min(1), verifiedAt: date });
-const domainSchema = z.object({ id: z.string().min(1), number: z.number().int().min(1).max(5), title: z.string().min(1), titleJa: z.string().min(1), weight: z.number().positive(), summary: z.string().min(1), objectives: z.array(objectiveSchema).min(1) });
-const cardSchema = z.object({ id: z.string().min(1), revision: z.number().int().positive(), domainId: z.string(), objectiveIds: z.array(z.string()).min(1), kind: z.enum(['recall', 'contrast', 'scenario']), prompt: z.string().min(1), answer: z.string().min(1), explanation: z.string().min(1), pitfall: z.string().min(1), sourceIds: z.array(z.string()).min(1), verifiedAt: date });
+const objectiveSchema = z.object({ id: z.string().min(1), title: localizedStringSchema, summary: localizedStringSchema, mustKnow: localizedStringArraySchema, sourceIds: z.array(z.string().min(1)).min(1), verifiedAt: date });
+const domainSchema = z.object({ id: z.string().min(1), number: z.number().int().min(1).max(5), title: localizedStringSchema, weight: z.number().positive(), summary: localizedStringSchema, objectives: z.array(objectiveSchema).min(1) });
+const cardSchema = z.object({ id: z.string().min(1), revision: z.number().int().positive(), domainId: z.string(), objectiveIds: z.array(z.string()).min(1), kind: z.enum(['recall', 'contrast', 'scenario']), prompt: localizedStringSchema, answer: localizedStringSchema, explanation: localizedStringSchema, pitfall: localizedStringSchema, sourceIds: z.array(z.string()).min(1), verifiedAt: date });
 export const genericSourceIds = new Set(['exam-guide', 'cert', 'announcement', 'code-index', 'platform-index']);
 
 const unique = (values: string[], label: string, errors: string[]) => {

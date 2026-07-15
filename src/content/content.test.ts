@@ -33,4 +33,33 @@ describe('study content', () => {
       expect(item.sourceIds.some((sourceId) => !genericSourceIds.has(sourceId)), item.id).toBe(true);
     }
   });
+
+  it('provides non-empty Japanese and English copy for every localized field', () => {
+    const expectLocalizedText = (value: { ja: string; en: string }) => {
+      expect(value.ja.trim()).not.toBe('');
+      expect(value.en.trim()).not.toBe('');
+    };
+    const expectLocalizedList = (value: { ja: string[]; en: string[] }) => {
+      for (const locale of ['ja', 'en'] as const) {
+        expect(value[locale].length).toBeGreaterThan(0);
+        for (const item of value[locale]) expect(item.trim()).not.toBe('');
+      }
+    };
+
+    for (const domain of domains) {
+      expectLocalizedText(domain.title);
+      expectLocalizedText(domain.summary);
+      for (const objective of domain.objectives) {
+        expectLocalizedText(objective.title);
+        expectLocalizedText(objective.summary);
+        expectLocalizedList(objective.mustKnow);
+      }
+    }
+    for (const card of cards) {
+      expectLocalizedText(card.prompt);
+      expectLocalizedText(card.answer);
+      expectLocalizedText(card.explanation);
+      expectLocalizedText(card.pitfall);
+    }
+  });
 });

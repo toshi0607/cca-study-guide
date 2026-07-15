@@ -7,6 +7,48 @@ test.beforeEach(async ({ page }) => {
   await page.reload();
 });
 
+for (const route of [
+  { path: '/', heading: /思い出してから/, navigation: 'メインナビゲーション', today: '今日', blueprint: '5領域の設計図' },
+  { path: '/en/', heading: /Recall first/, navigation: 'Main navigation', today: 'Today', blueprint: 'Map of the five domains' },
+]) {
+  test(`${route.path} prerenders meaningful landing content without JavaScript`, async ({ browser }) => {
+    const context = await browser.newContext({ javaScriptEnabled: false });
+    const page = await context.newPage();
+    await page.goto(route.path);
+
+    await expect(page.getByRole('heading', { name: route.heading })).toBeVisible();
+    await expect(page.getByRole('navigation', { name: route.navigation }).first()).toContainText(route.today);
+    await expect(page.getByText(route.blueprint)).toBeVisible();
+    await expect(page.locator('button:not([disabled])')).toHaveCount(0);
+
+    await context.close();
+  });
+}
+
+test('refreshes due cards while a tab remains open', async ({ page }) => {
+  await page.clock.install({ time: new Date('2026-07-15T00:00:00.000Z') });
+  await page.evaluate(() => localStorage.setItem('cca-field-notes:v1', JSON.stringify({
+    version: 1,
+    reviews: {
+      'd1-loop-stop': {
+        cardId: 'd1-loop-stop',
+        cardRevisionSeen: 1,
+        dueAt: '2026-07-15T00:00:30.000Z',
+        intervalDays: 0,
+        streak: 0,
+        lapses: 1,
+        lastRating: 'again',
+      },
+    },
+  })));
+  await page.reload();
+  await page.getByRole('button', { name: '練習' }).first().click();
+  await expect(page.locator('.practice-card')).toHaveCount(15);
+
+  await page.clock.runFor(60_000);
+  await expect(page.locator('.practice-card')).toHaveCount(16);
+});
+
 test('reveals an answer, records a rating, and persists progress', async ({ page }) => {
   await page.getByRole('button', { name: '練習' }).first().click();
   const reveal = page.locator('.reveal-button').first();
@@ -19,21 +61,43 @@ test('reveals an answer, records a rating, and persists progress', async ({ page
   await expect(page.getByText('できた：次の復習日を更新しました。')).toBeFocused();
   await expect.poll(() => page.evaluate(() => Object.keys(JSON.parse(localStorage.getItem('cca-field-notes:v1') ?? '{}').reviews ?? {}).length)).toBe(1);
 
-  await page.reload();
-  await page.getByRole('button', { name: '進捗' }).first().click();
+  await page.goto('/en/');
+  await page.getByRole('button', { name: 'Progress' }).first().click();
   await expect(page.getByText('1/4').first()).toBeVisible();
 });
 
-test('has no serious accessibility violations on the landing view', async ({ page }) => {
-  const results = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa']).analyze();
-  expect(results.violations).toEqual([]);
+test('switches between complete localized routes and searches active-locale content', async ({ page }) => {
+  await page.goto('/en/');
+  await expect(page.locator('html')).toHaveAttribute('lang', 'en');
+  await expect(page.getByRole('heading', { name: 'Recall first. Then reveal.' })).toBeVisible();
+  await expect(page.locator('.rail .language-switcher a[lang="en"]')).toHaveAttribute('aria-current', 'page');
+  await expect(page.locator('.rail .language-switcher a[lang="ja"]')).toHaveAttribute('href', '/');
+
+  await page.getByRole('button', { name: 'Practice' }).first().click();
+  await expect(page.getByRole('heading', { name: 'Practice cards' })).toBeVisible();
+  await page.getByRole('searchbox', { name: 'Search cards' }).fill('iteration count');
+  await expect(page.getByText('Showing 1 card')).toBeVisible();
+  await expect(page.locator('.practice-card')).toHaveCount(1);
+  await expect(page.locator('.practice-card')).toContainText('agentic loop');
+
+  await page.locator('.rail .language-switcher a[lang="ja"]').click();
+  await expect(page).toHaveURL(/\/$/);
+  await expect(page.locator('html')).toHaveAttribute('lang', 'ja');
+  await expect(page.getByRole('heading', { name: '思い出してから、 答えを開く。' })).toBeVisible();
 });
 
-test('has no serious accessibility violations on the privacy page', async ({ page }) => {
-  await page.goto('/privacy/');
-  const results = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa']).analyze();
-  expect(results.violations).toEqual([]);
-});
+for (const route of [
+  { name: 'Japanese app', path: '/' },
+  { name: 'English app', path: '/en/' },
+  { name: 'Japanese privacy page', path: '/privacy/' },
+  { name: 'English privacy page', path: '/en/privacy/' },
+]) {
+  test(`${route.name} has no serious accessibility violations`, async ({ page }) => {
+    await page.goto(route.path);
+    const results = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa']).analyze();
+    expect(results.violations).toEqual([]);
+  });
+}
 
 test('publishes canonical social metadata and public icon assets', async ({ page }) => {
   await expect(page.locator('link[rel="canonical"]')).toHaveAttribute('href', 'https://cca.toshi0607.com/');
@@ -47,6 +111,25 @@ test('publishes canonical social metadata and public icon assets', async ({ page
     expect(response.ok(), asset).toBe(true);
   }
 });
+
+for (const route of [
+  { path: '/', lang: 'ja', canonical: 'https://cca.toshi0607.com/', japanese: 'https://cca.toshi0607.com/', english: 'https://cca.toshi0607.com/en/', title: 'CCA Field Notes — 非公式学習ガイド', ogLocale: 'ja_JP' },
+  { path: '/en/', lang: 'en', canonical: 'https://cca.toshi0607.com/en/', japanese: 'https://cca.toshi0607.com/', english: 'https://cca.toshi0607.com/en/', title: 'CCA Field Notes — Unofficial Study Guide', ogLocale: 'en_US' },
+  { path: '/privacy/', lang: 'ja', canonical: 'https://cca.toshi0607.com/privacy/', japanese: 'https://cca.toshi0607.com/privacy/', english: 'https://cca.toshi0607.com/en/privacy/', title: 'プライバシー — CCA Field Notes', ogLocale: 'ja_JP' },
+  { path: '/en/privacy/', lang: 'en', canonical: 'https://cca.toshi0607.com/en/privacy/', japanese: 'https://cca.toshi0607.com/privacy/', english: 'https://cca.toshi0607.com/en/privacy/', title: 'Privacy — CCA Field Notes', ogLocale: 'en_US' },
+]) {
+  test(`${route.path} publishes locale-correct document metadata`, async ({ page }) => {
+    await page.goto(route.path);
+    await expect(page.locator('html')).toHaveAttribute('lang', route.lang);
+    await expect(page).toHaveTitle(route.title);
+    await expect(page.locator('link[rel="canonical"]')).toHaveAttribute('href', route.canonical);
+    await expect(page.locator('link[rel="alternate"][hreflang="ja"]')).toHaveAttribute('href', route.japanese);
+    await expect(page.locator('link[rel="alternate"][hreflang="en"]')).toHaveAttribute('href', route.english);
+    await expect(page.locator('link[rel="alternate"][hreflang="x-default"]')).toHaveAttribute('href', route.japanese);
+    await expect(page.locator('meta[property="og:locale"]')).toHaveAttribute('content', route.ogLocale);
+    await expect(page.locator('meta[property="og:locale:alternate"]')).toHaveCount(1);
+  });
+}
 
 test('loads privacy-restricted analytics immediately and links to its disclosure', async ({ page, context }) => {
   await page.close();
@@ -89,7 +172,12 @@ test('loads privacy-restricted analytics immediately and links to its disclosure
   await expect(analyticsPage.getByRole('heading', { name: 'アクセス解析' })).toBeVisible();
 });
 
-for (const route of [{ name: 'app', path: '/' }, { name: 'privacy page', path: '/privacy/' }]) {
+for (const route of [
+  { name: 'Japanese app', path: '/' },
+  { name: 'English app', path: '/en/' },
+  { name: 'Japanese privacy page', path: '/privacy/' },
+  { name: 'English privacy page', path: '/en/privacy/' },
+]) {
   for (const width of [375, 768, 1000, 1120, 1121, 1440]) {
     test(`${route.name} does not overflow horizontally at ${width}px`, async ({ page }) => {
       await page.setViewportSize({ width, height: 900 });
