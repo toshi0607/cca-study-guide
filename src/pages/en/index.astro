@@ -1,11 +1,13 @@
 ---
-import PrivacyPage from '../../components/PrivacyPage.astro';
+import App from '../../components/App';
+import { contentStats } from '../../content/validate';
 import LocalizedLayout from '../../layouts/LocalizedLayout.astro';
 import { parseGoogleAnalyticsId } from '../../lib/analytics';
+void contentStats;
 
 const analyticsEnabled = Boolean(parseGoogleAnalyticsId(import.meta.env.PUBLIC_GA_MEASUREMENT_ID));
 ---
 
-<LocalizedLayout locale="ja" page="privacy" bodyClass="privacy-page">
-  <PrivacyPage locale="ja" analyticsEnabled={analyticsEnabled} />
+<LocalizedLayout locale="en" page="app">
+  <App locale="en" analyticsEnabled={analyticsEnabled} client:load />
 </LocalizedLayout>

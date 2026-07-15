@@ -16,13 +16,37 @@ const forbidden = [
   'id="analytics-consent"',
   'cca-analytics-consent:v1',
   'アクセス解析の設定',
-  'Google Analyticsで基本的なページ閲覧情報を収集します。',
 ];
+const routeForbidden = {
+  'dist/index.html': [
+    'Google Analyticsで基本的なページ閲覧情報を収集します。',
+    'アクセス解析について',
+  ],
+  'dist/en/index.html': [
+    'Google Analytics collects basic page-view information.',
+    'Analytics information',
+  ],
+  'dist/privacy/index.html': [
+    'id="analytics-title"',
+    'id="cookies-title"',
+    'サイト改善のためGoogle Analytics 4を使用し',
+  ],
+  'dist/en/privacy/index.html': [
+    'id="analytics-title"',
+    'id="cookies-title"',
+    'To improve the site, Google Analytics 4 collects basic usage information',
+  ],
+};
 const found = [];
 
 for (const file of await htmlFiles('dist')) {
   const html = await readFile(file, 'utf8');
   for (const value of forbidden) if (html.includes(value)) found.push(`${file}: ${value}`);
+}
+
+for (const [file, values] of Object.entries(routeForbidden)) {
+  const html = await readFile(file, 'utf8');
+  for (const value of values) if (html.includes(value)) found.push(`${file}: ${value}`);
 }
 
 if (found.length) {

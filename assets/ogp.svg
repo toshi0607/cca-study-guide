@@ -30,7 +30,7 @@
   <rect x="178" y="352" width="284" height="45" rx="2" fill="#173447"/>
   <text x="199" y="382" fill="#fff" font-family="SFMono-Regular, Menlo, Consolas, monospace" font-size="18" font-weight="700" letter-spacing="2">FOUNDATIONS · CCAR-F</text>
 
-  <text x="178" y="446" fill="#173447" font-family="Hiragino Sans, Yu Gothic, Noto Sans CJK JP, sans-serif" font-size="24" font-weight="600">非公式学習ガイド &amp; 想起練習</text>
+  <text x="178" y="446" fill="#173447" font-family="SFMono-Regular, Menlo, Consolas, monospace" font-size="19" font-weight="700" letter-spacing="1.1">UNOFFICIAL STUDY GUIDE · RETRIEVAL PRACTICE</text>
   <text x="178" y="488" fill="#4c6574" font-family="SFMono-Regular, Menlo, Consolas, monospace" font-size="16" letter-spacing="1.8">5 DOMAINS · 30 OBJECTIVES · 16 CARDS</text>
   <text x="178" y="526" fill="#a85b18" font-family="SFMono-Regular, Menlo, Consolas, monospace" font-size="13" font-weight="700" letter-spacing="1.5">UNOFFICIAL · NOT AFFILIATED WITH ANTHROPIC</text>
 

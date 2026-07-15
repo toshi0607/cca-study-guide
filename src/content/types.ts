@@ -7,12 +7,16 @@ export type Source = {
   verifiedAt: string;
 };
 
+export type LocalizedText<T = string> = Readonly<{
+  ja: T;
+  en: T;
+}>;
+
 export type Objective = {
   id: string;
-  title: string;
-  titleJa: string;
-  summary: string;
-  mustKnow: string[];
+  title: LocalizedText;
+  summary: LocalizedText;
+  mustKnow: LocalizedText<string[]>;
   sourceIds: string[];
   verifiedAt: string;
 };
@@ -20,10 +24,9 @@ export type Objective = {
 export type Domain = {
   id: string;
   number: 1 | 2 | 3 | 4 | 5;
-  title: string;
-  titleJa: string;
+  title: LocalizedText;
   weight: number;
-  summary: string;
+  summary: LocalizedText;
   objectives: Objective[];
 };
 
@@ -33,10 +36,10 @@ export type Card = {
   domainId: string;
   objectiveIds: string[];
   kind: 'recall' | 'contrast' | 'scenario';
-  prompt: string;
-  answer: string;
-  explanation: string;
-  pitfall: string;
+  prompt: LocalizedText;
+  answer: LocalizedText;
+  explanation: LocalizedText;
+  pitfall: LocalizedText;
   sourceIds: string[];
   verifiedAt: string;
 };

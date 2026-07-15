@@ -1,0 +1,63 @@
+---
+import GoogleAnalytics from '../components/GoogleAnalytics.astro';
+import { localePaths, type Locale } from '../i18n/locales';
+import { siteCopy, type SitePage } from '../i18n/site';
+import '../styles/global.css';
+
+interface Props {
+  locale: Locale;
+  page: SitePage;
+  bodyClass?: string;
+}
+
+const { locale, page, bodyClass } = Astro.props;
+const copy = siteCopy[locale];
+const metadata = copy.metadata[page];
+const site = Astro.site ?? new URL('https://cca.toshi0607.com');
+const canonicalUrl = new URL(localePaths[locale][page], site);
+const japaneseUrl = new URL(localePaths.ja[page], site);
+const englishUrl = new URL(localePaths.en[page], site);
+const socialImageUrl = new URL('/ogp.png', site);
+---
+
+<!doctype html>
+<html lang={copy.htmlLang}>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width" />
+    <meta name="description" content={metadata.description} />
+    <meta name="theme-color" content="#173447" />
+    <meta name="robots" content="index,follow" />
+    <link rel="canonical" href={canonicalUrl} />
+    <link rel="alternate" hreflang="ja" href={japaneseUrl} />
+    <link rel="alternate" hreflang="en" href={englishUrl} />
+    <link rel="alternate" hreflang="x-default" href={japaneseUrl} />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="icon" href="/favicon.ico" sizes="any" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" sizes="180x180" />
+    <meta property="og:type" content="website" />
+    <meta property="og:locale" content={copy.ogLocale} />
+    <meta property="og:locale:alternate" content={copy.ogLocaleAlternate} />
+    <meta property="og:site_name" content="CCA Field Notes" />
+    <meta property="og:title" content={metadata.title} />
+    <meta property="og:description" content={metadata.description} />
+    <meta property="og:url" content={canonicalUrl} />
+    <meta property="og:image" content={socialImageUrl} />
+    <meta property="og:image:type" content="image/png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content={copy.socialImageAlt} />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={metadata.title} />
+    <meta name="twitter:description" content={metadata.description} />
+    <meta name="twitter:image" content={socialImageUrl} />
+    <meta name="twitter:image:alt" content={copy.socialImageAlt} />
+    <title>{metadata.title}</title>
+    <GoogleAnalytics />
+  </head>
+  <body class={bodyClass}>
+    <a class="skip-link" href="#main-content">{copy.skipLink}</a>
+    <slot />
+    <noscript>{copy.noscript}</noscript>
+  </body>
+</html>

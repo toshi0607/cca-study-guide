@@ -108,3 +108,140 @@ The following records describe the original consent-gated release and are retain
 - Independent reviewer reported no remaining P0-P3 findings after cookie scope, server isolation, privacy-page accessibility, and responsive coverage fixes.
 - Vercel production deployment `dpl_4k8BAy7CsM7n1GqoQe3aA71pjNYK` reached READY and was aliased to `cca.toshi0607.com`.
 - Production smoke check: `/` and `/privacy/` returned HTTP 200; each contained exactly one `G-MR40SCH5M6` loader, the expected privacy restrictions and host-only cookie config, and no consent runtime remnants.
+
+## Active Enhancement: Japanese / English Language Switcher
+
+### Goal
+
+Allow readers to switch the complete study experience between Japanese and English through stable, shareable locale URLs. Study progress must be shared between languages, and each URL must serve the correct document language and metadata in its initial HTML.
+
+### Design Specification
+
+- Stable locale routes: Japanese `/` and `/privacy/`; English `/en/` and `/en/privacy/`. Do not infer or persist locale separately—the URL is the source of truth.
+- Generate locale-correct `html[lang]`, title, description, canonical, reciprocal `hreflang`, Open Graph locale/copy, image alt, skip link, and noscript text in the initial Astro HTML.
+- Place a compact `日本語 / English` language navigation in the desktop rail and mobile header. Use real links with `lang`, `hreflang`, `aria-current`, visible selected state, and 44px minimum touch targets.
+- Translate all app chrome, notices, confirmations, dates, navigation labels, guide summaries, objectives, practice-card content, progress/source/disclaimer copy, and the privacy page. Preserve official product names, source titles, objective IDs, and source URLs.
+- Keep review state and card IDs locale-neutral so study progress is shared across both same-origin routes; do not change the storage schema, export shape, or card revisions for translation-only changes.
+- Search only the currently displayed locale text. Route navigation may reset transient view/filter/reveal state; persisted study progress must remain intact.
+- The standalone privacy routes share one localized component and the same language-navigation semantics.
+- Use one shared bilingual OGP image with language-neutral artwork/copy, or provide locale-specific images if the current Japanese copy cannot be removed cleanly.
+
+### Implementation Plan
+
+- [x] Finalize architecture after explorer and architect reports; record rejected alternatives.
+- [x] Add locale types, route helpers, shared Astro layout/metadata catalogs, UI-message catalogs, and content localization helpers.
+- [x] Extend domain/objective/card data with complete English and Japanese fields while keeping IDs/source references stable.
+- [x] Refactor the Preact app to render all content through the active locale and add responsive language controls.
+- [x] Add locale routes and localize the privacy page plus all initial document metadata.
+- [x] Add unit and end-to-end coverage for direct locale routes, shared progress, localized search, accessibility, metadata, and responsive overflow.
+- [x] Run formatting/diff checks, unit tests, Astro check/build, no-analytics build check, Playwright, and visual browser QA in both locales.
+- [x] Request independent correctness/regression review and resolve all findings.
+
+### Acceptance Criteria
+
+- Every user-facing Japanese string has a complete English counterpart, including dialogs and live notices.
+- `/`, `/en/`, `/privacy/`, and `/en/privacy/` each direct-load with complete localized content and correct initial `html[lang]`/metadata.
+- Switching languages preserves persisted study progress without adding or modifying a locale storage preference.
+- Keyboard and screen-reader users can identify and operate the language navigation; axe reports no WCAG A/AA violations.
+- No horizontal overflow occurs at the existing breakpoint matrix in either language.
+- `pnpm test`, `pnpm build`, `pnpm test:no-analytics`, and `pnpm test:e2e` pass.
+
+### Review
+
+- Added stable Japanese `/` and English `/en/` app routes plus localized `/privacy/` and `/en/privacy/` routes. All routes emit locale-correct initial HTML, canonical URLs, reciprocal `hreflang`, Open Graph/Twitter metadata, skip links, and noscript copy.
+- Added a typed two-locale UI/site catalog and `LocalizedText` content model. All 5 domains, 30 objectives, and 16 practice cards require non-empty Japanese and English content through Zod and tests; IDs, source references, review revisions, storage version, and JSON export shape remain unchanged.
+- Added accessible language links to the desktop rail, mobile header, and Privacy header with `lang`, `hreflang`, `aria-current`, visible focus/selection, and 44px minimum targets. The shared neutral OGP artwork contains no Japanese-only copy.
+- Search uses only the active locale. A card rated on the Japanese route remains recorded on the English route because both routes share the existing locale-neutral localStorage data.
+- `pnpm test`: 18/18 passed. `pnpm build`: 32 files checked with 0 errors/warnings/hints and 4 routes built. `pnpm test:no-analytics`: passed across all 4 routes. `pnpm test:e2e`: 38/38 passed, including no-JavaScript prerendering, shared progress, localized search, both-locale axe checks, metadata, analytics, and responsive overflow. `git diff --check`: passed.
+- Browser QA covered Japanese/English desktop, English Practice, 375px English mobile, and both Privacy locales; no horizontal overflow or console errors/warnings were observed.
+- Independent review found one stale English no-JavaScript heading expectation after the concurrent SSR integration; it was aligned with the actual localized heading and the complete suite was rerun successfully.
+- Environment note: the repository requests Node 22.x; verification ran on Node 26.5.0 with pnpm 10.30.3 and emitted only the engine/FORCE_COLOR warnings.
+
+### Architecture Decision
+
+Adopt locale-specific static routes instead of a same-URL client toggle. The same-URL option was rejected because the client-only Preact app cannot make initial HTML language and social metadata correct for English readers and crawlers. Browser-language redirects and locale localStorage were rejected to avoid display flashes, hidden routing behavior, and redundant state. A full i18n dependency was rejected as unnecessary for two compile-time locales.
+
+## Active Enhancement: Lighthouse Performance Optimization
+
+### Goal
+
+Identify production-representative performance bottlenecks with repeatable Lighthouse measurements, choose the smallest architectural improvements that address root causes, implement them without regressing behavior or accessibility, and verify before/after results.
+
+### Design and Measurement Specification
+
+- Measure the built Astro site through its preview server rather than the development server.
+- Capture at least three mobile Lighthouse runs for the main route and use the median to reduce run-to-run noise; inspect desktop and the privacy route when findings suggest shared-shell impact.
+- Preserve raw Lighthouse JSON reports and record the exact environment, command, metrics, audits, and bundle evidence used in decisions.
+- Prioritize user-visible metrics (LCP, INP/TBT, CLS) and transferred/executed JavaScript over score-only changes.
+- Do not modify or overwrite the in-progress Japanese/English localization work; isolate performance edits and rebase reasoning on the current workspace state.
+- Require unit tests, Astro check/build, relevant Playwright coverage, production-preview browser QA, and an independent regression review.
+
+### Implementation Plan
+
+- [x] Establish current buildability, preview workflow, Lighthouse availability, and a repeatable baseline.
+- [x] Trace the largest Lighthouse opportunities to source, asset, hydration, CSS, and rendering causes.
+- [x] Compare architectural options and select minimal, high-confidence changes with explicit trade-offs.
+- [x] Implement the selected optimizations in isolated files/components.
+- [x] Re-run a matched current-tree Lighthouse A/B and calculate median deltas.
+- [x] Run functional, accessibility, responsive, and regression verification.
+- [x] Complete independent correctness/performance review and resolve actionable findings.
+
+### Acceptance Criteria
+
+- Baseline and post-change Lighthouse reports are reproducible and retained outside shipped application assets.
+- Chosen changes demonstrably improve or remove an identified bottleneck; no metric is materially regressed without an explained trade-off.
+- Existing study flows, privacy behavior, analytics configuration, accessibility, and responsive layout remain intact.
+- `pnpm test`, `pnpm build`, relevant `pnpm test:e2e`, and `git diff --check` pass, except for any clearly documented pre-existing failure caused by protected user changes.
+
+### Review
+
+- Root cause: both app routes used `client:only`, leaving initial HTML without meaningful application content; the remaining dominant payload is the immediate 145,360 B Google tag.
+- Implemented deterministic SSR with `client:load` on `/` and `/en/`, truthful initial placeholders, localStorage/current-time initialization after hydration, minute/focus/visibility time refresh, and disabled pre-hydration stateful controls.
+- Added Japanese/English no-JS SSR assertions, disabled-control coverage, and a 60-second due-card rollover test.
+- Matched current-tree 3-run mobile Lighthouse A/B: Performance 96 → 98; TBT 151 ms → 79 ms; CLS stayed 0; LCP stayed effectively flat at about 2.29 s; transfer increased 1,533 B gzip.
+- Kept the existing immediate GA pageview behavior. A diagnostic two-second delay improved LCP but was rejected because it can miss short visits and changes the recently selected analytics policy.
+- Final verification: `git diff --check`; unit 18/18; build 4 routes with 0 Astro errors/warnings/hints; no-analytics build check; E2E 39/39; agent-browser Japanese/English hydration smoke with 0 console/page errors.
+- Raw reports are retained locally in the gitignored `tmp/lighthouse-final/client-load/` and `tmp/lighthouse-final/client-only/` directories; detailed reproducible evidence: `tasks/performance-notes.md`; final summary: `tasks/performance-review.md`.
+
+### Errors Encountered
+
+- The protected localization migration temporarily made the shared tree unbuildable while types changed ahead of consumers. Baseline and proof-of-concept work moved to isolated worktrees until the localized tree stabilized.
+- Concurrent shared `dist` rebuilds caused temporary E2E 404 responses; a fresh read-only snapshot produced coherent results.
+- One Chromium run returned `ERR_NETWORK_IO_SUSPENDED` before an overflow assertion; the exact test passed alone, and the final coherent full suite later passed 39/39 without retries.
+- The installed `agent-browser` skill referenced a missing `references/profiling.md`; used its complete core profiling instructions plus Lighthouse audit/trace data instead.
+
+## Active Enhancement: Production Deployment — 2026-07-15
+
+### Goal
+
+Deploy the current localized and performance-optimized working tree to the existing Vercel production project, preserve the configured analytics environment, and verify all four public routes plus critical metadata and hydration on the custom domain.
+
+### Deployment Plan
+
+- [x] Confirm the linked Vercel project, authenticated account, production environment, and current working-tree scope.
+- [x] Reconfirm deployment readiness from the completed build/test evidence and inspect the deploy diff for unintended files.
+- [x] Create a Vercel Production deployment from the current working tree and wait for READY.
+- [x] Confirm the production alias/custom domain points at the new deployment.
+- [x] Smoke-check `/`, `/en/`, `/privacy/`, and `/en/privacy/` for HTTP 200, locale metadata, SSR content, analytics configuration, and hydration errors.
+- [x] Record the deployment ID/URL, production verification, and rollback reference.
+
+### Acceptance Criteria
+
+- The deployment reaches READY and `https://cca.toshi0607.com` serves the new localized SSR release.
+- All four locale/privacy routes return HTTP 200 with correct initial `html[lang]`, canonical/hreflang metadata, and expected content.
+- The configured production GA ID and privacy restrictions remain present exactly once per route.
+- Browser smoke checks find no console/page errors and both locale navigation paths work.
+
+### Review
+
+- Production deployment `dpl_Chwb1VBd3EmgfA7t6U3AyMjDzgrX` reached READY and was aliased to `https://cca.toshi0607.com`.
+- Immutable deployment URL: `https://cca-study-guide-b4hfeoaah-toshi0607s-projects.vercel.app`; previous production/rollback reference: `dpl_9bTrgSSnKdaV4XBfEJJB3mf1eXro`.
+- The remote Astro build checked 32 files with 0 errors/warnings/hints and generated all four static routes.
+- `/`, `/en/`, `/privacy/`, and `/en/privacy/` each returned HTTP 200 with correct `html[lang]`, canonical URL, localized content, exactly one GA loader, and all expected analytics/privacy restrictions.
+- Production browser QA confirmed Japanese/English application and privacy content, 9 enabled post-hydration app buttons on the English route, and no console/page errors. All named sessions were closed.
+- Environment caveat: the Vercel project reports Node 24.x while `package.json` requests Node 22.x. The production build succeeded without diagnostics; align these versions in a separate maintenance change.
+
+### Errors Encountered
+
+- The first automated analytics-restriction boolean check returned false because nested shell quoting removed literal quote characters from the comparison. Direct snippet inspection showed the settings were present; a quote-agnostic structural regex then passed on all four routes.
+- The first language-link browser session stopped producing output after a navigation/wait chain. Closed the named session, opened `/en/` directly in a fresh session, and completed the English smoke check with zero errors.
