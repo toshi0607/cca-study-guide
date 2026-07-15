@@ -10,7 +10,7 @@ Replace the site-wide analytics consent prompt with normal GA4 loading and a con
 - [x] Phase 2: Inspect the consent implementation, tests, and best disclosure location
 - [x] Phase 3: Remove consent gating and add the analytics disclosure
 - [x] Phase 4: Update documentation and automated tests
-- [ ] Phase 5: Independently review, test, deploy, and verify production
+- [x] Phase 5: Independently review, test, deploy, and verify production
 
 ## Key Questions
 
@@ -36,4 +36,4 @@ Replace the site-wide analytics consent prompt with normal GA4 loading and a con
 
 ## Status
 
-**Currently in Phase 5** — Running independent review, full checks, deployment, and production verification.
+**Complete** — Consent gating is removed, immediate privacy-restricted GA4 loading and `/privacy/` disclosure are live, and production verification passed.

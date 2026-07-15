@@ -93,8 +93,18 @@ The following records describe the original consent-gated release and are retain
 - [x] Remove consent-specific UI, storage, and settings controls.
 - [x] Add a concise analytics disclosure page and persistent footer link.
 - [x] Update tests and documentation.
-- [ ] Run independent review, full verification, deployment, and production smoke checks.
+- [x] Run independent review, full verification, deployment, and production smoke checks.
 
 ### Enhancement Review
 
-- Pending implementation and verification.
+- Consent prompt, consent localStorage key, cookie cleanup, settings button, and consent event wiring were removed.
+- A valid production ID now loads GA4 immediately with analytics storage granted; ad storage, ad user data, ad personalization, Google Signals, and ad-personalization signals remain disabled.
+- `cookie_domain: 'none'` keeps analytics cookies on the current host rather than sharing them with sibling subdomains.
+- `/privacy/` explains study-data storage, analytics collection, exclusions, Google data use, Cookie behavior, and opt-out options. The app-wide footer and Progress view link to it.
+- `pnpm test`: 17/17 passed.
+- `pnpm test:e2e`: 17/17 passed, including both-route axe checks, immediate loader/config assertions, removed-consent assertions, disclosure navigation, and overflow checks at 375/768/1000/1120/1121/1440px.
+- `pnpm test:no-analytics`: passed across both generated pages.
+- `pnpm exec astro check`: 0 errors, warnings, or hints; `git diff --check`: passed.
+- Independent reviewer reported no remaining P0-P3 findings after cookie scope, server isolation, privacy-page accessibility, and responsive coverage fixes.
+- Vercel production deployment `dpl_4k8BAy7CsM7n1GqoQe3aA71pjNYK` reached READY and was aliased to `cca.toshi0607.com`.
+- Production smoke check: `/` and `/privacy/` returned HTTP 200; each contained exactly one `G-MR40SCH5M6` loader, the expected privacy restrictions and host-only cookie config, and no consent runtime remnants.

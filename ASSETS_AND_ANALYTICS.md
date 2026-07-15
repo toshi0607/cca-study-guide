@@ -25,4 +25,4 @@
 
 Recommended GA4 property settings: keep Google Signals off, do not link Google Ads, disable Enhanced Measurement if only page views are desired, and use the shortest suitable retention period.
 
-Production activation completed on 2026-07-14. The GA4 measurement ID is stored in Vercel's Production environment; the built page exposes it as expected for a public Google tag. Consent gating was removed by user choice on 2026-07-15 in favor of immediate loading plus a dedicated disclosure page.
+Production activation completed on 2026-07-14. The GA4 measurement ID is stored in Vercel's Production environment; the built page exposes it as expected for a public Google tag. Consent gating was removed by user choice on 2026-07-15 in favor of immediate loading plus a dedicated disclosure page. Production smoke checks returned HTTP 200 for `/` and `/privacy/`, found exactly one loader per page, and found no consent runtime remnants.
