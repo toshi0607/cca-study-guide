@@ -34,29 +34,30 @@ describe('self-hosted display font subsets', () => {
     expect(missing, 'run `pnpm build && pnpm fonts:subset` to regenerate the font subsets').toEqual([]);
   });
 
-  it('ships the woff2 files referenced by the manifest with their licenses', async () => {
+  it('ships content-hashed woff2 files referenced by the manifest with their licenses', async () => {
     // #given
     const manifest = JSON.parse(await readFile('public/fonts/manifest.json', 'utf8')) as {
-      fonts: { file: string; bytes: number }[];
+      fonts: { family: string; file: string; bytes: number }[];
     };
 
     // #when / #then
-    expect(manifest.fonts.length).toBeGreaterThan(0);
+    expect(manifest.fonts.map((font) => font.family).sort()).toEqual(['Barlow Condensed', 'Zen Kaku Gothic New']);
     for (const font of manifest.fonts) {
+      // Immutable cache headers (vercel.json) require content-hashed names.
+      expect(font.file).toMatch(/\.[0-9a-f]{8}\.woff2$/);
       expect((await stat(`public/fonts/${font.file}`)).size).toBe(font.bytes);
     }
     await expect(readFile('public/fonts/OFL-barlow-condensed.txt', 'utf8')).resolves.toContain('SIL OPEN FONT LICENSE');
     await expect(readFile('public/fonts/OFL-zen-kaku-gothic-new.txt', 'utf8')).resolves.toContain('SIL OPEN FONT LICENSE');
   });
 
-  it('keeps the layout free of third-party font requests', async () => {
+  it('keeps the layout free of third-party font requests and driven by the manifest', async () => {
     // #given
     const layout = await readFile('src/layouts/LocalizedLayout.astro', 'utf8');
 
     // #when / #then
     expect(layout).not.toContain('fonts.googleapis.com');
     expect(layout).not.toContain('fonts.gstatic.com');
-    expect(layout).toContain('/fonts/barlow-condensed-700.woff2');
-    expect(layout).toContain('/fonts/zen-kaku-gothic-new-900.woff2');
+    expect(layout).toContain('public/fonts/manifest.json');
   });
 });
