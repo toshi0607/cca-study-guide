@@ -46,3 +46,27 @@ SSR did not materially improve the simulated LCP, but it reduced median TBT by 4
 - Detailed commands, environment, audit trace, and intermediate controls: `tasks/performance-notes.md`.
 - Final verification: `git diff --check`; unit 18/18; Astro build with 0 errors/warnings/hints and 4 routes; no-analytics build check; Playwright E2E 39/39; named browser smoke on both locales with zero console/page errors.
 - Environment caveat: the repository declares Node 22.x, while local verification ran on Node 26.5.0 / pnpm 10.30.3 and emitted an engine warning.
+
+---
+
+# Round 2 (2026-07-16): Self-Hosted Subset Fonts
+
+## Outcome
+
+The visual redesign (887e733) had regressed mobile Lighthouse Performance from 98 to a median of 65 by adding a render-blocking Google Fonts stylesheet and 161 KB of font files. Replacing them with two committed, subset, self-hosted woff2 files (71.9 KB total) restored the median to 97: FCP 4,581 → 983 ms, LCP 5,504 → 2,602 ms, TBT 153 → 41 ms, CLS 0, transfer -148 KB. The blueprint typography is unchanged.
+
+## Implemented Design
+
+- `pnpm fonts:subset` (scripts/subset-fonts.mjs) subsets Barlow Condensed 700 and Zen Kaku Gothic New 900 to the characters the display stack can render (i18n UI strings + built HTML headings + ASCII/kana/CJK-punctuation ranges); outputs and OFL licenses are committed under `public/fonts/`.
+- `LocalizedLayout.astro` inlines the two `@font-face` rules and preloads the fonts (Japanese pages additionally preload the Japanese face); all Google Fonts references are gone.
+- `src/lib/fonts.test.ts` independently recomputes required characters from the i18n modules and fails with regeneration instructions if the manifest falls behind copy changes.
+- CI guard: `.github/workflows/perf.yml` runs 3 Lighthouse audits per PR and enforces budgets via `scripts/check-lighthouse-budget.mjs` (score ≥ 90, FCP ≤ 2 s, LCP ≤ 3 s, CLS ≤ 0.02, no external stylesheets) — the class of regression that shipped in 887e733 now fails CI.
+
+## Remaining Bottleneck
+
+Immediate gtag stays the dominant simulated-LCP contributor (unused-JS ~66 KiB) per the standing product decision; the ~310 ms LCP delta versus the font-less Round 1 build is the accepted cost of the web fonts. The plan's LCP < 2.5 s target was missed by 4% (2,602 ms); Performance ≥ 95, FCP < 1.5 s, and CLS 0 targets were met.
+
+## Evidence
+
+- Verification: unit 21/21, astro check 0 issues, no-analytics build check, Playwright E2E 39/39, both locales visually confirmed at 375px with fonts loaded and zero console errors.
+- Details, commands, and raw-metric tables: `tasks/performance-notes.md` (Round 2 section).

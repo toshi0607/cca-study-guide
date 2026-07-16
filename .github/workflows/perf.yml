@@ -1,0 +1,46 @@
+name: Performance budget
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  lighthouse:
+    runs-on: ubuntu-latest
+    env:
+      PUBLIC_GA_MEASUREMENT_ID: G-TEST123456
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm test
+      - run: pnpm build
+      - name: Serve production build
+        run: |
+          pnpm preview --host 127.0.0.1 --port 4321 &
+          for i in $(seq 1 30); do
+            curl -sf -o /dev/null http://127.0.0.1:4321/ && break
+            sleep 1
+          done
+      - name: Run Lighthouse (3 runs, mobile)
+        run: |
+          mkdir -p tmp/lighthouse-ci
+          for i in 1 2 3; do
+            npx --yes lighthouse@13 http://127.0.0.1:4321/ \
+              --quiet --only-categories=performance --output=json \
+              --output-path=tmp/lighthouse-ci/run$i.json \
+              --chrome-flags='--headless --no-sandbox'
+          done
+      - name: Check performance budget
+        run: node scripts/check-lighthouse-budget.mjs tmp/lighthouse-ci/run1.json tmp/lighthouse-ci/run2.json tmp/lighthouse-ci/run3.json
+      - name: Upload Lighthouse reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lighthouse-reports
+          path: tmp/lighthouse-ci/

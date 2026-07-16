@@ -282,3 +282,88 @@ Deploy the current localized and performance-optimized working tree to the exist
 ## Notes
 
 - Browser ペインのスクロール後スクリーンショットが空白になるため、検証は Playwright スクリプト(node_modules/.shots.mjs)で実施。
+
+---
+
+# Performance Optimization Round 2 — Webフォント退行の解消 (2026-07-16)
+
+## Baseline (今回計測)
+
+- 環境: Lighthouse 13.4.0 / Chrome headless / mobile simulated / production build + preview / GA=G-TEST123456 / Node 26.5.0 (repo宣言は22.x、before/after比較は同一ランタイムで実施)
+- `/` 3-run: Performance 62–70 (median 65); FCP ~4.6 s; LCP ~5.5 s; TBT 63–258 ms; CLS ~0; transfer 421 KB / 26 requests
+- 前回改善後 (tasks/performance-review.md): Performance 98; FCP 0.98 s; LCP 2.29 s; transfer 204 KB → **大幅退行**
+
+## Root Cause (VERIFIED)
+
+- デザイン刷新 (887e733) で追加された Google Fonts が原因:
+  - render-blocking cross-origin CSS 57 KB (Zen Kaku Gothic New の unicode-range サブセット定義が巨大)。render-blocking-insight: wasted ~1,321 ms
+  - フォント本体 16 ファイル / 161 KB (日本語サブセット多数)
+  - LCP 要素 h2#today-title (日本語見出し) は --display スタック = Zen Kaku Gothic New 適用対象
+- 二次 (既知・据え置き): gtag 144 KB (unused ~67 KB)。即時ロードは製品ポリシーとして維持済みの意思決定 (performance-notes.md)
+
+## Constraints
+
+| Constraint | Source | Verify by |
+|------------|--------|-----------|
+| blueprint デザイン (見出しの Barlow Condensed + Zen Kaku Gothic New の見た目) を維持 | 887e733 の意図 | 375px/1440px スクリーンショット比較 |
+| GA 即時ロードは変更しない | performance-notes.md 既決 | GoogleAnalytics.astro diff なし |
+| CLS = 0 を維持 | 前回計測 | Lighthouse CLS |
+| 既存テスト (vitest / build / e2e 39) を壊さない | pr.md | 全テスト成功 |
+| before/after は同一ランタイム・同一条件の 3-run median | performance-notes.md 手法 | 記録済みコマンドで再現 |
+
+## Assumptions
+
+| Assumption | Status | Evidence |
+|------------|--------|----------|
+| FCP/LCP 退行の主因は render-blocking フォント CSS | VERIFIED | render-blocking-insight wasted 1,321 ms / 57 KB; 前回計測時はフォントなしで FCP 0.98 s |
+| 静的サイトなので表示テキストはビルド時に全列挙可能 (グリフサブセット可) | VERIFIED | astro output: 'static'、コンテンツは src/content/*.ts + src/i18n/*.ts |
+| --display はヘッダー/hero/nav 見出しのみ、本文はシステムフォント | VERIFIED | global.css:20-31,109,251 |
+| セルフホスト化で preconnect 2 本 + third-party CSS 往復が消える | INFERRED | 同一オリジン配信、HTTP/2 |
+
+## Plan
+
+### Phase 1: フォント配信の最適化 (主対策)
+
+- [x] 1. ビルド時グリフサブセット生成スクリプト (scripts/subset-fonts.mjs):
+      src/content/*.ts + src/i18n/*.ts から --display 適用テキストの使用グリフを抽出し、
+      Zen Kaku Gothic New 700/900 と Barlow Condensed 600/700 を subset-font (harfbuzz) で woff2 化 → public/fonts/
+      検証: 生成物合計 < 80 KB、fc-scan/opentype で glyph 存在確認
+- [x] 2. LocalizedLayout.astro: fonts.googleapis.com の <link rel=stylesheet> と preconnect 2 本を削除、
+      @font-face (font-display: swap) をインライン <style> 化、LCP 見出し用 woff2 を <link rel=preload as=font crossorigin>
+      検証: dist/index.html に fonts.googleapis.com への参照ゼロ (grep)
+- [x] 3. フォールバック調整: size-adjust / ascent-override 付きローカルフォールバックで swap 時のリフローを抑制 (CLS 0 維持)
+      検証: Lighthouse CLS = 0
+      → 不要と判断: size-adjust なしで CLS 0.0000 (3-run 全一致)。追加調整は行わず、CLS 予算 0.02 を CI ガードに設定
+- [x] 4. 見出しテキストとサブセットの整合ガード: 新規コンテンツ追加でグリフ欠けが起きないよう、
+      subset 生成をビルド (assets:generate 相当) に組み込み + vitest でカバレッジ検証
+      検証: pnpm build 内で自動生成、テスト green
+
+### Phase 2: 小粒の残課題
+
+- [x] 5. unminified-css 監査 (Est 6 KiB): ローカル CSS が未 minify なら astro/vite 設定確認
+      検証: Lighthouse unminified-css passed
+- [x] 6. (据え置き確認のみ) gtag・App.js code splitting は前回判断を維持。post-change 計測で unused-JS 上位が変わらないことを確認
+
+### Phase 3: 再計測と回帰ガード
+
+- [x] 7. matched A/B: 同一条件 3-run median を before (現 HEAD) / after で取得し記録
+      目標: Performance ≥ 95 / FCP < 1.5 s / LCP < 2.5 s / CLS = 0 (GA 有効時)
+- [x] 8. 回帰ガード: Lighthouse CI (assertions: performance ≥ 90, render-blocking 3rd-party CSS 禁止) を CI に追加
+      理由: 887e733 は FCP 3.7 倍の退行を検知なしでマージした — 再発防止
+- [x] 9. 検証一式: vitest / astro build / no-analytics check / e2e 39 / 両ロケール目視 (デザイン非退行)
+- [x] 10. tasks/performance-notes.md と performance-review.md に Round 2 の結果を追記
+
+## Fallback
+
+- Phase 1 で目標未達、またはグリフサブセットの保守コストが過大な場合:
+  代替案 B = 日本語 display フォントを廃止しシステムフォント (BIZ UDPGothic 系) へ、Barlow Condensed (latin ~15 KB) のみセルフホスト。
+  デザイン変更を伴うためユーザー承認必須。
+
+## Notes
+
+- 計測生データ: scratchpad/lh/run{1,2,3}.json (before) と lh-after/run{1,2,3}.json (after)。再現コマンドは performance-notes.md の手順に --only-categories=performance を追加したもの。
+- 逸脱 1 (項目 1/4): subset 生成は「ビルド組み込み」ではなく assets:generate と同じ「手動スクリプト + 生成物コミット + vitest ガード」方式に変更。理由: 生成はソース TTF のダウンロードを伴い、ビルド組み込みだと CI/デプロイごとにネットワーク依存が生じる。整合性は fonts.test.ts が i18n ソースから必要文字を独立再計算して担保。
+- 逸脱 2 (項目 1): 当初の抽出源 dist HTML だけでは hydration 後にのみ描画される guide/practice/progress 見出しの 7 文字(学・習・練・進・捗・資・料)が漏れ、ガードテストが検出。抽出源に src/i18n/ui.ts の全文字列リテラルを加えて解消 (subset 609 文字、Zen Kaku 900 = 54,972 B / Barlow 700 = 16,920 B、合計 71.9 KB < 80 KB)。
+- 逸脱 3: 未使用ウェイト Barlow Condensed 600 / Zen Kaku Gothic New 700 は自前ホストに含めない。--display 使用箇所は .wordmark b (700, latin "CCA") と .today-hero/.page-header h2 (900) のみで、600/700(JA) に解決される要素は存在しない (global.css:108-112, 249-257)。
+- 結果 (項目 7): before 65 / FCP 4,581 / LCP 5,504 → after 97 / FCP 983 / LCP 2,602 / TBT 41 / CLS 0.0000 (3-run median、GA 有効)。en ルートは 98 / LCP 2,455。目標のうち LCP < 2.5 s のみ 4% 超過 (2,602 ms) — 残余は既決の即時 gtag (unused 66 KiB) とフォント転送自体で、フォント導入前の 2,292 ms に対する +310 ms がデザイン維持の実コスト。CI 予算は変動マージンを見て LCP 3,000 ms / score 90 に設定。
+- unminified-css 警告 (項目 5) の実体は Google Fonts CSS だったため、セルフホスト化で消滅。ローカル CSS は minify 済みで設定変更不要。
