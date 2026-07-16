@@ -245,3 +245,40 @@ Deploy the current localized and performance-optimized working tree to the exist
 
 - The first automated analytics-restriction boolean check returned false because nested shell quoting removed literal quote characters from the comparison. Direct snippet inspection showed the settings were present; a quote-agnostic structural regex then passed on all four routes.
 - The first language-link browser session stopped producing output after a navigation/wait chain. Closed the named session, opened `/en/` directly in a fresh session, and completed the English smoke check with zero errors.
+
+---
+
+# Design Refinement — 2026-07-16 (frontend-design)
+
+## Constraints
+
+| Constraint | Source | Verify by |
+|------------|--------|-----------|
+| 色味(紺+シアン+アンバーのパレット)は大体維持 | user msg | global.css の hue 変更なし(用法のみ変更) |
+| web/モバイル両対応、モバイル優先で磨く | user answers | 375px/1440px スクリーンショット比較 |
+| 世界観(blueprint/field notes)を強める方向 | user answers | 目視レビュー |
+| Webフォント導入OK(見出しのみサブセット) | user answers | Google Fonts link + font-display: swap |
+| ロジック変更なし(スタイル+head のみ) | fidelity | App.tsx のロジック diff なし |
+| 既存テスト(vitest/build/axe e2e)を壊さない | pr.md | pnpm test / pnpm build 成功 |
+
+## Assumptions
+
+| Assumption | Status | Evidence |
+|------------|--------|----------|
+| 違和感の源 = JA見出しタイポ/余白むら/箱のフラットさ/色の分散 | VERIFIED | ユーザー回答(4候補すべて該当) |
+| クラス名は据え置きで CSS 書き換えのみで到達可能 | VERIFIED | App.tsx 構造確認済み |
+| e2e は markup semantics に依存(role/aria) | VERIFIED | pnpm test:e2e 39 passed(markup 変更なしで全通過) |
+
+## Plan
+
+- [x] 1. Webフォント導入(LocalizedLayout.astro): Barlow Condensed 600/700 + Zen Kaku Gothic New 700/900、preconnect + swap
+- [x] 2. タイポ再設計: display スタック差し替え、JA 見出しの負字間廃止 + palt、line-height 1.16、hero/page-header のサイズ再調整、word-break: auto-phrase
+- [x] 3. 階層の再設計: --shadow をハードオフセット影へ再定義、hero/page-header/due-block へ 2px 枠 + --shadow-strong
+- [x] 4. blueprint ノード: タイトルを % より優先(1.6rem cyan 注記化)、CSS order で「タイトル→進捗帯」、モバイル 1 カラム
+- [x] 5. 色の規律: D チップを ink 帯に統一、rating ボタンへ意味色の 3px 下線(color-mix)、--focus 変数化
+- [x] 6. モバイル磨き: hero clamp(1.9-2.6rem)、bottom-nav アクティブ上線、safe-area-inset-bottom、blueprint 1 カラム
+- [x] 7. 検証: vitest 18 passed / astro build 4 pages / playwright e2e 39 passed(axe + 6 breakpoints × ja/en 横はみ出しなし)、375/1440 スクリーンショット目視確認済み
+
+## Notes
+
+- Browser ペインのスクロール後スクリーンショットが空白になるため、検証は Playwright スクリプト(node_modules/.shots.mjs)で実施。
