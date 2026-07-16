@@ -1,3 +1,4 @@
+import { readFile } from 'node:fs/promises';
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
 
@@ -100,13 +101,14 @@ for (const route of [
 }
 
 test('publishes canonical social metadata and public icon assets', async ({ page }) => {
+  const assetsManifest = JSON.parse(await readFile('public/assets-manifest.json', 'utf8')) as { ogp: { file: string } };
   await expect(page.locator('link[rel="canonical"]')).toHaveAttribute('href', 'https://cca.toshi0607.com/');
-  await expect(page.locator('meta[property="og:image"]')).toHaveAttribute('content', 'https://cca.toshi0607.com/ogp.png');
+  await expect(page.locator('meta[property="og:image"]')).toHaveAttribute('content', `https://cca.toshi0607.com/${assetsManifest.ogp.file}`);
   await expect(page.locator('meta[property="og:image:width"]')).toHaveAttribute('content', '1200');
   await expect(page.locator('meta[property="og:image:height"]')).toHaveAttribute('content', '630');
   await expect(page.locator('meta[name="twitter:card"]')).toHaveAttribute('content', 'summary_large_image');
 
-  for (const asset of ['/ogp.png', '/favicon.svg', '/favicon.ico', '/apple-touch-icon.png']) {
+  for (const asset of [`/${assetsManifest.ogp.file}`, '/ogp.png', '/favicon.svg', '/favicon.ico', '/apple-touch-icon.png']) {
     const response = await page.request.get(asset);
     expect(response.ok(), asset).toBe(true);
   }
