@@ -256,7 +256,8 @@ main {
   word-break: auto-phrase;
 }
 
-.today-hero h2 { max-width: 740px; font-size: clamp(2.1rem, 4.8vw, 4.5rem); }
+.today-hero > div:first-child { container-type: inline-size; }
+.today-hero h2 { max-width: 740px; font-size: clamp(1.7rem, 4.2vw, 4.5rem); font-size: clamp(1.7rem, 11cqi, 4.5rem); }
 .today-hero h2 em { color: var(--cyan); font-style: normal; }
 .today-hero > div:first-child > p:last-child { max-width: 590px; margin: 18px 0 0; color: var(--ink-soft); }
 
@@ -549,7 +550,6 @@ main {
   :root { --rail: 204px; }
   .rail { padding-inline: 21px; }
   main { padding-inline: 28px; }
-  .today-hero { grid-template-columns: 1fr 210px; gap: 28px; }
   .filter-panel { grid-template-columns: 1fr 1fr; }
   .search-label { grid-column: 1 / -1; }
   .card-stack { grid-template-columns: 1fr; }
@@ -557,6 +557,8 @@ main {
 }
 
 @media (max-width: 1120px) {
+  .today-hero { grid-template-columns: 1fr; gap: 26px; }
+  .today-hero h2 { font-size: clamp(1.7rem, 11cqi, 3.2rem); }
   .blueprint-map {
     min-height: 0;
     grid-template-columns: repeat(2, minmax(0, 1fr));
