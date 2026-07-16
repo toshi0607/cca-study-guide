@@ -30,21 +30,21 @@
   <rect x="178" y="352" width="284" height="45" rx="2" fill="#173447"/>
   <text x="199" y="382" fill="#fff" font-family="SFMono-Regular, Menlo, Consolas, monospace" font-size="18" font-weight="700" letter-spacing="2">FOUNDATIONS · CCAR-F</text>
 
-  <text x="178" y="446" fill="#173447" font-family="SFMono-Regular, Menlo, Consolas, monospace" font-size="19" font-weight="700" letter-spacing="1.1">UNOFFICIAL STUDY GUIDE · RETRIEVAL PRACTICE</text>
+  <text x="178" y="446" fill="#173447" font-family="SFMono-Regular, Menlo, Consolas, monospace" font-size="18" font-weight="700" letter-spacing="1">UNOFFICIAL STUDY GUIDE · RETRIEVAL PRACTICE</text>
   <text x="178" y="488" fill="#4c6574" font-family="SFMono-Regular, Menlo, Consolas, monospace" font-size="16" letter-spacing="1.8">5 DOMAINS · 30 OBJECTIVES · 16 CARDS</text>
   <text x="178" y="526" fill="#a85b18" font-family="SFMono-Regular, Menlo, Consolas, monospace" font-size="13" font-weight="700" letter-spacing="1.5">UNOFFICIAL · NOT AFFILIATED WITH ANTHROPIC</text>
 
   <g transform="translate(757 196)">
     <text x="0" y="0" fill="#087e9b" font-family="SFMono-Regular, Menlo, Consolas, monospace" font-size="15" font-weight="700" letter-spacing="2">EXAM BLUEPRINT / COVERAGE</text>
-    <path d="M42 104H137L200 177H290L348 91M137 104H348" fill="none" stroke="#87b9c6" stroke-width="3"/>
+    <path d="M33 104H115L158 175H228L254 88M115 104H254" fill="none" stroke="#87b9c6" stroke-width="3"/>
     <g font-family="SFMono-Regular, Menlo, Consolas, monospace" text-anchor="middle">
-      <g transform="translate(42 104)"><circle r="36" fill="#173447"/><circle r="28" fill="none" stroke="#70c1d3" stroke-width="2"/><text y="-3" fill="#fff" font-size="14">D1</text><text y="17" fill="#70c1d3" font-size="16" font-weight="700">27%</text></g>
-      <g transform="translate(137 104)"><circle r="33" fill="#fff" stroke="#173447" stroke-width="3"/><text y="-3" fill="#173447" font-size="14">D2</text><text y="17" fill="#087e9b" font-size="16" font-weight="700">18%</text></g>
-      <g transform="translate(200 177)"><circle r="34" fill="#173447"/><circle r="26" fill="none" stroke="#70c1d3" stroke-width="2"/><text y="-3" fill="#fff" font-size="14">D3</text><text y="17" fill="#70c1d3" font-size="16" font-weight="700">20%</text></g>
-      <g transform="translate(290 177)"><circle r="34" fill="#fff" stroke="#173447" stroke-width="3"/><text y="-3" fill="#173447" font-size="14">D4</text><text y="17" fill="#087e9b" font-size="16" font-weight="700">20%</text></g>
-      <g transform="translate(348 91)"><circle r="32" fill="#173447"/><circle r="24" fill="none" stroke="#70c1d3" stroke-width="2"/><text y="-3" fill="#fff" font-size="14">D5</text><text y="17" fill="#70c1d3" font-size="16" font-weight="700">15%</text></g>
+      <g transform="translate(33 104)"><circle r="32" fill="#173447"/><circle r="25" fill="none" stroke="#70c1d3" stroke-width="2"/><text y="-3" fill="#fff" font-size="14">D1</text><text y="16" fill="#70c1d3" font-size="15" font-weight="700">27%</text></g>
+      <g transform="translate(115 104)"><circle r="30" fill="#fff" stroke="#173447" stroke-width="3"/><text y="-3" fill="#173447" font-size="14">D2</text><text y="16" fill="#087e9b" font-size="15" font-weight="700">18%</text></g>
+      <g transform="translate(158 175)"><circle r="30" fill="#173447"/><circle r="23" fill="none" stroke="#70c1d3" stroke-width="2"/><text y="-3" fill="#fff" font-size="14">D3</text><text y="16" fill="#70c1d3" font-size="15" font-weight="700">20%</text></g>
+      <g transform="translate(228 175)"><circle r="30" fill="#fff" stroke="#173447" stroke-width="3"/><text y="-3" fill="#173447" font-size="14">D4</text><text y="16" fill="#087e9b" font-size="15" font-weight="700">20%</text></g>
+      <g transform="translate(254 88)"><circle r="29" fill="#173447"/><circle r="23" fill="none" stroke="#70c1d3" stroke-width="2"/><text y="-3" fill="#fff" font-size="14">D5</text><text y="16" fill="#70c1d3" font-size="15" font-weight="700">15%</text></g>
     </g>
-    <rect x="0" y="252" width="390" height="2" fill="#d7e4ea"/>
-    <text x="0" y="292" fill="#4c6574" font-family="SFMono-Regular, Menlo, Consolas, monospace" font-size="14" letter-spacing="1.4">THINK → REVEAL → RATE → REVISIT</text>
+    <rect x="0" y="252" width="283" height="2" fill="#d7e4ea"/>
+    <text x="0" y="292" fill="#4c6574" font-family="SFMono-Regular, Menlo, Consolas, monospace" font-size="13" letter-spacing="1.2">THINK → REVEAL → RATE → REVISIT</text>
   </g>
 </svg>
