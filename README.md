@@ -24,6 +24,17 @@ pnpm build
 
 Astroの静的ビルドを使用します。サーバー、APIキー、データベースは不要です。
 
+### Webフォント
+
+見出し用フォント（Barlow Condensed / Zen Kaku Gothic New）は、使用文字だけにサブセットしたwoff2を`public/fonts/`にコミットしてセルフホストしています。見出しやUI文言を変更してサブセットに文字が足りなくなると`pnpm test`が失敗するので、その場合は次で再生成してください。
+
+```sh
+pnpm build
+pnpm fonts:subset
+```
+
+ファイル名には内容ハッシュが含まれ、参照は`public/fonts/manifest.json`経由で自動追従します。生成物のwoff2とmanifestはコミットしてください。
+
 ## Google Analytics
 
 GA4のWebデータストリームに表示される測定IDを、Production環境のみに設定します。未設定ならGoogleタグとアクセス解析の表示は出力されません。不正な形式はビルドエラーになります。

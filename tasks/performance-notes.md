@@ -104,3 +104,9 @@
 - Unit 21/21 (includes 3 new font-guard tests); `astro check` 0 errors/warnings/hints; 4 routes built; `pnpm test:no-analytics` passed; Playwright E2E 39/39.
 - `dist/**/index.html` contains zero `fonts.googleapis.com` / `fonts.gstatic.com` references (grep).
 - Playwright font check at 375px: ja loads Barlow Condensed 700 + Zen Kaku Gothic New 900, en loads Barlow only (no Japanese display glyphs); zero console/page errors; screenshots visually match the blueprint design.
+
+## Follow-ups
+
+- PR #6: the budget script's external-stylesheet guard compared against a hardcoded `http://127.0.0.1` and misflagged the site's own CSS when auditing the production origin; it now compares each stylesheet's origin with the audited page's origin. Verified against local, production, and regressed-baseline reports.
+- PR #7: `public/fonts/*.woff2` was served with `max-age=0, must-revalidate` (Vercel default), costing repeat visits a revalidation round-trip per font. Filenames now embed an 8-char sha256 content hash, the layout reads them from `public/fonts/manifest.json`, and `vercel.json` serves `/fonts/*.woff2` with `public, max-age=31536000, immutable`. Regeneration mints new URLs, so a stale cache is impossible. Production verified: both fonts return the immutable header, HTML references only hashed URLs, old URLs 404.
+- Production Lighthouse after deploy (`https://cca.toshi0607.com/`, mobile, 3-run median): Performance 96; FCP 1,012 ms; LCP 2,689 ms; CLS 0 — all budgets met.
