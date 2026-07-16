@@ -1,4 +1,5 @@
-import { mkdir, readFile, writeFile, access } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
+import { mkdir, readFile, readdir, rm, writeFile, access } from 'node:fs/promises';
 import { join } from 'node:path';
 import subsetFont from 'subset-font';
 
@@ -18,7 +19,7 @@ const SOURCES = [
     weight: 700,
     url: 'https://raw.githubusercontent.com/google/fonts/main/ofl/barlowcondensed/BarlowCondensed-Bold.ttf',
     license: 'https://raw.githubusercontent.com/google/fonts/main/ofl/barlowcondensed/OFL.txt',
-    output: 'barlow-condensed-700.woff2',
+    outputBase: 'barlow-condensed-700',
     licenseOutput: 'OFL-barlow-condensed.txt',
   },
   {
@@ -26,7 +27,7 @@ const SOURCES = [
     weight: 900,
     url: 'https://raw.githubusercontent.com/google/fonts/main/ofl/zenkakugothicnew/ZenKakuGothicNew-Black.ttf',
     license: 'https://raw.githubusercontent.com/google/fonts/main/ofl/zenkakugothicnew/OFL.txt',
-    output: 'zen-kaku-gothic-new-900.woff2',
+    outputBase: 'zen-kaku-gothic-new-900',
     licenseOutput: 'OFL-zen-kaku-gothic-new.txt',
   },
 ];
@@ -107,15 +108,23 @@ const uiText = await collectUiStrings();
 const subsetText = [...new Set(baseChars + displayText + uiText)].sort().join('');
 
 await mkdir('public/fonts', { recursive: true });
+// Filenames carry a content hash so the files can be served with immutable
+// cache headers (vercel.json); regeneration produces new URLs, never a stale
+// cache. Remove previous outputs so old hashes do not accumulate.
+for (const stale of await readdir('public/fonts')) {
+  if (stale.endsWith('.woff2')) await rm(join('public/fonts', stale));
+}
 const manifest = { generatedBy: 'scripts/subset-fonts.mjs', characters: subsetText, fonts: [] };
 
 for (const source of SOURCES) {
   const [ttf, license] = await Promise.all([fetchBinary(source.url), fetchBinary(source.license)]);
   const woff2 = await subsetFont(ttf, subsetText, { targetFormat: 'woff2' });
-  await writeFile(join('public/fonts', source.output), woff2);
+  const hash = createHash('sha256').update(woff2).digest('hex').slice(0, 8);
+  const output = `${source.outputBase}.${hash}.woff2`;
+  await writeFile(join('public/fonts', output), woff2);
   await writeFile(join('public/fonts', source.licenseOutput), license);
-  manifest.fonts.push({ family: source.family, weight: source.weight, file: source.output, bytes: woff2.length });
-  console.log(`${source.output}: ${woff2.length} bytes (${source.family} ${source.weight})`);
+  manifest.fonts.push({ family: source.family, weight: source.weight, file: output, bytes: woff2.length });
+  console.log(`${output}: ${woff2.length} bytes (${source.family} ${source.weight})`);
 }
 
 await writeFile('public/fonts/manifest.json', `${JSON.stringify(manifest, null, 2)}\n`);
