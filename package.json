@@ -11,7 +11,8 @@
     "test": "vitest run",
     "test:no-analytics": "PUBLIC_GA_MEASUREMENT_ID= astro build && node scripts/check-no-analytics.mjs",
     "test:e2e": "playwright test",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "fonts:subset": "node scripts/subset-fonts.mjs"
   },
   "dependencies": {
     "@astrojs/preact": "^4.1.0",
@@ -25,6 +26,7 @@
     "@playwright/test": "^1.61.1",
     "png-to-ico": "^3.0.2",
     "sharp": "^0.35.3",
+    "subset-font": "^2.5.0",
     "typescript": "^5.8.3",
     "vitest": "^3.2.4"
   },
