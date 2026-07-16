@@ -38,9 +38,11 @@ for (const [audit, budget] of Object.entries(BUDGETS)) {
   if (value > limit) failures.push(`${audit} ${Math.round(value)} > ${limit}`);
 }
 
-const externalBlocking = reports
-  .flatMap((r) => r.audits['network-requests'].details.items)
-  .filter((item) => item.resourceType === 'Stylesheet' && !item.url.startsWith('http://127.0.0.1'));
+const externalBlocking = reports.flatMap((r) => {
+  const pageOrigin = new URL(r.finalDisplayedUrl ?? r.requestedUrl).origin;
+  return r.audits['network-requests'].details.items
+    .filter((item) => item.resourceType === 'Stylesheet' && new URL(item.url).origin !== pageOrigin);
+});
 if (externalBlocking.length > 0) {
   failures.push(`external stylesheets detected: ${[...new Set(externalBlocking.map((i) => i.url))].join(', ')}`);
 }
