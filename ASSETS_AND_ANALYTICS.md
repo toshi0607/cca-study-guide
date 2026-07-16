@@ -3,7 +3,7 @@
 ## Social preview
 
 - Source: `assets/ogp.svg`
-- Output: `public/ogp.png` (1200×630)
+- Outputs: `public/ogp.<hash>.png` (1200×630; the canonical `og:image` URL — the content hash busts social-media image caches such as Slack's) and `public/ogp.png` (stable-path copy for previously shared pages). The mapping lives in `public/assets-manifest.json`.
 - Canonical origin: `https://cca.toshi0607.com`
 - Design: the existing drafting-paper grid, CCA Field Notes wordmark, five-domain blueprint, and explicit unofficial/non-affiliation label. No third-party logo is used.
 

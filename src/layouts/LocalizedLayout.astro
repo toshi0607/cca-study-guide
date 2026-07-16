@@ -3,6 +3,7 @@ import GoogleAnalytics from '../components/GoogleAnalytics.astro';
 import { localePaths, type Locale } from '../i18n/locales';
 import { siteCopy, type SitePage } from '../i18n/site';
 import fontManifest from '../../public/fonts/manifest.json';
+import assetsManifest from '../../public/assets-manifest.json';
 import '../styles/global.css';
 
 interface Props {
@@ -18,7 +19,7 @@ const site = Astro.site ?? new URL('https://cca.toshi0607.com');
 const canonicalUrl = new URL(localePaths[locale][page], site);
 const japaneseUrl = new URL(localePaths.ja[page], site);
 const englishUrl = new URL(localePaths.en[page], site);
-const socialImageUrl = new URL('/ogp.png', site);
+const socialImageUrl = new URL(`/${assetsManifest.ogp.file}`, site);
 
 const fontByFamily = (family: string) => {
   const font = fontManifest.fonts.find((candidate) => candidate.family === family);
