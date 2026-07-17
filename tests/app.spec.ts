@@ -137,6 +137,32 @@ test('runs a domain-scoped quiz round with immediate feedback, a summary, and pe
   expect(axe.violations).toEqual([]);
 });
 
+test('surfaces a struggling card in the weak filter and navigates from the today weak areas', async ({ page }) => {
+  await expect(page.getByText('記録はまだありません。')).toBeVisible();
+
+  await page.getByRole('button', { name: '練習' }).first().click();
+  await page.locator('.reveal-button').first().click();
+  await page.getByRole('button', { name: /もう一度/ }).first().click();
+
+  const weakChip = page.getByRole('button', { name: '苦手', exact: true });
+  await weakChip.click();
+  await expect(weakChip).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('.practice-card')).toHaveCount(1);
+
+  await page.getByRole('button', { name: '今日' }).first().click();
+  await expect(page.getByRole('heading', { name: '苦手エリア' })).toBeVisible();
+  await expect(page.getByText('記録はまだありません。')).toHaveCount(0);
+  const weakRow = page.locator('.weak-row');
+  await expect(weakRow).toHaveCount(1);
+  await expect(weakRow).toContainText('1枚');
+
+  await weakRow.press('Enter');
+  await expect(page.getByRole('heading', { name: '練習カード' })).toBeVisible();
+  await expect(page.getByRole('button', { name: '苦手', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.getByRole('button', { name: 'D1', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('.practice-card')).toHaveCount(1);
+});
+
 test('switches between complete localized routes and searches active-locale content', async ({ page }) => {
   await page.goto('/en/');
   await expect(page.locator('html')).toHaveAttribute('lang', 'en');

@@ -4,7 +4,7 @@ import type { Locale } from './locales';
 type View = 'today' | 'guide' | 'practice' | 'quiz' | 'progress';
 type CardKind = 'recall' | 'contrast' | 'scenario';
 type QuestionFormat = 'single' | 'multiple';
-type ReviewFilter = 'due' | 'all' | 'unseen' | 'reviewed';
+type ReviewFilter = 'due' | 'all' | 'unseen' | 'reviewed' | 'weak';
 
 export type UiCopy = {
   brand: {
@@ -48,6 +48,16 @@ export type UiCopy = {
     title: string;
     progressNote: string;
     started: (percent: number) => string;
+  };
+  weakAreas: {
+    eyebrow: string;
+    title: string;
+    note: string;
+    cardCount: (count: number) => string;
+    emptyBeforeStartTitle: string;
+    emptyBeforeStartDescription: string;
+    emptyAllClearTitle: string;
+    emptyAllClearDescription: string;
   };
   status: {
     eyebrow: string;
@@ -144,6 +154,7 @@ export type UiCopy = {
     details: string;
     exportJson: string;
     reset: string;
+    weakCount: (count: number) => string;
     sourcesEyebrow: string;
     sourcesTitle: string;
     sourcesDescription: string;
@@ -206,6 +217,16 @@ export const ui = {
       progressNote: 'ノード内の帯はカード着手率',
       started: (percent) => `${percent}% 着手`,
     },
+    weakAreas: {
+      eyebrow: 'WEAK AREAS',
+      title: '苦手エリア',
+      note: '「もう一度」「難しい」評価や、つまずき2回以上のカードを集計',
+      cardCount: (count) => `${count}枚`,
+      emptyBeforeStartTitle: '記録はまだありません。',
+      emptyBeforeStartDescription: '練習でカードを評価すると、つまずいた領域がここに表示されます。',
+      emptyAllClearTitle: '苦手なカードはありません。',
+      emptyAllClearDescription: 'この調子で復習を続けましょう。',
+    },
     status: {
       eyebrow: 'LOCAL PROGRESS',
       title: 'この端末の進捗',
@@ -232,7 +253,7 @@ export const ui = {
       searchPlaceholder: '例：MCP、スキーマ、フック',
       stateLegend: '状態',
       domainLegend: '領域',
-      filters: { due: '復習対象', all: 'すべて', unseen: '未着手', reviewed: '着手済み' },
+      filters: { due: '復習対象', all: 'すべて', unseen: '未着手', reviewed: '着手済み', weak: '苦手' },
       allDomains: 'すべて',
       resultCount: (count) => `${count}枚を表示`,
       kinds: { recall: '想起', contrast: '比較', scenario: '場面' },
@@ -301,6 +322,7 @@ export const ui = {
       details: '詳細を見る',
       exportJson: '進捗をJSONで書き出す',
       reset: 'この端末の進捗を削除',
+      weakCount: (count) => `苦手 ${count}`,
       sourcesEyebrow: 'SOURCE REGISTER',
       sourcesTitle: '公式資料',
       sourcesDescription: '説明は公開資料の要約です。仕様変更に備え、学習時はリンク先の最新版も確認してください。',
@@ -356,6 +378,16 @@ export const ui = {
       progressNote: 'The band in each node shows cards started',
       started: (percent) => `${percent}% started`,
     },
+    weakAreas: {
+      eyebrow: 'WEAK AREAS',
+      title: 'Struggling areas',
+      note: 'Counts cards rated Again or Hard, or lapsed twice or more',
+      cardCount: (count) => `${count} ${count === 1 ? 'card' : 'cards'}`,
+      emptyBeforeStartTitle: 'Nothing recorded yet.',
+      emptyBeforeStartDescription: 'Rate cards in practice and the domains you struggle with will appear here.',
+      emptyAllClearTitle: 'No struggling cards.',
+      emptyAllClearDescription: 'Nice work — keep reviewing at this pace.',
+    },
     status: {
       eyebrow: 'LOCAL PROGRESS',
       title: 'Progress on this device',
@@ -382,7 +414,7 @@ export const ui = {
       searchPlaceholder: 'Try: MCP, schema, hooks',
       stateLegend: 'Status',
       domainLegend: 'Domain',
-      filters: { due: 'Due', all: 'All', unseen: 'Not started', reviewed: 'Started' },
+      filters: { due: 'Due', all: 'All', unseen: 'Not started', reviewed: 'Started', weak: 'Struggling' },
       allDomains: 'All',
       resultCount: (count) => `Showing ${count} ${count === 1 ? 'card' : 'cards'}`,
       kinds: { recall: 'Recall', contrast: 'Contrast', scenario: 'Scenario' },
@@ -451,6 +483,7 @@ export const ui = {
       details: 'View details',
       exportJson: 'Export progress as JSON',
       reset: 'Delete progress on this device',
+      weakCount: (count) => `${count} struggling`,
       sourcesEyebrow: 'SOURCE REGISTER',
       sourcesTitle: 'Official sources',
       sourcesDescription: 'Explanations summarize public sources. Check the latest linked documentation as you study in case specifications have changed.',
