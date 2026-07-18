@@ -30,6 +30,9 @@ export type UiCopy = {
     ratingHard: string;
     ratingGood: string;
     exported: string;
+    importConfirm: (count: number, exportedAt: string | null) => string;
+    importInvalid: string;
+    importDone: string;
     resetConfirm: string;
     resetFailed: string;
     resetDone: string;
@@ -184,6 +187,7 @@ export type UiCopy = {
     analyticsDisclosure: string;
     details: string;
     exportJson: string;
+    importJson: string;
     reset: string;
     weakCount: (count: number) => string;
     sourcesEyebrow: string;
@@ -229,6 +233,9 @@ export const ui = {
       ratingHard: '明日もう一度確認します。',
       ratingGood: 'できた：次の復習日を更新しました。',
       exported: '進捗をJSONで書き出しました。',
+      importConfirm: (count, exportedAt) => `${exportedAt ? `${exportedAt}に書き出した進捗` : '読み込んだ進捗'}（復習済みカード${count}枚）で、この端末の現在の進捗を上書きします。よろしいですか？`,
+      importInvalid: '進捗データとして読み込めませんでした。このアプリで書き出したJSONファイルを選択してください。',
+      importDone: 'JSONから進捗を読み込みました。',
       resetConfirm: 'この端末の学習進捗をすべて削除します。元に戻せません。',
       resetFailed: '進捗を削除できませんでした。ブラウザのサイトデータ設定を確認してください。',
       resetDone: 'この端末の進捗を削除しました。',
@@ -383,6 +390,7 @@ export const ui = {
       analyticsDisclosure: 'Google Analyticsで基本的なページ閲覧情報を収集します。学習カード、検索語、評価、進捗データは独自イベントとして送信しません。',
       details: '詳細を見る',
       exportJson: '進捗をJSONで書き出す',
+      importJson: '進捗をJSONから読み込む',
       reset: 'この端末の進捗を削除',
       weakCount: (count) => `苦手 ${count}`,
       sourcesEyebrow: 'SOURCE REGISTER',
@@ -421,6 +429,9 @@ export const ui = {
       ratingHard: 'This card will appear again tomorrow.',
       ratingGood: 'Got it: the next review date has been updated.',
       exported: 'Your progress was exported as JSON.',
+      importConfirm: (count, exportedAt) => `Overwrite the progress on this device with ${exportedAt ? `the progress exported on ${exportedAt}` : 'the imported progress'} (${count} reviewed ${count === 1 ? 'card' : 'cards'})?`,
+      importInvalid: 'The file could not be read as progress data. Choose a JSON file exported from this app.',
+      importDone: 'Progress was imported from JSON.',
       resetConfirm: 'Delete all study progress on this device? This cannot be undone.',
       resetFailed: 'Your progress could not be deleted. Check this browser’s site-data settings.',
       resetDone: 'Progress on this device was deleted.',
@@ -575,6 +586,7 @@ export const ui = {
       analyticsDisclosure: 'Google Analytics collects basic page-view information. Study cards, search terms, ratings, and progress are not sent as custom events.',
       details: 'View details',
       exportJson: 'Export progress as JSON',
+      importJson: 'Import progress from JSON',
       reset: 'Delete progress on this device',
       weakCount: (count) => `${count} struggling`,
       sourcesEyebrow: 'SOURCE REGISTER',
