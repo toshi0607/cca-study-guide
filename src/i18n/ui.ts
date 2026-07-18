@@ -1,8 +1,9 @@
 import type { LocalizedText } from '../content/types';
 import type { Locale } from './locales';
 
-type View = 'today' | 'guide' | 'practice' | 'progress';
+type View = 'today' | 'guide' | 'practice' | 'quiz' | 'progress';
 type CardKind = 'recall' | 'contrast' | 'scenario';
+type QuestionFormat = 'single' | 'multiple';
 type ReviewFilter = 'due' | 'all' | 'unseen' | 'reviewed';
 
 export type UiCopy = {
@@ -96,6 +97,42 @@ export type UiCopy = {
     emptyTitle: string;
     emptyDescription: string;
   };
+  quiz: {
+    eyebrow: string;
+    title: string;
+    introduction: string;
+    countLegend: string;
+    count10: string;
+    count20: string;
+    countAll: string;
+    domainLegend: string;
+    weightedDomains: string;
+    start: string;
+    progressLabel: (current: number, total: number) => string;
+    formats: Record<QuestionFormat, string>;
+    singleHint: string;
+    multipleHint: string;
+    choicesLegend: string;
+    submitAnswer: string;
+    resultCorrect: string;
+    resultIncorrect: string;
+    correctAnswerLabel: string;
+    correctBadge: string;
+    selectedBadge: string;
+    officialSources: string;
+    verified: (date: string) => string;
+    next: string;
+    showResults: string;
+    quit: string;
+    summaryEyebrow: string;
+    summaryTitle: string;
+    accuracy: string;
+    scoreLine: (correct: number, total: number) => string;
+    byDomain: string;
+    wrongTitle: string;
+    noWrong: string;
+    retry: string;
+  };
   progress: {
     eyebrow: string;
     title: string;
@@ -142,7 +179,7 @@ export const ui = {
       opensNewTab: '（新しいタブで開く）',
     },
     languageNames: { ja: '日本語', en: 'English' },
-    views: { today: '今日', guide: 'ガイド', practice: '練習', progress: '進捗' },
+    views: { today: '今日', guide: 'ガイド', practice: '練習', quiz: '演習', progress: '進捗' },
     pageTitle: 'CCA Field Notes — Claude Certified Architect非公式学習ガイド',
     notices: {
       saveFailed: '進捗を保存できませんでした。ブラウザのサイトデータ設定または空き容量を確認してください。',
@@ -217,6 +254,42 @@ export const ui = {
       emptyTitle: '該当するカードはありません。',
       emptyDescription: '検索語またはフィルターを変えてください。',
     },
+    quiz: {
+      eyebrow: 'INDEPENDENT CHOICE PRACTICE',
+      title: '選択式演習',
+      introduction: '本試験の再現ではありません。独自作成の選択問題で、単一選択・複数選択の解答形式に慣れるための演習です。',
+      countLegend: '出題数',
+      count10: '10問',
+      count20: '20問',
+      countAll: '全問',
+      domainLegend: '領域',
+      weightedDomains: '全領域（重み加重）',
+      start: '演習を始める',
+      progressLabel: (current, total) => `第${current}問 / 全${total}問`,
+      formats: { single: '単一選択', multiple: '複数選択' },
+      singleHint: '正しい選択肢を1つ選んでください。選ぶと同時に回答になります。',
+      multipleHint: '複数選択：当てはまる選択肢をすべて選び、「回答する」を押してください。',
+      choicesLegend: '選択肢',
+      submitAnswer: '回答する',
+      resultCorrect: '正解！',
+      resultIncorrect: '不正解',
+      correctAnswerLabel: '正解：',
+      correctBadge: '正解',
+      selectedBadge: '選択',
+      officialSources: '公式資料',
+      verified: (date) => `最終確認 ${date}`,
+      next: '次の問題へ',
+      showResults: '結果を見る',
+      quit: '設定に戻る',
+      summaryEyebrow: 'QUIZ RESULT',
+      summaryTitle: '演習結果',
+      accuracy: '正答率',
+      scoreLine: (correct, total) => `${total}問中${correct}問正解`,
+      byDomain: '領域別の内訳',
+      wrongTitle: '間違えた問題',
+      noWrong: '全問正解でした。',
+      retry: 'もう一度演習する',
+    },
     progress: {
       eyebrow: 'STUDY DATA: LOCAL ONLY',
       title: '進捗と資料',
@@ -256,7 +329,7 @@ export const ui = {
       opensNewTab: ' (opens in a new tab)',
     },
     languageNames: { ja: '日本語', en: 'English' },
-    views: { today: 'Today', guide: 'Guide', practice: 'Practice', progress: 'Progress' },
+    views: { today: 'Today', guide: 'Guide', practice: 'Practice', quiz: 'Quiz', progress: 'Progress' },
     pageTitle: 'CCA Field Notes — Unofficial Claude Certified Architect study guide',
     notices: {
       saveFailed: 'Your progress could not be saved. Check this browser’s site-data settings or available storage.',
@@ -330,6 +403,42 @@ export const ui = {
       ratingGoodExtended: 'Extend interval',
       emptyTitle: 'No cards match.',
       emptyDescription: 'Try a different search term or filter.',
+    },
+    quiz: {
+      eyebrow: 'INDEPENDENT CHOICE PRACTICE',
+      title: 'Choice quiz',
+      introduction: 'This quiz does not reproduce the actual exam. It uses independently written questions to practice the single- and multiple-select answer formats.',
+      countLegend: 'Questions',
+      count10: '10 questions',
+      count20: '20 questions',
+      countAll: 'All questions',
+      domainLegend: 'Domain',
+      weightedDomains: 'All domains (weighted)',
+      start: 'Start quiz',
+      progressLabel: (current, total) => `Question ${current} of ${total}`,
+      formats: { single: 'Single select', multiple: 'Multiple select' },
+      singleHint: 'Choose the one correct option. Selecting it submits your answer.',
+      multipleHint: 'Multiple select: choose every option that applies, then press “Submit answer”.',
+      choicesLegend: 'Options',
+      submitAnswer: 'Submit answer',
+      resultCorrect: 'Correct!',
+      resultIncorrect: 'Incorrect',
+      correctAnswerLabel: 'Correct answer:',
+      correctBadge: 'Correct',
+      selectedBadge: 'Your pick',
+      officialSources: 'Official sources',
+      verified: (date) => `Last verified ${date}`,
+      next: 'Next question',
+      showResults: 'See results',
+      quit: 'Back to setup',
+      summaryEyebrow: 'QUIZ RESULT',
+      summaryTitle: 'Quiz results',
+      accuracy: 'Accuracy',
+      scoreLine: (correct, total) => `${correct} of ${total} correct`,
+      byDomain: 'Breakdown by domain',
+      wrongTitle: 'Missed questions',
+      noWrong: 'You answered every question correctly.',
+      retry: 'Run another quiz',
     },
     progress: {
       eyebrow: 'STUDY DATA: LOCAL ONLY',
