@@ -49,6 +49,10 @@ vercel deploy --prod
 
 値は`G-...`形式です。設定時は`gtag.js`を通常読み込みし、広告ストレージ・広告向けユーザーデータ・広告パーソナライズを拒否した状態で基本ページビューを設定します。Google Signalsと広告パーソナライズ用シグナルも無効で、GA Cookieはアクセス中のホストだけに限定します。アプリ独自のカスタムイベントは実装していません。ページビューだけに限定する場合は、GA4 Webデータストリーム側でも「拡張計測」を無効にしてください。利用者向け説明は`/privacy/`に掲載します。
 
+## 告知動画（video/）
+
+`video/`はSNS告知動画（約30秒・1920×1080・H.264）を生成する独立したRemotionプロジェクトです。自前の`package.json`を持ち、アプリ本体のビルド・テスト・デプロイには影響しません。画面素材は`video/assets/`に置いた実画面スクリーンショットで、`cd video && pnpm install && npx remotion render promo out/promo.mp4`でレンダリングします（`video/out/`の生成物はコミットしません）。
+
 ## 公式情報
 
 - [Certification page](https://anthropic-partners.skilljar.com/claude-certified-architect-foundations-certification)
