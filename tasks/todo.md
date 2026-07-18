@@ -51,7 +51,7 @@ Branch: `feat/choice-quiz`（origin/main = 44cf2b5 から分岐）
 - [x] 12. tests/app.spec.ts に演習フロー e2e 追加（フィードバック・サマリ・localStorage・axe）— verify: pnpm test:e2e 40 passed
 - [x] 13. DESIGN.md スコープ節更新 + README 追記 — verify: 「再現ではない」文言を両方に明記
 - [x] 14. pnpm test / test:e2e / build 全パス — verify: 37 unit / 40 e2e / build exit 0
-- [ ] 15. commit / push / PR 作成 — verify: PR URL
+- [x] 15. commit / push / PR 作成 — verify: https://github.com/toshi0607/cca-study-guide/pull/12（CI: Vercel / lighthouse 全パス）
 
 ## Notes
 
@@ -62,4 +62,13 @@ Branch: `feat/choice-quiz`（origin/main = 44cf2b5 から分岐）
 
 ## Review
 
-（レビュー結果をここに記録）
+/code-review high（8観点ファインダー→検証）の結果と対応:
+
+| Finding | Verdict | 対応 |
+|---------|---------|------|
+| QuizView.answer() に同期的な再入ガードが無く、再レンダー前の二重クリックで同一問題を二重記録 | PLAUSIBLE | **修正**: answeredIdRef による同期ガードを追加（start でリセット）。全テスト再パス |
+| recordQuizAnswer の stale closure で二重呼び出し時に attempts を過少記録 | PLAUSIBLE | 上記ガードで発火経路が閉じることを検証済み（二重呼び出しは answer() 経由のみ）。追加変更なし |
+| recordQuizAnswer が saveRating の save→失敗通知スケルトンを複製 | CONFIRMED | 見送り: 2箇所・挙動同一。ヘルパー抽出は弱点可視化PRとのコンフリクト面を増やすため保留 |
+| .quiz-start 等の CSS が既存プライマリボタン定義を複製 | CONFIRMED | 見送り: 既存セレクタへの合流は .data-actions button に flex を波及させるため非drop-in。現状維持 |
+| localized() ヘルパーが3ファイル目の複製 | CONFIRMED | 見送り: cards.ts / domains.ts の既存パターンに合わせた意図的な踏襲。まとめて types.ts へ移す改善は別PR向き |
+| View 型が App.tsx と ui.ts で二重定義 | PLAUSIBLE | 見送り: 既存構造の踏襲。共有型化は並行実装中の弱点可視化とぶつかるため別PR向き |

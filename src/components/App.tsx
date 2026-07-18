@@ -83,6 +83,9 @@ function QuizView({ locale, copy, onAnswer }: { locale: Locale; copy: UiCopy; on
   const [selected, setSelected] = useState<string[]>([]);
   const [results, setResults] = useState<QuizResult[]>([]);
   const feedbackRef = useRef<HTMLDivElement>(null);
+  // Synchronous re-entrancy guard: `answered` only flips on the next render,
+  // so a double-fired click could otherwise record the same question twice.
+  const answeredIdRef = useRef<string | null>(null);
 
   const current = phase === 'question' ? round[index] : undefined;
   const lastResult = results[results.length - 1];
@@ -97,6 +100,7 @@ function QuizView({ locale, copy, onAnswer }: { locale: Locale; copy: UiCopy; on
   const start = () => {
     const picked = pickQuizQuestions(questions, domains, count, domainChoice);
     if (!picked.length) return;
+    answeredIdRef.current = null;
     setRound(picked);
     setIndex(0);
     setSelected([]);
@@ -106,6 +110,8 @@ function QuizView({ locale, copy, onAnswer }: { locale: Locale; copy: UiCopy; on
   };
 
   const answer = (question: ChoiceQuestion, selectedIds: string[]) => {
+    if (answeredIdRef.current === question.id) return;
+    answeredIdRef.current = question.id;
     const correct = isAnswerCorrect(question, selectedIds);
     setResults((value) => [...value, { question, selectedIds, correct }]);
     onAnswer(question.id, correct);
