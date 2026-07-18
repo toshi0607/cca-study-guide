@@ -30,6 +30,22 @@ export type Domain = {
   objectives: Objective[];
 };
 
+export type ChoiceQuestion = {
+  id: string;
+  revision: number;
+  domainId: string;
+  objectiveIds: string[];
+  format: 'single' | 'multiple';
+  stem: LocalizedText;
+  choices: Array<{ id: string; text: LocalizedText }>;
+  correctChoiceIds: string[];
+  explanation: LocalizedText;
+  sourceIds: string[];
+  verifiedAt: string;
+  // Reserved for the upcoming scenario-practice feature; no question sets it yet.
+  scenarioId?: string;
+};
+
 export type Card = {
   id: string;
   revision: number;

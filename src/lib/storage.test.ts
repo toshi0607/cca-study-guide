@@ -51,6 +51,53 @@ describe('study storage', () => {
     expect(createStudyStorage(memory).load()).toEqual({ version: 1, reviews: {} });
   });
 
+  it('round-trips quiz stats alongside review state', () => {
+    // #given
+    const memory = memoryStorage();
+    const storage = createStudyStorage(memory);
+    const stat = { attempts: 3, correct: 2, lastAnsweredAt: '2026-07-17T10:00:00.000Z', lastCorrect: true };
+
+    // #when
+    expect(storage.save({ version: 1, reviews: {}, quizStats: { 'q-d1-loop-continue': stat } })).toBe(true);
+
+    // #then
+    expect(storage.load()).toEqual({ version: 1, reviews: {}, quizStats: { 'q-d1-loop-continue': stat } });
+  });
+
+  it('loads legacy data without quizStats unchanged', () => {
+    // #given
+    const memory = memoryStorage();
+    const review = scheduleReview('card', 1, 'good', undefined, new Date('2026-07-14T00:00:00Z'));
+    memory.setItem(STORAGE_KEY, JSON.stringify({ version: 1, reviews: { card: review } }));
+
+    // #when / #then
+    expect(createStudyStorage(memory).load()).toEqual({ version: 1, reviews: { card: review } });
+  });
+
+  it('drops malformed quiz stat entries instead of trusting stored data', () => {
+    // #given
+    const memory = memoryStorage();
+    const valid = { attempts: 2, correct: 1, lastAnsweredAt: '2026-07-17T10:00:00.000Z', lastCorrect: false };
+    memory.setItem(STORAGE_KEY, JSON.stringify({
+      version: 1,
+      reviews: {},
+      quizStats: {
+        valid,
+        negativeAttempts: { ...valid, attempts: -1 },
+        moreCorrectThanAttempts: { ...valid, correct: 5 },
+        badDate: { ...valid, lastAnsweredAt: 'not-a-date' },
+        stringFlag: { ...valid, lastCorrect: 'yes' },
+        notARecord: 7,
+      },
+    }));
+
+    // #when / #then
+    expect(createStudyStorage(memory).load()).toEqual({ version: 1, reviews: {}, quizStats: { valid } });
+
+    memory.setItem(STORAGE_KEY, JSON.stringify({ version: 1, reviews: {}, quizStats: [] }));
+    expect(createStudyStorage(memory).load()).toEqual({ version: 1, reviews: {} });
+  });
+
   it('reports unavailable or failing persistence without throwing', () => {
     expect(createStudyStorage(undefined).save({ version: 1, reviews: {} })).toBe(false);
     expect(createStudyStorage(undefined).reset()).toBe(false);

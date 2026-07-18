@@ -20,7 +20,9 @@ The site must never imply Anthropic endorsement and must not contain, reconstruc
 - A source and disclaimer section with the blueprint verification date.
 - No login, API, database, or user-generated content. Optional aggregate usage analytics loads when configured, with advertising storage and signals disabled; the app emits no custom events for study content or progress and links to a dedicated disclosure page.
 
-Out of scope for the first release: device sync, community submissions, paid content, an exam simulator that claims to reproduce the live test, and pass-probability estimates.
+In scope since July 2026: a multiple-choice quiz mode built from independently authored questions (single- and multiple-select), with weighted or per-domain draws, immediate feedback with official-source links, and locally stored per-question stats.
+
+Out of scope: device sync, community submissions, paid content, an exam simulator that claims to reproduce the live test, and pass-probability estimates. The quiz mode practices the answer formats only; it does not mirror live exam questions, difficulty, or scoring.
 
 ## Source-of-truth hierarchy
 
