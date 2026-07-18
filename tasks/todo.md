@@ -65,3 +65,19 @@ Branch: claude/optimistic-booth-c5c244（origin/main 6687f6b を含む）
   4. finished state を index >= queue.length の導出値に簡素化
   5. 答え+評価 JSX の重複を CardAnswer コンポーネントに抽出（スタック/セッション共用）
 - 見送った指摘: deps なし keydown effect（意図的・最簡）、rateSessionCard のスプレッドコピー（規模的に無害）、tally/rating 文言の名前空間分離（過剰）
+
+---
+
+## Maintenance: Dependabot
+
+### Plan
+
+- [x] Root pnpm project用のDependabot設定を追加する。
+- [x] GitHub側の脆弱性アラートとセキュリティ更新を有効化する。
+- [ ] 設定をPRとして作成し、レビュー後にmainへマージする。
+
+### Configuration
+
+- npm ecosystemでルートの`package.json`と`pnpm-lock.yaml`を対象に、毎週月曜09:00（Asia/Tokyo）にバージョン更新を確認する。
+- production/developmentのminor・patch更新は別々にグループ化し、major更新は個別PRにする。version update PRは最大5件に制限する。
+- セキュリティ更新はグループ化・上限制限の対象外とし、脆弱性検出時に個別・即時で作成する。自動マージは有効化しない。
