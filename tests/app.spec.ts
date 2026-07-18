@@ -55,7 +55,7 @@ test('refreshes due cards while a tab remains open', async ({ page }) => {
 test('resets practice filters when starting review from the today view', async ({ page }) => {
   // #given — practice view narrowed to one domain and a search query
   await page.getByRole('button', { name: '練習' }).first().click();
-  await expect(page.locator('.practice-card')).toHaveCount(16);
+  await expect(page.locator('.practice-card')).toHaveCount(cards.length);
   await page.getByRole('searchbox', { name: 'カードを検索' }).fill('エージェント');
   const domainChip = page.getByRole('button', { name: 'D1', exact: true });
   await domainChip.click();
@@ -66,7 +66,7 @@ test('resets practice filters when starting review from the today view', async (
   await page.getByRole('button', { name: '復習を始める' }).click();
 
   // #then — every due card is shown, matching the count next to the CTA
-  await expect(page.locator('.practice-card')).toHaveCount(16);
+  await expect(page.locator('.practice-card')).toHaveCount(cards.length);
   await expect(domainChip).toHaveAttribute('aria-pressed', 'false');
   await expect(page.getByRole('searchbox', { name: 'カードを検索' })).toHaveValue('');
 });
