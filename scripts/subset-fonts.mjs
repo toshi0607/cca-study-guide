@@ -3,8 +3,9 @@ import { mkdir, readFile, readdir, rm, writeFile, access } from 'node:fs/promise
 import { join } from 'node:path';
 import subsetFont from 'subset-font';
 
-// The display font stack (--display in global.css) is used only by
-// `.wordmark b` and `.today-hero h2, .page-header h2`. Client-side views
+// The display font stack (--display in global.css) is used by `.wordmark b`,
+// `.today-hero h2`, `.page-header h2`, `.section-heading h2` and
+// `.status-strip h2`. Client-side views
 // render some of those headings after hydration, so the subset must cover
 // every UI string, not just the server-rendered HTML: this script takes all
 // string literals from src/i18n/ui.ts plus the display-font text found in the
@@ -47,7 +48,7 @@ const BASE_RANGES = [
 
 const DISPLAY_TEXT_PATTERNS = [
   /class="wordmark"[^>]*><b(?:\s[^>]*)?>(.*?)<\/b>/gs,
-  /<h2 id="(?:today|guide|practice|progress)-title"(?:\s[^>]*)?>(.*?)<\/h2>/gs,
+  /<h2 id="(?:today|guide|practice|progress|coverage|status)-title"(?:\s[^>]*)?>(.*?)<\/h2>/gs,
 ];
 
 const stripMarkup = (html) => html

@@ -3,9 +3,10 @@ import { describe, expect, it } from 'vitest';
 import { ui } from '../i18n/ui';
 import { locales } from '../i18n/locales';
 
-// The display font stack (--display in global.css) renders only `.wordmark b`
-// and `.today-hero h2, .page-header h2`. These strings must stay covered by
-// the committed subset fonts; regenerate with `pnpm build && pnpm fonts:subset`.
+// The display font stack (--display in global.css) renders `.wordmark b`,
+// `.today-hero h2`, `.page-header h2`, `.section-heading h2` and
+// `.status-strip h2`. These strings must stay covered by the committed subset
+// fonts; regenerate with `pnpm build && pnpm fonts:subset`.
 const displayFontText = (): string =>
   locales
     .map((locale) => {
@@ -18,6 +19,8 @@ const displayFontText = (): string =>
         copy.practice.title,
         copy.quiz.title,
         copy.progress.title,
+        copy.blueprint.title,
+        copy.status.title,
       ].join('');
     })
     .join('');
