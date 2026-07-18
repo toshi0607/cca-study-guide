@@ -4,9 +4,9 @@ import { ui } from '../i18n/ui';
 import { locales } from '../i18n/locales';
 
 // The display font stack (--display in global.css) renders `.wordmark b`,
-// `.today-hero h2`, `.page-header h2`, `.section-heading h2` and
-// `.status-strip h2`. These strings must stay covered by the committed subset
-// fonts; regenerate with `pnpm build && pnpm fonts:subset`.
+// `.today-hero h2`, `.page-header h2`, `.section-heading h2`,
+// `.status-strip h2` and `.session-summary h3`. These strings must stay covered
+// by the committed subset fonts; regenerate with `pnpm build && pnpm fonts:subset`.
 const displayFontText = (): string =>
   locales
     .map((locale) => {
@@ -18,6 +18,7 @@ const displayFontText = (): string =>
         copy.weakAreas.title,
         copy.guide.title,
         copy.practice.title,
+        copy.session.summaryTitle,
         copy.quiz.title,
         copy.progress.title,
         copy.blueprint.title,

@@ -1,68 +1,67 @@
-# シナリオ演習の実装
+# 集中レビューセッションモードの実装
 
-Previous plan (weak-area visualization, PR #11) completed and merged; replaced by
-the scenario-practice plan below.
+Previous plan (scenario practice, PR #16) completed and merged; replaced by the
+focused review session plan below.
 
-Branch: claude/amazing-lehmann-f723d4（origin/main ada1a51 からリセット済み）
+Branch: claude/optimistic-booth-c5c244（origin/main 6687f6b を含む）
 
 ## Constraints
 
 | Constraint | Source | Verify by |
 |------------|--------|-----------|
-| 選択式演習の回答UI・採点・保存ロジックを再利用（重複実装禁止） | user msg | App.tsx diff（QuizView内で answer/advance/results を共用） |
-| 実試験のシナリオ・設問の複製・再構成の禁止、独自作成明記 | user msg + cards.ts方針 | 全コンテンツが独自の架空事例、UI/README/DESIGNに明記 |
-| ja/en両ロケール必須 | user msg + ui.ts | content.test.ts のローカライズテスト |
-| Scenario: id/revision/title/background(2〜4段落)/domainIds/sourceIds/verifiedAt | user msg | validate.ts zodスキーマ |
-| シナリオ3本以上、各3〜5問、single/multiple混在、scenarioId紐づけ | user msg | content.test.ts |
-| scenarioId参照整合・設問3問以上を validate/テストで担保 | user msg | validateContent() |
-| quizStats は既存の仕組み（questionId単位）にそのまま乗せる | user msg | storage.ts 変更なし |
-| 設問中にケース記述を参照可能（折りたたみ） | user msg | e2e |
-| e2e にシナリオ演習フロー追加 | user msg | tests/app.spec.ts |
-| pnpm test / test:e2e / build 全パス | user msg + pr.md | exit 0 |
-| フォントサブセット不足時は再生成しコミット | user msg | fonts.test.ts |
-| コミット末尾 Co-Authored-By / PR末尾 Generated with | user msg | git log / PR body |
-| アクセシビリティ既存水準維持（axe wcag2a/aa） | user msg | e2e axe |
+| scheduler.ts のスケジューリング挙動を変更しない | user msg (MUST NOT) | scheduler.ts が diff に含まれない |
+| storage.ts の保存形式（reviews）を変更しない | user msg (MUST NOT) | storage.ts が diff に含まれない |
+| 既存スタック表示・フィルタ・quiz・シナリオ演習を壊さない | user msg (MUST NOT) | 既存 e2e が今日CTA以外無修正でパス |
+| 入力要素フォーカス中はショートカット無効 | user msg (MUST NOT) | keydown ハンドラの target ガード |
+| 評価保存は scheduleReview / saveRating 相当を再利用 | user msg | persistRating が既存ロジックの抽出のみ |
+| again カードはセッションキュー末尾に再挿入（dueAt は通常保存） | user msg | session.ts unit test + e2e |
+| 0枚なら開始不可＋理由表示 | user msg | disabled ボタン + 理由テキスト |
+| ja/en 両ロケール必須 | user msg + ui.ts | UiCopy 型が満たされる（astro check） |
+| キーボード: Space/Enter=開示, 1/2/3=評価, Esc=中断(確認) | user msg | e2e キーボードテスト |
+| モバイルは同操作をボタンで（44px） | user msg | 既存 .rating/.reveal-button スタイル再利用 |
+| aria-live 通知・フォーカス管理・semantic button/fieldset 踏襲 | user msg | axe e2e + 実装 |
+| 見出しフォントの新規文字はサブセット再生成してコミット | README + fonts.test.ts | pnpm test パス |
+| DESIGN.md 1〜3行追記 + README 同期 | user msg | diff |
+| コミット末尾 Co-Authored-By / PR 末尾 Generated with | user msg | git log / PR 本文 |
+| quizビュー（1問ずつ→サマリ）と UI/コードのトーンを揃える | user msg | PracticeSession が QuizView と同型の構成 |
 
 ## Assumptions
 
 | Assumption | Status | Evidence |
 |------------|--------|----------|
-| シナリオ設問はケース前提のためランダム演習プールから除外する | DECISION | 設問単体では文脈不足。標準プール＝ !scenarioId でフィルタ |
-| 領域配分テスト（±6%）は非シナリオ設問のみに適用へ変更 | DECISION | 上記除外に伴う整合。既存21問の配分は不変 |
-| 新規UI文言はdisplayフォント要素に載せない → サブセット再生成不要 | VERIFIED | fonts.test.ts / subset-fonts.mjs のdisplay対象は既存見出しのみ |
-| content.test.ts の「scenarioId未使用」テストは置換する | VERIFIED | content.test.ts:64 |
-| background は LocalizedText<string[]>（段落配列）で表現 | DECISION | mustKnow と同じパターン。zodで2〜4段落を検証 |
+| quiz と同様にセッションは独立コンポーネントで、保存はコールバックで App に委譲できる | VERIFIED | App.tsx:88 QuizView + onAnswer パターン |
+| 既存 e2e「resets practice filters…」は今日CTA変更で修正が必要（仕様で明示的に許可済み） | VERIFIED | tests/app.spec.ts:57 |
+| セッションサマリ見出しに display フォントを使うと subset 再生成が必要 | VERIFIED | global.css:590 (.quiz-score h3 が var(--display)) + fonts.test.ts |
+| 「もう一度セッション」は終了したセッションと同じ初期キューで再開（フィルタ再評価だと due が空になり無意味） | INFERRED | scheduler.ts:21-33（評価後は due から外れる） |
 
-## Todo
+## Plan
 
-- [x] types.ts に Scenario 型追加
-- [x] scenarios.ts 新規作成（独自シナリオ4本 ja/en、うち3本は複数ドメインをまたぐ）
-- [x] questions.ts にシナリオ設問17問追加（scenarioId付き、single/multiple混在）
-- [x] validate.ts: scenarioスキーマ + 参照整合 + 3〜5問・形式混在チェック
-- [x] content.test.ts 更新（scenario検証、配分テストのスコープ変更、ローカライズ）
-- [x] i18n/ui.ts に ja/en 文言追加
-- [x] App.tsx QuizView にモード選択・シナリオ一覧・ケース記述・折りたたみ参照を追加（既存回答ロジック再利用）
-- [x] global.css にシナリオUIスタイル追加
-- [x] e2e: シナリオ演習フロー + axe
-- [x] DESIGN.md / README.md 更新（独自作成であることを明記）
-- [x] pnpm test（44 passed, exit 0）/ pnpm test:e2e（43 passed, exit 0）/ pnpm build（exit 0）
-- [x] コミット・push・PR作成
+- [x] 1. src/lib/session.ts + session.test.ts — again 再挿入・進行の純粋ロジック（vitest 5 tests パス）
+- [x] 2. src/i18n/ui.ts — UiCopy に session セクション追加、ja/en 文言（astro check 0 errors）
+- [x] 3. src/components/App.tsx — PracticeSession コンポーネント、practice ビューの開始ボタン、today CTA 直接開始、persistRating 抽出
+- [x] 4. src/styles/global.css — session ヘッダー/ショートカット/サマリのスタイル（既存 practice-card / quiz-* 踏襲）
+- [x] 5. fonts.test.ts に session.summaryTitle を追加し `pnpm build && pnpm fonts:subset` で再生成（646 chars、woff2+manifest 更新）
+- [x] 6. tests/app.spec.ts — 今日CTAテスト更新 + セッションフロー e2e + キーボード e2e（45 e2e パス）
+- [x] 7. DESIGN.md（IA 1行 + Interaction model 1項）/ README.md（方針 1行）追記
+- [x] 8. pnpm test（49 pass）/ pnpm build（exit 0）/ pnpm test:e2e（45 pass）全パス
+- [ ] 9. コミット & PR 作成
 
 ## Notes
 
-- 2026-07-17: 依存の選択式演習モードが未マージのため停止。
-- 2026-07-18: PR #12 マージ済みを確認、origin/main へリセットして着手。
-- シナリオ4本: MCPツール設計（d2）、マルチエージェント構成（d1/d5）、Claude Codeチーム導入（d3）、構造化出力と信頼性設計（d4/d5）。全て架空企業の独自ケース。
-- サマリの「解説の見直し導線」: 間違えた問題リストに解説本文を追加表示（両モード共通、既存CSSはfirst-child基準に調整）。
-- e2e回答ループは既存quizテストのパターンを踏襲（ヘッダの 第n問/全m問 を利用）。
-- 逸脱: sc-code-rollout に MCP設定共有（d2）の段落と設問を追加し5問構成へ（「複数ドメインをまたぐ題材」の充足のため）。フォント再生成は不要だった（新規文言はdisplayフォント要素に載せず、fonts.test.tsパス）。
+- persistRating を saveRating から抽出：セッション中は評価ごとの notice フォーカス移動を行わない
+  （フォーカスは次カードの開示ボタンへ）。保存失敗時のみ notice + フォーカス。
+- キーボードガード: input/textarea/select/contenteditable 中は無効。Space/Enter は
+  button フォーカス中はネイティブ activation に譲る（二重発火防止）。
+- 中断は window.confirm（resetData と同パターン）。中断後 notice で「評価は保存済み」を明示。
+- サマリの「残りの due 枚数」は App の dueCards.length を prop で渡す（評価で data が更新され自動反映）。
 
 ## Review
 
-/code-review high（6アングル並列）の結果: バグ指摘0件、クリーンアップ5件を反映済み。
-- 背景段落レンダリングを ScenarioBackground コンポーネントへ共通化（indexキー化）
-- ランダム演習プール standaloneQuestions を questions.ts へ一元化
-- validate.ts に 3〜5問・single/multiple混在のビルド時チェックを追加
-- localizedStringList ファクトリでbackgroundスキーマを共通化
-- 未使用の scenarioById エクスポートを削除
-反映後に pnpm test（44）/ test:e2e（43）/ build すべて exit 0 を再確認。
+- /code-review high（7ファインダー並列 + インライン検証。1エージェントはAPI spend limit で失敗し、その角度＝クロスファイル追跡は手元で実施）
+- 修正した指摘（いずれも再テスト済み: vitest 49 / e2e 45 / build パス）:
+  1. rate() が persistRating の失敗を無視して進行 → 失敗時はカードに留まり再試行可能に
+  2. セッション中の別ビュー遷移で内部状態のみ喪失し無言で先頭から再開 → navigate() でセッション破棄（評価は保存済み）
+  3. Space/Enter がフォーカス中のリンクの既定動作を乗っ取る → button/a/summary をガード
+  4. finished state を index >= queue.length の導出値に簡素化
+  5. 答え+評価 JSX の重複を CardAnswer コンポーネントに抽出（スタック/セッション共用）
+- 見送った指摘: deps なし keydown effect（意図的・最簡）、rateSessionCard のスプレッドコピー（規模的に無害）、tally/rating 文言の名前空間分離（過剰）
