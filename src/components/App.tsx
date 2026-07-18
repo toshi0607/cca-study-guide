@@ -401,7 +401,7 @@ function App({ locale, analyticsEnabled = false }: { locale: Locale; analyticsEn
               <span>{copy.today.dueTitle}</span>
               <strong>{ready && now ? formatNumber(dueCards.length, locale) : '—'}</strong>
               <span>{ready && now ? copy.today.dueCount(dueCards.length) : '—'}</span>
-              <button disabled={!ready} onClick={() => { setStateFilter('due'); navigate('practice'); }}>{copy.today.startReview} <span aria-hidden="true">→</span></button>
+              <button disabled={!ready} onClick={() => { setQuery(''); setDomainFilter('all'); setStateFilter('due'); navigate('practice'); }}>{copy.today.startReview} <span aria-hidden="true">→</span></button>
             </div>
           </section>
           <Blueprint reviews={data.reviews} ready={ready} locale={locale} copy={copy}/>
