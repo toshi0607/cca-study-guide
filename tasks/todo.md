@@ -72,3 +72,42 @@ Branch: `feat/choice-quiz`（origin/main = 44cf2b5 から分岐）
 | .quiz-start 等の CSS が既存プライマリボタン定義を複製 | CONFIRMED | 見送り: 既存セレクタへの合流は .data-actions button に flex を波及させるため非drop-in。現状維持 |
 | localized() ヘルパーが3ファイル目の複製 | CONFIRMED | 見送り: cards.ts / domains.ts の既存パターンに合わせた意図的な踏襲。まとめて types.ts へ移す改善は別PR向き |
 | View 型が App.tsx と ui.ts で二重定義 | PLAUSIBLE | 見送り: 既存構造の踏襲。共有型化は並行実装中の弱点可視化とぶつかるため別PR向き |
+
+---
+
+# 想起カード拡充（コンテンツ追加のみ）— 2026-07-17〜18
+
+Branch: `claude/mystifying-heyrovsky-a4464f`（origin/main = 44cf2b5 から分岐、PR #13）
+
+## Constraints
+
+| Constraint | Source | Verify by |
+|------------|--------|-----------|
+| 各objectiveが合計2枚以上でカバー | user msg | 集計で全30 objective >= 2 |
+| 約30枚追加、D1最優先→重み順 | user msg | 追加枚数とドメイン別内訳 |
+| kind 3種のバランス、contrast重視 | user msg | kind別集計 |
+| ja/en 4フィールド全記述 | user msg | pnpm test (zod) |
+| sourceIds実在、新規ソースはWebFetch確認 | user msg | pnpm test + validate.ts |
+| 新規ソースは platform.claude.com / code.claude.com / modelcontextprotocol.io 配下のみ | user msg | sources.ts diff |
+| 全主張を公式Docsで裏取り（記憶で書かない） | user msg | Notesのfetch記録 |
+| 試験問題の複製・再構成禁止 | user msg / cards.ts冒頭 | 独自作成のみ |
+| 既存カード改変禁止 | user msg | git diff がカード追加+sources追加のみ |
+| UI・型・スケジューラ変更禁止 | user msg | git diff 対象ファイル |
+| pnpm test / test:e2e / build 全パス | user msg | exit 0 |
+
+## 結果
+
+- [x] cards.ts へ35枚追加（D1:8, D2:7, D3:7, D4:7, D5:6、16→51枚。kind: recall16/contrast15/scenario20）
+- [x] 全30 objective >= 2 カバレッジを一時vitestで機械確認
+- [x] sources.ts へ define-tools を追加（verifiedAt=2026-07-18、WebFetchで実在・内容確認）
+- [x] pnpm test 22/22 / pnpm test:e2e 39/39 / pnpm build 0 errors（マージ前時点）
+- [x] PR #13 作成、Vercelチェック全pass
+
+## Notes
+
+- WebFetchで裏取りしたページ（2026-07-17〜18）: stop-reasons / how-tool-use-works / subagents / sessions / hooks-guide / agent-sdk claude-code-features / mcp / memory / agent-sdk skills / how-claude-code-works / best-practices / headless / develop-tests(evals) / claude-prompting-best-practices / structured-outputs / batch-processing / context-windows / context-editing / user-input / large-codebases / features-overview / MCP spec tools / define-tools。
+- 逸脱1: 新規カードのverifiedAtを実際の検証日(2026-07-18)にするため、card()ヘルパーへ省略可能なverifiedAt引数を追加（既定値VERIFIED_ATで既存カードのデータは無変更）。
+- 逸脱2: tests/app.spec.ts の2件がカード総数(16枚時代)をハードコードしており失敗（practice一覧15→16枚、進捗「1/4」）。期待値をsrc/content/cards.tsから導出する形に更新。アプリ側は非変更。
+- フォントサブセット再生成は不要: .card-prompt h3 は--display非対象（subset-fonts.mjsの抽出対象はh2/wordmarkのみ）。
+- 既存カードの誤りは発見なし。
+- マージ時: main側のPR #12（quiz view）とコンフリクトは tasks/todo.md のみ。main版を採用し本セクションを追記。tests/app.spec.ts は自動マージ（quizテストと共存）。
