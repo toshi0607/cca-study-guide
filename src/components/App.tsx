@@ -1,17 +1,20 @@
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import { cards } from '../content/cards';
 import { domains } from '../content/domains';
+import { questions } from '../content/questions';
 import { sourceById, sources, VERIFIED_AT } from '../content/sources';
+import type { ChoiceQuestion } from '../content/types';
 import { locales, localePaths, type Locale } from '../i18n/locales';
 import { localize, ui, type UiCopy } from '../i18n/ui';
+import { isAnswerCorrect, pickQuizQuestions, type QuizCount, type QuizDomainChoice } from '../lib/quiz';
 import { isDue, scheduleReview, type Rating, type ReviewState } from '../lib/scheduler';
 import { createStudyStorage, type StudyData } from '../lib/storage';
 
-type View = 'today' | 'guide' | 'practice' | 'progress';
+type View = 'today' | 'guide' | 'practice' | 'quiz' | 'progress';
 
-const viewKeys: View[] = ['today', 'guide', 'practice', 'progress'];
+const viewKeys: View[] = ['today', 'guide', 'practice', 'quiz', 'progress'];
 const stateFilters = ['due', 'all', 'unseen', 'reviewed'] as const;
-const icons: Record<View, string> = { today: '⌂', guide: '▤', practice: '◇', progress: '✓' };
+const icons: Record<View, string> = { today: '⌂', guide: '▤', practice: '◇', quiz: '☑', progress: '✓' };
 
 function studyStorage() {
   try {
@@ -66,6 +69,159 @@ function SourceLinks({ ids, copy }: { ids: string[]; copy: UiCopy }) {
         ) : null;
       })}
     </ul>
+  );
+}
+
+type QuizResult = { question: ChoiceQuestion; selectedIds: string[]; correct: boolean };
+
+function QuizView({ locale, copy, onAnswer }: { locale: Locale; copy: UiCopy; onAnswer: (questionId: string, correct: boolean) => void }) {
+  const [phase, setPhase] = useState<'setup' | 'question' | 'summary'>('setup');
+  const [count, setCount] = useState<QuizCount>(10);
+  const [domainChoice, setDomainChoice] = useState<QuizDomainChoice>('weighted');
+  const [round, setRound] = useState<ChoiceQuestion[]>([]);
+  const [index, setIndex] = useState(0);
+  const [selected, setSelected] = useState<string[]>([]);
+  const [results, setResults] = useState<QuizResult[]>([]);
+  const feedbackRef = useRef<HTMLDivElement>(null);
+
+  const current = phase === 'question' ? round[index] : undefined;
+  const lastResult = results[results.length - 1];
+  const currentResult = current && lastResult?.question.id === current.id ? lastResult : undefined;
+  const answered = Boolean(currentResult);
+  const countOptions: Array<{ value: QuizCount; label: string }> = [
+    { value: 10, label: copy.quiz.count10 },
+    { value: 20, label: copy.quiz.count20 },
+    { value: 'all', label: copy.quiz.countAll },
+  ];
+
+  const start = () => {
+    const picked = pickQuizQuestions(questions, domains, count, domainChoice);
+    if (!picked.length) return;
+    setRound(picked);
+    setIndex(0);
+    setSelected([]);
+    setResults([]);
+    setPhase('question');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const answer = (question: ChoiceQuestion, selectedIds: string[]) => {
+    const correct = isAnswerCorrect(question, selectedIds);
+    setResults((value) => [...value, { question, selectedIds, correct }]);
+    onAnswer(question.id, correct);
+    requestAnimationFrame(() => feedbackRef.current?.focus());
+  };
+
+  const advance = () => {
+    if (index + 1 >= round.length) {
+      setPhase('summary');
+    } else {
+      setIndex(index + 1);
+      setSelected([]);
+    }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const reset = () => {
+    setPhase('setup');
+    setRound([]);
+    setResults([]);
+    setSelected([]);
+  };
+
+  const correctCount = results.filter((result) => result.correct).length;
+  const wrongResults = results.filter((result) => !result.correct);
+  const answerText = (question: ChoiceQuestion) =>
+    question.choices.filter((choice) => question.correctChoiceIds.includes(choice.id)).map((choice) => localize(choice.text, locale)).join(' / ');
+
+  return (
+    <section class="quiz-view" aria-labelledby="quiz-title">
+      <header class="page-header compact">
+        <p class="eyebrow">{copy.quiz.eyebrow}</p><h2 id="quiz-title">{copy.quiz.title}</h2><p>{copy.quiz.introduction}</p>
+      </header>
+
+      {phase === 'setup' && <div class="quiz-setup">
+        <fieldset><legend>{copy.quiz.countLegend}</legend><div class="chips">{countOptions.map((option) => <button key={String(option.value)} type="button" class={count === option.value ? 'selected' : ''} aria-pressed={count === option.value} onClick={() => setCount(option.value)}>{option.label}</button>)}</div></fieldset>
+        <fieldset><legend>{copy.quiz.domainLegend}</legend><div class="chips"><button type="button" class={domainChoice === 'weighted' ? 'selected' : ''} aria-pressed={domainChoice === 'weighted'} onClick={() => setDomainChoice('weighted')}>{copy.quiz.weightedDomains}</button>{domains.map((domain) => <button key={domain.id} type="button" class={domainChoice === domain.id ? 'selected' : ''} aria-pressed={domainChoice === domain.id} onClick={() => setDomainChoice(domain.id)}>D{domain.number}</button>)}</div></fieldset>
+        <button class="quiz-start" onClick={start}>{copy.quiz.start} <span aria-hidden="true">→</span></button>
+      </div>}
+
+      {current && <article class="quiz-question">
+        <header>
+          <div><span class="card-domain">D{domains.find((domain) => domain.id === current.domainId)!.number}</span><span>{copy.quiz.formats[current.format]}</span></div>
+          <code>{copy.quiz.progressLabel(index + 1, round.length)}</code>
+        </header>
+        <div class="card-prompt"><p class="eyebrow">{copy.practice.question}</p><h3>{localize(current.stem, locale)}</h3></div>
+        <p class="quiz-hint">{current.format === 'single' ? copy.quiz.singleHint : copy.quiz.multipleHint}</p>
+        <fieldset class="choice-list">
+          <legend class="sr-only">{copy.quiz.choicesLegend}</legend>
+          {current.choices.map((choice) => {
+            const isCorrectChoice = current.correctChoiceIds.includes(choice.id);
+            const wasSelected = Boolean(currentResult?.selectedIds.includes(choice.id));
+            const isSelected = !answered && selected.includes(choice.id);
+            const state = answered ? (isCorrectChoice ? ' correct' : wasSelected ? ' incorrect' : '') : isSelected ? ' selected' : '';
+            return <button
+              key={choice.id}
+              type="button"
+              class={`choice-button${state}`}
+              disabled={answered}
+              aria-pressed={current.format === 'multiple' && !answered ? isSelected : undefined}
+              onClick={() => {
+                if (answered) return;
+                if (current.format === 'single') answer(current, [choice.id]);
+                else setSelected((value) => (value.includes(choice.id) ? value.filter((id) => id !== choice.id) : [...value, choice.id]));
+              }}
+            >
+              <span class="choice-id" aria-hidden="true">{choice.id.toUpperCase()}</span>
+              <span class="choice-text">{localize(choice.text, locale)}</span>
+              {answered && isCorrectChoice && <span class="choice-mark choice-mark--correct">{copy.quiz.correctBadge}</span>}
+              {wasSelected && <span class="choice-mark">{copy.quiz.selectedBadge}</span>}
+            </button>;
+          })}
+        </fieldset>
+        {current.format === 'multiple' && !answered && <button class="quiz-submit" disabled={!selected.length} onClick={() => answer(current, selected)}>{copy.quiz.submitAnswer}</button>}
+        {currentResult && <div class="quiz-feedback" role="status" tabIndex={-1} ref={feedbackRef}>
+          <p class={`quiz-verdict ${currentResult.correct ? 'is-correct' : 'is-incorrect'}`}>{currentResult.correct ? copy.quiz.resultCorrect : copy.quiz.resultIncorrect}</p>
+          <p class="quiz-correct-answer"><strong>{copy.quiz.correctAnswerLabel}</strong> {answerText(current)}</p>
+          <p>{localize(current.explanation, locale)}</p>
+          <div class="card-sources"><strong>{copy.quiz.officialSources}</strong><SourceLinks ids={current.sourceIds} copy={copy}/><small>{copy.quiz.verified(formatDate(current.verifiedAt, locale))}</small></div>
+          <button class="quiz-next" onClick={advance}>{index + 1 >= round.length ? copy.quiz.showResults : copy.quiz.next} <span aria-hidden="true">→</span></button>
+        </div>}
+        <button class="quiz-quit" onClick={reset}>{copy.quiz.quit}</button>
+      </article>}
+
+      {phase === 'summary' && <div class="quiz-summary">
+        <section class="quiz-score" aria-labelledby="quiz-score-title">
+          <p class="eyebrow" id="quiz-score-title">{copy.quiz.summaryEyebrow}</p>
+          <h3>{copy.quiz.summaryTitle}</h3>
+          <div class="quiz-score-figure">
+            <span>{copy.quiz.accuracy}</span>
+            <strong>{results.length ? Math.round((correctCount / results.length) * 100) : 0}%</strong>
+            <span>{copy.quiz.scoreLine(correctCount, results.length)}</span>
+          </div>
+        </section>
+        <section class="quiz-domains" aria-labelledby="quiz-domains-title">
+          <h3 id="quiz-domains-title">{copy.quiz.byDomain}</h3>
+          {domains.map((domain) => {
+            const domainResults = results.filter((result) => result.question.domainId === domain.id);
+            if (!domainResults.length) return null;
+            const domainCorrect = domainResults.filter((result) => result.correct).length;
+            return <div class="progress-row" key={domain.id}>
+              <span>D{domain.number} {localize(domain.title, locale)}</span>
+              <progress value={domainCorrect} max={domainResults.length}>{domainCorrect}/{domainResults.length}</progress>
+              <strong>{formatNumber(domainCorrect, locale)}/{formatNumber(domainResults.length, locale)}</strong>
+            </div>;
+          })}
+        </section>
+        <section class="quiz-missed" aria-labelledby="quiz-missed-title">
+          <h3 id="quiz-missed-title">{copy.quiz.wrongTitle}</h3>
+          {wrongResults.length
+            ? <ul>{wrongResults.map((result) => <li key={result.question.id}><p>{localize(result.question.stem, locale)}</p><p><strong>{copy.quiz.correctAnswerLabel}</strong> {answerText(result.question)}</p></li>)}</ul>
+            : <p>{copy.quiz.noWrong}</p>}
+        </section>
+        <button class="quiz-start" onClick={reset}>{copy.quiz.retry}</button>
+      </div>}
+    </section>
   );
 }
 
@@ -151,7 +307,7 @@ function App({ locale, analyticsEnabled = false }: { locale: Locale; analyticsEn
   const saveRating = (cardId: string, rating: Rating) => {
     const currentCard = cards.find((card) => card.id === cardId)!;
     const reviews = { ...data.reviews, [cardId]: scheduleReview(cardId, currentCard.revision, rating, data.reviews[cardId]) };
-    const next = { version: 1 as const, reviews };
+    const next = { ...data, reviews };
     if (!studyStorage().save(next)) {
       setNotice(copy.notices.saveFailed);
       focusNotice();
@@ -161,6 +317,23 @@ function App({ locale, analyticsEnabled = false }: { locale: Locale; analyticsEn
     setRevealed((value) => ({ ...value, [cardId]: false }));
     setNotice(rating === 'again' ? copy.notices.ratingAgain : rating === 'hard' ? copy.notices.ratingHard : copy.notices.ratingGood);
     focusNotice();
+  };
+
+  const recordQuizAnswer = (questionId: string, correct: boolean) => {
+    const previous = data.quizStats?.[questionId];
+    const stat = {
+      attempts: (previous?.attempts ?? 0) + 1,
+      correct: (previous?.correct ?? 0) + (correct ? 1 : 0),
+      lastAnsweredAt: new Date().toISOString(),
+      lastCorrect: correct,
+    };
+    const next = { ...data, quizStats: { ...data.quizStats, [questionId]: stat } };
+    if (!studyStorage().save(next)) {
+      setNotice(copy.notices.saveFailed);
+      focusNotice();
+      return;
+    }
+    setData(next);
   };
 
   const exportData = () => {
@@ -278,6 +451,8 @@ function App({ locale, analyticsEnabled = false }: { locale: Locale; analyticsEn
           })}</div>
           {!filteredCards.length && <div class="empty-state"><strong>{copy.practice.emptyTitle}</strong><p>{copy.practice.emptyDescription}</p></div>}
         </section>}
+
+        {view === 'quiz' && <QuizView locale={locale} copy={copy} onAnswer={recordQuizAnswer}/>}
 
         {view === 'progress' && <section class="progress-view" aria-labelledby="progress-title">
           <header class="page-header"><p class="eyebrow">{copy.progress.eyebrow}</p><h2 id="progress-title">{copy.progress.title}</h2><p>{copy.progress.introduction}</p></header>

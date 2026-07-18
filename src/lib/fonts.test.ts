@@ -16,6 +16,7 @@ const displayFontText = (): string =>
         copy.today.titleEmphasis,
         copy.guide.title,
         copy.practice.title,
+        copy.quiz.title,
         copy.progress.title,
       ].join('');
     })
