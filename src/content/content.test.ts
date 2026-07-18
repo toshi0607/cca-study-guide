@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { cards } from './cards';
 import { domains } from './domains';
-import { questions } from './questions';
+import { questions, standaloneQuestions } from './questions';
+import { scenarios } from './scenarios';
 import { sources } from './sources';
 import { genericSourceIds, validateContent } from './validate';
 
@@ -13,6 +14,7 @@ describe('study content', () => {
       objectiveCount: 30,
       cardCount: cards.length,
       questionCount: questions.length,
+      scenarioCount: scenarios.length,
     });
     expect(domains.map((domain) => domain.weight)).toEqual([27, 18, 20, 20, 15]);
   });
@@ -24,14 +26,15 @@ describe('study content', () => {
     }
   });
 
-  it('keeps the question bank sized and distributed like the blueprint', () => {
-    // #given
-    const total = questions.length;
+  it('keeps the standalone question bank sized and distributed like the blueprint', () => {
+    // #given — scenario questions are excluded from the random quiz pool, so
+    // the blueprint distribution applies to the standalone bank only
+    const total = standaloneQuestions.length;
 
     // #when
     const shareByDomain = domains.map((domain) => ({
       weight: domain.weight,
-      share: (questions.filter((question) => question.domainId === domain.id).length / total) * 100,
+      share: (standaloneQuestions.filter((question) => question.domainId === domain.id).length / total) * 100,
     }));
 
     // #then
@@ -41,12 +44,12 @@ describe('study content', () => {
     }
   });
 
-  it('keeps at least 30% of the questions in multiple-select format', () => {
+  it('keeps at least 30% of the standalone questions in multiple-select format', () => {
     // #given
-    const multipleCount = questions.filter((question) => question.format === 'multiple').length;
+    const multipleCount = standaloneQuestions.filter((question) => question.format === 'multiple').length;
 
     // #then
-    expect(multipleCount / questions.length).toBeGreaterThanOrEqual(0.3);
+    expect(multipleCount / standaloneQuestions.length).toBeGreaterThanOrEqual(0.3);
   });
 
   it('marks correct choices consistently with each question format', () => {
@@ -61,8 +64,37 @@ describe('study content', () => {
     }
   });
 
-  it('reserves scenarioId for the future scenario feature without using it yet', () => {
-    for (const question of questions) expect(question.scenarioId, question.id).toBeUndefined();
+  it('provides at least three scenarios, each with 3-5 linked questions mixing both formats', () => {
+    // #given
+    expect(scenarios.length).toBeGreaterThanOrEqual(3);
+
+    for (const scenario of scenarios) {
+      // #when
+      const linked = questions.filter((question) => question.scenarioId === scenario.id);
+
+      // #then
+      expect(linked.length, scenario.id).toBeGreaterThanOrEqual(3);
+      expect(linked.length, scenario.id).toBeLessThanOrEqual(5);
+      expect(linked.some((question) => question.format === 'single'), scenario.id).toBe(true);
+      expect(linked.some((question) => question.format === 'multiple'), scenario.id).toBe(true);
+      for (const question of linked) expect(scenario.domainIds, question.id).toContain(question.domainId);
+    }
+  });
+
+  it('links every scenario question to an existing scenario', () => {
+    const scenarioIds = new Set(scenarios.map((scenario) => scenario.id));
+    for (const question of questions) {
+      if (question.scenarioId) expect(scenarioIds.has(question.scenarioId), question.id).toBe(true);
+    }
+  });
+
+  it('keeps every scenario background between two and four paragraphs', () => {
+    for (const scenario of scenarios) {
+      for (const locale of ['ja', 'en'] as const) {
+        expect(scenario.background[locale].length, scenario.id).toBeGreaterThanOrEqual(2);
+        expect(scenario.background[locale].length, scenario.id).toBeLessThanOrEqual(4);
+      }
+    }
   });
 
   it('links every objective to the official exam guide', () => {
@@ -108,6 +140,10 @@ describe('study content', () => {
       expectLocalizedText(question.stem);
       expectLocalizedText(question.explanation);
       for (const choice of question.choices) expectLocalizedText(choice.text);
+    }
+    for (const scenario of scenarios) {
+      expectLocalizedText(scenario.title);
+      expectLocalizedList(scenario.background);
     }
   });
 });

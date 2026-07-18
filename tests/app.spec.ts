@@ -3,6 +3,8 @@ import AxeBuilder from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
 import { cards } from '../src/content/cards';
 import { domains } from '../src/content/domains';
+import { questions } from '../src/content/questions';
+import { scenarios } from '../src/content/scenarios';
 
 test.beforeEach(async ({ page }) => {
   await page.goto('/');
@@ -136,6 +138,60 @@ test('runs a domain-scoped quiz round with immediate feedback, a summary, and pe
 
   const axe = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa']).analyze();
   expect(axe.violations).toEqual([]);
+});
+
+test('runs a scenario practice round with a reviewable case background and persisted stats', async ({ page }) => {
+  const scenario = scenarios[0];
+  const scenarioQuestions = questions.filter((question) => question.scenarioId === scenario.id);
+
+  // #given — the scenario list shows the case with its question count and answered status
+  await page.getByRole('button', { name: '演習' }).first().click();
+  await page.getByRole('button', { name: 'シナリオ演習' }).click();
+  const item = page.locator('.scenario-item').first();
+  await expect(item).toContainText(scenario.title.ja);
+  await expect(item).toContainText(`設問${scenarioQuestions.length}問`);
+  await expect(item).toContainText(`解答済み 0/${scenarioQuestions.length}`);
+
+  // #when — opening the scenario shows the full case background before the questions
+  await item.click();
+  await expect(page.getByRole('heading', { name: scenario.title.ja })).toBeVisible();
+  for (const paragraph of scenario.background.ja) await expect(page.getByText(paragraph)).toBeVisible();
+  await page.getByRole('button', { name: '設問へ進む' }).click();
+
+  // #then — every question is answerable with the case description reachable throughout
+  for (let answered = 1; answered <= scenarioQuestions.length; answered += 1) {
+    await expect(page.locator('.quiz-question > header code')).toHaveText(`第${answered}問 / 全${scenarioQuestions.length}問`);
+
+    const context = page.locator('.scenario-context');
+    await expect(context.locator('summary')).toHaveText('ケース記述を開く');
+    if (answered === 1) {
+      await context.locator('summary').click();
+      await expect(context.getByText(scenario.background.ja[0])).toBeVisible();
+    }
+
+    const isMultiple = await page.getByText('複数選択：当てはまる選択肢をすべて選び、「回答する」を押してください。').isVisible();
+    if (isMultiple) {
+      await page.locator('.choice-button').nth(0).click();
+      await page.locator('.choice-button').nth(1).click();
+      await page.getByRole('button', { name: '回答する' }).click();
+    } else {
+      await page.locator('.choice-button').first().press('Enter');
+    }
+
+    await expect(page.locator('.quiz-feedback')).toBeVisible();
+    await page.getByRole('button', { name: answered === scenarioQuestions.length ? '結果を見る' : '次の問題へ' }).click();
+  }
+
+  await expect(page.getByRole('heading', { name: '演習結果' })).toBeVisible();
+  const stats = await page.evaluate(() => JSON.parse(localStorage.getItem('cca-field-notes:v1') ?? '{}').quizStats ?? {});
+  expect(Object.keys(stats).sort()).toEqual(scenarioQuestions.map((question) => question.id).sort());
+
+  const axe = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa']).analyze();
+  expect(axe.violations).toEqual([]);
+
+  // #then — the scenario list reflects the recorded answers
+  await page.getByRole('button', { name: 'もう一度演習する' }).click();
+  await expect(page.locator('.scenario-item').first()).toContainText(`解答済み ${scenarioQuestions.length}/${scenarioQuestions.length}`);
 });
 
 test('surfaces a struggling card in the weak filter and navigates from the today weak areas', async ({ page }) => {

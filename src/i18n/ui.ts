@@ -111,6 +111,16 @@ export type UiCopy = {
     eyebrow: string;
     title: string;
     introduction: string;
+    modeLegend: string;
+    modeRandom: string;
+    modeScenario: string;
+    scenarioIntroduction: string;
+    scenarioListLabel: string;
+    scenarioQuestionCount: (count: number) => string;
+    scenarioAnswered: (answered: number, total: number) => string;
+    backgroundTitle: string;
+    proceedToQuestions: string;
+    backgroundToggle: string;
     countLegend: string;
     count10: string;
     count20: string;
@@ -279,6 +289,16 @@ export const ui = {
       eyebrow: 'INDEPENDENT CHOICE PRACTICE',
       title: '選択式演習',
       introduction: '本試験の再現ではありません。独自作成の選択問題で、単一選択・複数選択の解答形式に慣れるための演習です。',
+      modeLegend: '演習モード',
+      modeRandom: 'ランダム演習',
+      modeScenario: 'シナリオ演習',
+      scenarioIntroduction: 'ケース記述を読んでから設問群に答える形式に慣れる演習です。シナリオと設問はすべて公開資料に基づく独自作成で、本試験のシナリオの再現ではありません。',
+      scenarioListLabel: 'シナリオ一覧',
+      scenarioQuestionCount: (count) => `設問${count}問`,
+      scenarioAnswered: (answered, total) => `解答済み ${answered}/${total}`,
+      backgroundTitle: 'ケース記述',
+      proceedToQuestions: '設問へ進む',
+      backgroundToggle: 'ケース記述を開く',
       countLegend: '出題数',
       count10: '10問',
       count20: '20問',
@@ -440,6 +460,16 @@ export const ui = {
       eyebrow: 'INDEPENDENT CHOICE PRACTICE',
       title: 'Choice quiz',
       introduction: 'This quiz does not reproduce the actual exam. It uses independently written questions to practice the single- and multiple-select answer formats.',
+      modeLegend: 'Mode',
+      modeRandom: 'Random quiz',
+      modeScenario: 'Scenario practice',
+      scenarioIntroduction: 'Practice reading a case description before answering its question set. Every scenario and question is independently written from public sources; nothing reproduces the live exam scenarios.',
+      scenarioListLabel: 'Scenario list',
+      scenarioQuestionCount: (count) => `${count} ${count === 1 ? 'question' : 'questions'}`,
+      scenarioAnswered: (answered, total) => `Answered ${answered}/${total}`,
+      backgroundTitle: 'Case background',
+      proceedToQuestions: 'Start the questions',
+      backgroundToggle: 'Show the case background',
       countLegend: 'Questions',
       count10: '10 questions',
       count20: '20 questions',
