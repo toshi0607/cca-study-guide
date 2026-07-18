@@ -9,11 +9,12 @@ import { localize, ui, type UiCopy } from '../i18n/ui';
 import { isAnswerCorrect, pickQuizQuestions, type QuizCount, type QuizDomainChoice } from '../lib/quiz';
 import { isDue, scheduleReview, type Rating, type ReviewState } from '../lib/scheduler';
 import { createStudyStorage, type StudyData } from '../lib/storage';
+import { isWeak } from '../lib/weakness';
 
 type View = 'today' | 'guide' | 'practice' | 'quiz' | 'progress';
 
 const viewKeys: View[] = ['today', 'guide', 'practice', 'quiz', 'progress'];
-const stateFilters = ['due', 'all', 'unseen', 'reviewed'] as const;
+const stateFilters = ['due', 'all', 'unseen', 'reviewed', 'weak'] as const;
 const icons: Record<View, string> = { today: '⌂', guide: '▤', practice: '◇', quiz: '☑', progress: '✓' };
 
 function studyStorage() {
@@ -268,7 +269,7 @@ function App({ locale, analyticsEnabled = false }: { locale: Locale; analyticsEn
   const [ready, setReady] = useState(false);
   const [query, setQuery] = useState('');
   const [domainFilter, setDomainFilter] = useState('all');
-  const [stateFilter, setStateFilter] = useState<'due' | 'all' | 'unseen' | 'reviewed'>('due');
+  const [stateFilter, setStateFilter] = useState<(typeof stateFilters)[number]>('due');
   const [revealed, setRevealed] = useState<Record<string, boolean>>({});
   const [notice, setNotice] = useState('');
   const noticeRef = useRef<HTMLParagraphElement>(null);
@@ -304,9 +305,14 @@ function App({ locale, analyticsEnabled = false }: { locale: Locale; analyticsEn
     const matchesQuery = text.includes(query.trim().toLocaleLowerCase(dateLocale(locale)));
     const matchesDomain = domainFilter === 'all' || card.domainId === domainFilter;
     const review = data.reviews[card.id];
-    const matchesState = stateFilter === 'all' || (stateFilter === 'unseen' ? !review : stateFilter === 'reviewed' ? Boolean(review) : Boolean(now && isDue(review, card.revision, now)));
+    const matchesState = stateFilter === 'all' || (stateFilter === 'unseen' ? !review : stateFilter === 'reviewed' ? Boolean(review) : stateFilter === 'weak' ? isWeak(review) : Boolean(now && isDue(review, card.revision, now)));
     return matchesQuery && matchesDomain && matchesState;
   }), [query, domainFilter, stateFilter, data, locale, now]);
+
+  const weakByDomain = useMemo(() => domains
+    .map((domain) => ({ domain, count: cards.filter((card) => card.domainId === domain.id && isWeak(data.reviews[card.id])).length }))
+    .filter((entry) => entry.count > 0)
+    .sort((a, b) => b.count - a.count), [data]);
 
   const focusNotice = () => requestAnimationFrame(() => noticeRef.current?.focus());
 
@@ -369,6 +375,13 @@ function App({ locale, analyticsEnabled = false }: { locale: Locale; analyticsEn
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  const openWeakPractice = (domainId: string) => {
+    setQuery('');
+    setDomainFilter(domainId);
+    setStateFilter('weak');
+    navigate('practice');
+  };
+
   return (
     <div class="app-shell">
       <header class="mobile-header">
@@ -405,6 +418,23 @@ function App({ locale, analyticsEnabled = false }: { locale: Locale; analyticsEn
             </div>
           </section>
           <Blueprint reviews={data.reviews} ready={ready} locale={locale} copy={copy}/>
+          <section class="weak-areas" aria-labelledby="weak-areas-title">
+            <div class="section-heading">
+              <div><p class="eyebrow">{copy.weakAreas.eyebrow}</p><h2 id="weak-areas-title">{copy.weakAreas.title}</h2></div>
+              <p>{copy.weakAreas.note}</p>
+            </div>
+            {ready && weakByDomain.length > 0
+              ? <div class="weak-list">{weakByDomain.map(({ domain, count }) => <button key={domain.id} type="button" class="weak-row" onClick={() => openWeakPractice(domain.id)}>
+                  <span class="weak-row-domain" aria-hidden="true">D{domain.number}</span>
+                  <span class="weak-row-title">{localize(domain.title, locale)}</span>
+                  <strong>{copy.weakAreas.cardCount(count)}</strong>
+                  <span aria-hidden="true">→</span>
+                </button>)}</div>
+              : <div class="empty-state">
+                  <strong>{ready && reviewedCount > 0 ? copy.weakAreas.emptyAllClearTitle : copy.weakAreas.emptyBeforeStartTitle}</strong>
+                  <p>{ready && reviewedCount > 0 ? copy.weakAreas.emptyAllClearDescription : copy.weakAreas.emptyBeforeStartDescription}</p>
+                </div>}
+          </section>
           <section class="status-strip" aria-labelledby="status-title">
             <div><p class="eyebrow">{copy.status.eyebrow}</p><h2 id="status-title">{copy.status.title}</h2></div>
             <dl>
@@ -465,7 +495,8 @@ function App({ locale, analyticsEnabled = false }: { locale: Locale; analyticsEn
           <section class="progress-panel" aria-labelledby="by-domain"><h3 id="by-domain">{copy.progress.byDomain}</h3>{domains.map((domain) => {
             const list = cards.filter((card) => card.domainId === domain.id);
             const done = list.filter((card) => data.reviews[card.id]).length;
-            return <div class="progress-row" key={domain.id}><span>D{domain.number} {localize(domain.title, locale)}</span><progress value={done} max={list.length}>{done}/{list.length}</progress><strong>{formatNumber(done, locale)}/{formatNumber(list.length, locale)}</strong></div>;
+            const weak = list.filter((card) => isWeak(data.reviews[card.id])).length;
+            return <div class="progress-row" key={domain.id}><span>D{domain.number} {localize(domain.title, locale)}{weak > 0 && <small class="weak-count">{copy.progress.weakCount(weak)}</small>}</span><progress value={done} max={list.length}>{done}/{list.length}</progress><strong>{formatNumber(done, locale)}/{formatNumber(list.length, locale)}</strong></div>;
           })}</section>
           <section class="data-panel" aria-labelledby="data-title"><div><h3 id="data-title">{copy.progress.localData}</h3><p>{copy.progress.localDataDescription}</p>{analyticsEnabled && <p class="analytics-disclosure">{copy.progress.analyticsDisclosure}<a href={localePaths[locale].privacy}>{copy.progress.details}</a></p>}</div><div class="data-actions"><button onClick={exportData}>{copy.progress.exportJson}</button><button class="danger" onClick={resetData}>{copy.progress.reset}</button></div></section>
           <section class="sources-panel" aria-labelledby="sources-title"><div><p class="eyebrow">{copy.progress.sourcesEyebrow}</p><h3 id="sources-title">{copy.progress.sourcesTitle}</h3><p>{copy.progress.sourcesDescription}</p></div><div class="source-register">{sources.map((source) => <article key={source.id}><code>{source.id}</code><div><a href={source.url} target="_blank" rel="noreferrer"><span lang="en">{source.title}</span><span class="sr-only">{copy.aria.opensNewTab}</span><span aria-hidden="true"> ↗</span></a><p>{source.publisher} · {copy.progress.verified(formatDate(source.verifiedAt, locale))}</p></div></article>)}</div></section>

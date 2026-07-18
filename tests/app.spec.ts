@@ -2,6 +2,7 @@ import { readFile } from 'node:fs/promises';
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
 import { cards } from '../src/content/cards';
+import { domains } from '../src/content/domains';
 
 test.beforeEach(async ({ page }) => {
   await page.goto('/');
@@ -54,7 +55,7 @@ test('refreshes due cards while a tab remains open', async ({ page }) => {
 test('resets practice filters when starting review from the today view', async ({ page }) => {
   // #given — practice view narrowed to one domain and a search query
   await page.getByRole('button', { name: '練習' }).first().click();
-  await expect(page.locator('.practice-card')).toHaveCount(16);
+  await expect(page.locator('.practice-card')).toHaveCount(cards.length);
   await page.getByRole('searchbox', { name: 'カードを検索' }).fill('エージェント');
   const domainChip = page.getByRole('button', { name: 'D1', exact: true });
   await domainChip.click();
@@ -65,7 +66,7 @@ test('resets practice filters when starting review from the today view', async (
   await page.getByRole('button', { name: '復習を始める' }).click();
 
   // #then — every due card is shown, matching the count next to the CTA
-  await expect(page.locator('.practice-card')).toHaveCount(16);
+  await expect(page.locator('.practice-card')).toHaveCount(cards.length);
   await expect(domainChip).toHaveAttribute('aria-pressed', 'false');
   await expect(page.getByRole('searchbox', { name: 'カードを検索' })).toHaveValue('');
 });
@@ -135,6 +136,35 @@ test('runs a domain-scoped quiz round with immediate feedback, a summary, and pe
 
   const axe = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa']).analyze();
   expect(axe.violations).toEqual([]);
+});
+
+test('surfaces a struggling card in the weak filter and navigates from the today weak areas', async ({ page }) => {
+  // The flow rates the first card of the default due list, so the expected
+  // domain chip is derived from content order instead of hardcoding D1.
+  const firstDomain = domains.find((domain) => domain.id === cards[0].domainId)!;
+  await expect(page.getByText('記録はまだありません。')).toBeVisible();
+
+  await page.getByRole('button', { name: '練習' }).first().click();
+  await page.locator('.reveal-button').first().click();
+  await page.getByRole('button', { name: /もう一度/ }).first().click();
+
+  const weakChip = page.getByRole('button', { name: '苦手', exact: true });
+  await weakChip.click();
+  await expect(weakChip).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('.practice-card')).toHaveCount(1);
+
+  await page.getByRole('button', { name: '今日' }).first().click();
+  await expect(page.getByRole('heading', { name: '苦手エリア' })).toBeVisible();
+  await expect(page.getByText('記録はまだありません。')).toHaveCount(0);
+  const weakRow = page.locator('.weak-row');
+  await expect(weakRow).toHaveCount(1);
+  await expect(weakRow).toContainText('1枚');
+
+  await weakRow.press('Enter');
+  await expect(page.getByRole('heading', { name: '練習カード' })).toBeVisible();
+  await expect(page.getByRole('button', { name: '苦手', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.getByRole('button', { name: `D${firstDomain.number}`, exact: true })).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('.practice-card')).toHaveCount(1);
 });
 
 test('switches between complete localized routes and searches active-locale content', async ({ page }) => {

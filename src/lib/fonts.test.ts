@@ -15,6 +15,7 @@ const displayFontText = (): string =>
         copy.brand.mark,
         copy.today.titleLead,
         copy.today.titleEmphasis,
+        copy.weakAreas.title,
         copy.guide.title,
         copy.practice.title,
         copy.quiz.title,

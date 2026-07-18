@@ -378,6 +378,33 @@ main {
 .status-strip dt { color: var(--ink-soft); font-size: .75rem; }
 .status-strip dd { margin: 0; font: 700 1.5rem var(--mono); }
 
+.weak-areas {
+  margin-top: 24px;
+  padding: clamp(24px, 4vw, 48px);
+  border: 1px solid var(--grid-strong);
+  background: var(--surface);
+}
+.weak-list { margin-top: 26px; display: grid; gap: 8px; }
+.weak-row {
+  min-height: 54px;
+  padding: 8px 16px;
+  display: grid;
+  grid-template-columns: auto 1fr auto auto;
+  gap: 14px;
+  align-items: center;
+  border: 1px solid var(--grid-strong);
+  border-left: 4px solid var(--amber);
+  background: var(--surface);
+  text-align: left;
+  cursor: pointer;
+}
+.weak-row:hover { border-color: var(--amber); background: var(--amber-pale); }
+.weak-row-domain { padding: 3px 6px; background: var(--amber); color: #fff; font: 700 .72rem var(--mono); }
+.weak-row-title { font-weight: 700; word-break: auto-phrase; }
+.weak-row strong { font: .8rem var(--mono); white-space: nowrap; }
+.weak-areas .empty-state { margin-top: 26px; }
+.weak-count { margin-left: 10px; color: var(--amber); font-weight: 700; font-size: .72rem; }
+
 .page-header {
   padding: clamp(28px, 4.5vw, 52px);
   border: 2px solid var(--ink);
