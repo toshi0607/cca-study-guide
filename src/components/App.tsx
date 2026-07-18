@@ -10,7 +10,7 @@ import { localize, ui, type UiCopy } from '../i18n/ui';
 import { isAnswerCorrect, pickQuizQuestions, type QuizCount, type QuizDomainChoice } from '../lib/quiz';
 import { isDue, scheduleReview, type Rating, type ReviewState } from '../lib/scheduler';
 import { emptyTally, rateSessionCard, type SessionTally } from '../lib/session';
-import { createStudyStorage, type QuizStat, type StudyData } from '../lib/storage';
+import { buildStudyDataExport, createStudyStorage, parseStudyDataImport, type ImportedStudyData, type QuizStat, type StudyData } from '../lib/storage';
 import { isWeak } from '../lib/weakness';
 
 type View = 'today' | 'guide' | 'practice' | 'quiz' | 'progress';
@@ -483,6 +483,10 @@ function App({ locale, analyticsEnabled = false }: { locale: Locale; analyticsEn
   const [sessionCards, setSessionCards] = useState<Card[] | null>(null);
   const [notice, setNotice] = useState('');
   const noticeRef = useRef<HTMLParagraphElement>(null);
+  const importInputRef = useRef<HTMLInputElement>(null);
+  // Serializes imports: a second file picked while one is still being read
+  // would otherwise apply in resolution order, not selection order.
+  const importBusyRef = useRef(false);
 
   useEffect(() => {
     const refreshNow = () => setNow(new Date());
@@ -572,13 +576,46 @@ function App({ locale, analyticsEnabled = false }: { locale: Locale; analyticsEn
   };
 
   const exportData = () => {
-    const blob = new Blob([JSON.stringify({ exportedAt: new Date().toISOString(), app: 'CCA Field Notes', ...data }, null, 2)], { type: 'application/json' });
+    const blob = new Blob([JSON.stringify(buildStudyDataExport(data, new Date()), null, 2)], { type: 'application/json' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
     link.download = `cca-field-notes-${new Date().toISOString().slice(0, 10)}.json`;
     link.click();
     URL.revokeObjectURL(link.href);
     setNotice(copy.notices.exported);
+  };
+
+  const applyImport = (imported: ImportedStudyData | null) => {
+    if (!imported) {
+      setNotice(copy.notices.importInvalid);
+      focusNotice();
+      return;
+    }
+    const reviewedTotal = Object.keys(imported.data.reviews).length;
+    const exportedAt = imported.exportedAt ? formatDate(new Date(imported.exportedAt), locale) : null;
+    if (!window.confirm(copy.notices.importConfirm(reviewedTotal, exportedAt))) return;
+    if (!studyStorage().save(imported.data)) {
+      setNotice(copy.notices.saveFailed);
+      focusNotice();
+      return;
+    }
+    setData(imported.data);
+    setRevealed({});
+    setNotice(copy.notices.importDone);
+    focusNotice();
+  };
+
+  const importData = (event: Event) => {
+    const input = event.currentTarget as HTMLInputElement;
+    const file = input.files?.[0];
+    input.value = '';
+    if (!file || importBusyRef.current) return;
+    importBusyRef.current = true;
+    void file.text()
+      .then((text) => applyImport(parseStudyDataImport(text)), () => applyImport(null))
+      .finally(() => {
+        importBusyRef.current = false;
+      });
   };
 
   const resetData = () => {
@@ -723,7 +760,7 @@ function App({ locale, analyticsEnabled = false }: { locale: Locale; analyticsEn
             const weak = list.filter((card) => isWeak(data.reviews[card.id])).length;
             return <div class="progress-row" key={domain.id}><span>D{domain.number} {localize(domain.title, locale)}{weak > 0 && <small class="weak-count">{copy.progress.weakCount(weak)}</small>}</span><progress value={done} max={list.length}>{done}/{list.length}</progress><strong>{formatNumber(done, locale)}/{formatNumber(list.length, locale)}</strong></div>;
           })}</section>
-          <section class="data-panel" aria-labelledby="data-title"><div><h3 id="data-title">{copy.progress.localData}</h3><p>{copy.progress.localDataDescription}</p>{analyticsEnabled && <p class="analytics-disclosure">{copy.progress.analyticsDisclosure}<a href={localePaths[locale].privacy}>{copy.progress.details}</a></p>}</div><div class="data-actions"><button onClick={exportData}>{copy.progress.exportJson}</button><button class="danger" onClick={resetData}>{copy.progress.reset}</button></div></section>
+          <section class="data-panel" aria-labelledby="data-title"><div><h3 id="data-title">{copy.progress.localData}</h3><p>{copy.progress.localDataDescription}</p>{analyticsEnabled && <p class="analytics-disclosure">{copy.progress.analyticsDisclosure}<a href={localePaths[locale].privacy}>{copy.progress.details}</a></p>}</div><div class="data-actions"><button onClick={exportData}>{copy.progress.exportJson}</button><button onClick={() => importInputRef.current?.click()}>{copy.progress.importJson}</button><input ref={importInputRef} type="file" accept=".json,application/json" hidden onChange={importData}/><button class="danger" onClick={resetData}>{copy.progress.reset}</button></div></section>
           <section class="sources-panel" aria-labelledby="sources-title"><div><p class="eyebrow">{copy.progress.sourcesEyebrow}</p><h3 id="sources-title">{copy.progress.sourcesTitle}</h3><p>{copy.progress.sourcesDescription}</p></div><div class="source-register">{sources.map((source) => <article key={source.id}><code>{source.id}</code><div><a href={source.url} target="_blank" rel="noreferrer"><span lang="en">{source.title}</span><span class="sr-only">{copy.aria.opensNewTab}</span><span aria-hidden="true"> ↗</span></a><p>{source.publisher} · {copy.progress.verified(formatDate(source.verifiedAt, locale))}</p></div></article>)}</div></section>
           <section class="disclaimer" aria-labelledby="disclaimer-title"><h3 id="disclaimer-title">{copy.progress.disclaimerTitle}</h3><p>{copy.progress.disclaimerBody}</p><p>{copy.progress.blueprintVerified(formatDate(VERIFIED_AT, locale))} {copy.progress.reportIssueLead} <a href="https://github.com/toshi0607/cca-study-guide/issues" target="_blank" rel="noreferrer">{copy.progress.reportIssueLink}<span class="sr-only">{copy.aria.opensNewTab}</span><span aria-hidden="true"> ↗</span></a>.</p></section>
         </section>}

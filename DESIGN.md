@@ -16,7 +16,7 @@ The site must never imply Anthropic endorsement and must not contain, reconstruc
 - Short explanations, common-confusion notes, and direct official documentation links.
 - Ratings: `もう一度`, `難しい`, `できた`; local due-date scheduling and persistent progress.
 - Filters by domain and state; card search.
-- Progress summary, JSON export, and local reset.
+- Progress summary, JSON export/import for moving between devices, and local reset.
 - A source and disclaimer section with the blueprint verification date.
 - No login, API, database, or user-generated content. Optional aggregate usage analytics loads when configured, with advertising storage and signals disabled; the app emits no custom events for study content or progress and links to a dedicated disclosure page.
 
@@ -43,7 +43,7 @@ The MVP is a single fast page with four views to avoid routing overhead while re
 - `ガイド`: five domain sections, 30 task statements, must-remember bullets, official links.
 - `練習`: due/all filters, domain chips, search, one reveal card at a time or browsable stack, plus a focused review session that runs the current filtered set one card at a time (the today CTA starts one directly over the due cards).
 - `演習`: random quiz (question count and weighted/per-domain draw) and scenario practice (case list → background → linked questions) sharing one answering flow and summary.
-- `進捗`: domain completion, due counts, local-data explanation, export/reset, sources/disclaimer.
+- `進捗`: domain completion, due counts, local-data explanation, export/import/reset, sources/disclaimer.
 
 On narrow screens, the four views use a bottom navigation bar. On wide screens, a left rail carries the same navigation.
 
@@ -208,7 +208,7 @@ Avoid warm editorial cream, neon-on-black, decorative gradients, Claude logos, a
 - Five domains and weights total 100 and match the official page.
 - All 30 blueprint objectives are present; every objective and card has at least one public official source.
 - A learner can reveal, rate, and revisit cards using keyboard only.
-- Progress survives reload and can be exported/reset.
+- Progress survives reload and can be exported/imported/reset.
 - Build and tests pass; axe has no serious/critical findings in the core flow.
 - 360px layout has no horizontal scroll.
 - Repository is created under `toshi0607`; deployment works on a provider URL.
