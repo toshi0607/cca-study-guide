@@ -1,4 +1,5 @@
 import type { ChoiceQuestion, LocalizedText } from './types';
+import { SCENARIO_VERIFIED_AT } from './scenarios';
 import { VERIFIED_AT } from './sources';
 
 type QuestionCopy = {
@@ -20,6 +21,7 @@ const question = (
   ja: QuestionCopy,
   en: QuestionCopy,
   sourceIds: string[],
+  extra?: { scenarioId: string; verifiedAt: string },
 ): ChoiceQuestion => ({
   id,
   revision: 1,
@@ -31,7 +33,8 @@ const question = (
   correctChoiceIds,
   explanation: localized(ja.explanation, en.explanation),
   sourceIds,
-  verifiedAt: VERIFIED_AT,
+  verifiedAt: extra?.verifiedAt ?? VERIFIED_AT,
+  ...(extra ? { scenarioId: extra.scenarioId } : {}),
 });
 
 // All stems, choices, and explanations below were independently authored for
@@ -546,4 +549,439 @@ export const questions: ChoiceQuestion[] = [
     },
     ['structured'],
   ),
+
+  // --- Scenario-practice questions ---
+  // Answered with the fictional case in scenarios.ts in view; excluded from the
+  // standalone random quiz pool. Independently authored like everything above.
+  question(
+    'q-sc-mcp-surface', 'd2', ['2.3'], 'single', ['c'],
+    {
+      stem: '北斗ロジスティクスの「40エンドポイントを1対1でツール化した」構成を見直します。ツール取り違えを減らす最初の一手として最も適切なのはどれですか？',
+      choices: [
+        'ツール名をすべて短い略語に変えて、定義の読み込み量を減らす',
+        '全操作を1つの汎用ツール「callApi」に統合し、選択の余地をなくす',
+        '利用場面と責任のまとまりでツールを再設計し、同時に見せる数と紛らわしさを減らす',
+        'モデルの温度を下げて、ツール選択のランダム性を抑える',
+      ],
+      explanation: 'APIの内部構造をそのまま写すのではなく、エージェントの仕事の単位でツール面を設計し直すことが本質的な対策です。略語化は説明の質を下げ、汎用ツール化は境界を曖昧にし、温度調整は紛らわしさという原因に触れません。',
+    },
+    {
+      stem: 'You are reworking Hokuto Logistics’ “forty endpoints exposed one-to-one” design. Which first step most appropriately reduces tool mix-ups?',
+      choices: [
+        'Rename every tool to a short abbreviation to shrink the loaded definitions',
+        'Merge every operation into one general-purpose “callApi” tool so there is nothing to choose',
+        'Redesign the tool surface around use cases and responsibilities, reducing the number and confusability of simultaneously exposed tools',
+        'Lower the model temperature to suppress randomness in tool selection',
+      ],
+      explanation: 'The essential fix is designing the tool surface around the agent’s units of work instead of mirroring the internal API structure. Abbreviations degrade descriptions, an all-purpose tool blurs boundaries, and temperature does not address confusability.',
+    },
+    ['mcp-tools', 'define-tools'],
+    { scenarioId: 'sc-mcp-tool-design', verifiedAt: SCENARIO_VERIFIED_AT },
+  ),
+  question(
+    'q-sc-mcp-args', 'd2', ['2.1'], 'single', ['b'],
+    {
+      stem: '日付やIDの引数形式の誤りが続いています。ツール定義側の対策として最も適切なのはどれですか？',
+      choices: [
+        '引数を自由記述の文字列に統一し、サーバー側で柔軟に解釈する',
+        '入力のJSON Schemaで型・形式・制約を宣言し、説明文に利用条件と境界を明記する',
+        '正しい引数例を社内Wikiにまとめ、開発者がプロンプトへ貼るよう周知する',
+        '引数検証を廃止し、失敗したらエージェントに再試行させる',
+      ],
+      explanation: 'ツール定義はモデルが入力生成に使う契約なので、スキーマで構造を宣言し、説明文で利用条件を伝えるのが正攻法です。自由記述は曖昧さを増やし、Wikiはモデルの選択時に参照されず、検証の廃止は誤りを下流へ流します。',
+    },
+    {
+      stem: 'Malformed date and ID arguments keep appearing. Which tool-definition measure is most appropriate?',
+      choices: [
+        'Unify the arguments as free-form strings and interpret them flexibly on the server',
+        'Declare types, formats, and constraints in the input JSON Schema, and state usage conditions and boundaries in the description',
+        'Collect correct argument examples in an internal wiki and ask developers to paste them into prompts',
+        'Drop argument validation and let the agent retry when calls fail',
+      ],
+      explanation: 'A tool definition is the contract the model uses to generate inputs, so declare the structure in the schema and communicate usage conditions in the description. Free-form strings add ambiguity, a wiki is not consulted at selection time, and dropping validation pushes errors downstream.',
+    },
+    ['define-tools', 'mcp-tools'],
+    { scenarioId: 'sc-mcp-tool-design', verifiedAt: SCENARIO_VERIFIED_AT },
+  ),
+  question(
+    'q-sc-mcp-carrier-error', 'd2', ['2.2'], 'multiple', ['a', 'c'],
+    {
+      stem: '配送業者APIのレート制限で失敗したとき、エージェントが適切に回復できるツール応答を2つ選んでください。',
+      choices: [
+        'エラーであることと、失敗の分類（一時的か恒久的か）・再試行可能性を構造化して返す',
+        'デバッグ用にスタックトレースと認証ヘッダーを含む生のレスポンスをそのまま返す',
+        '内部実装の詳細を含まない安全な説明で、次に取り得る行動を判断できる内容を返す',
+        '空の成功レスポンスを返し、エージェントに処理を継続させる',
+      ],
+      explanation: '一時障害の分類と再試行可能性が、待って再試行するか別手段へ切り替えるかの判断材料になります。生のレスポンスは認証情報や内部詳細を漏らし、失敗の成功偽装は同じ呼び出しの無限反復や誤った続行を招きます。',
+    },
+    {
+      stem: 'When the carrier API fails with a rate limit, select the TWO tool responses that let the agent recover appropriately.',
+      choices: [
+        'Return a structured result marking the error with its category (transient or permanent) and retryability',
+        'Return the raw response as-is, including the stack trace and auth headers, for debugging',
+        'Return a safe explanation without internal implementation details that lets the agent decide its next action',
+        'Return an empty success response so the agent continues processing',
+      ],
+      explanation: 'The failure category and retryability inform whether to wait and retry or switch approaches. Raw responses leak credentials and internals, and faking success invites endless repeats of the same call or an incorrect continuation.',
+    },
+    ['mcp-tools', 'tool-use'],
+    { scenarioId: 'sc-mcp-tool-design', verifiedAt: SCENARIO_VERIFIED_AT },
+  ),
+  question(
+    'q-sc-mcp-token', 'd2', ['2.4'], 'single', ['a'],
+    {
+      stem: 'コミットされてしまった配送業者APIトークンへの対処として最も適切なのはどれですか？',
+      choices: [
+        'トークンを無効化して再発行し、設定は環境変数や秘密管理から参照する形へ改め、共有ファイルから秘密を除く',
+        'リポジトリはプライベートなので、現状の設定ファイルのまま運用を続ける',
+        'トークンをbase64でエンコードしてから設定ファイルへ書き直す',
+        '全プロジェクト共通のグローバル設定へトークンを移して一元管理する',
+      ],
+      explanation: '漏えいした秘密は失効させたうえで、共有できる接続定義と秘密情報を分離するのが原則です。プライベートリポジトリは秘密管理の代替にならず、base64は暗号化ではなく、スコープを広げる一元管理は露出をむしろ増やします。',
+    },
+    {
+      stem: 'What is the most appropriate way to deal with the carrier API token that was committed to the repository?',
+      choices: [
+        'Revoke and reissue the token, switch the configuration to read it from environment variables or a secrets manager, and remove secrets from the shared file',
+        'Keep operating with the current configuration file because the repository is private',
+        'Re-encode the token in base64 before writing it back into the configuration file',
+        'Move the token into a global configuration shared by every project for central management',
+      ],
+      explanation: 'Revoke the leaked secret, then separate shareable connection definitions from secret values. A private repository is not a substitute for secrets management, base64 is not encryption, and widening the scope increases exposure rather than containing it.',
+    },
+    ['code-mcp', 'mcp-tools'],
+    { scenarioId: 'sc-mcp-tool-design', verifiedAt: SCENARIO_VERIFIED_AT },
+  ),
+
+  question(
+    'q-sc-support-parallel', 'd1', ['1.2', '1.6'], 'single', ['d'],
+    {
+      stem: 'さくらマーケットの試作は、独立した照会も1つずつ順番に実行しています。オーケストレーター型へ移行する際の実行設計として最も適切なのはどれですか？',
+      choices: [
+        '返金の本人確認と返金実行も含め、すべての手順を並列化して待ち時間を最小化する',
+        '並列化はデバッグを難しくするため、移行後もすべて逐次実行を維持する',
+        'サブタスクの数が多い問い合わせだけを、依存関係を見ずに一律で並列化する',
+        '注文照会と配送照会のような互いに独立した作業は並列にfan-outし、順序が必要な手順は逐次にする',
+      ],
+      explanation: '並列化の判断軸はサブタスク間の依存関係です。独立した照会は並列で速くでき、本人確認→返金実行のような順序が必須の手順は逐次に保ちます。全並列も全逐次も、依存関係という基準を無視しています。',
+    },
+    {
+      stem: 'Sakura Market’s prototype runs even independent lookups one at a time. Which execution design is most appropriate when moving to an orchestrator?',
+      choices: [
+        'Parallelize every step, including identity verification and refund execution, to minimize waiting time',
+        'Keep everything sequential after the migration because parallelism makes debugging harder',
+        'Parallelize only inquiries with many subtasks, uniformly, without checking dependencies',
+        'Fan out mutually independent work such as order and delivery lookups in parallel, and keep order-dependent steps sequential',
+      ],
+      explanation: 'The deciding factor is the dependency between subtasks. Independent lookups can run in parallel for speed, while steps with a required order — verify identity, then execute the refund — stay sequential. All-parallel and all-sequential both ignore that criterion.',
+    },
+    ['subagents', 'sdk-features'],
+    { scenarioId: 'sc-support-agents', verifiedAt: SCENARIO_VERIFIED_AT },
+  ),
+  question(
+    'q-sc-support-worker-contract', 'd1', ['1.3'], 'single', ['b'],
+    {
+      stem: 'オーケストレーターから分類別のワーカーエージェントへ問い合わせ対応を委譲します。起動時の設計として最も適切なのはどれですか？',
+      choices: [
+        'ワーカーは親の会話を自動で参照できるため、問い合わせIDだけを渡す',
+        '対応に必要な顧客情報・期待する出力形式・完了と失敗の条件を明示して渡す',
+        '毎回、会話履歴全体をそのままワーカーへコピーして判断を任せる',
+        '出力形式は固定せず、ワーカーごとの自由な形式で返させて柔軟性を保つ',
+      ],
+      explanation: 'サブエージェントが親の文脈を暗黙に見られる前提は誤りで、必要十分な入力と出力契約、終了条件を明示して渡します。全履歴のコピーはコンテキストを浪費し、自由形式の返答はオーケストレーター側で統合できません。',
+    },
+    {
+      stem: 'The orchestrator delegates inquiries to per-category worker agents. Which invocation design is most appropriate?',
+      choices: [
+        'Pass only the inquiry ID because workers can automatically see the parent conversation',
+        'Pass the customer information the work needs, the expected output format, and the completion and failure conditions explicitly',
+        'Copy the entire conversation history to the worker every time and let it decide',
+        'Leave the output format open so each worker replies in its own style for flexibility',
+      ],
+      explanation: 'Assuming a subagent implicitly sees the parent context is a mistake; pass sufficient input, an output contract, and stopping conditions explicitly. Copying the full history wastes context, and free-form replies cannot be integrated by the orchestrator.',
+    },
+    ['subagents'],
+    { scenarioId: 'sc-support-agents', verifiedAt: SCENARIO_VERIFIED_AT },
+  ),
+  question(
+    'q-sc-support-escalation', 'd5', ['5.2', '5.5'], 'single', ['c'],
+    {
+      stem: '返金規定（一定額超・本人確認未完了は人間の承認者へ）をエージェント運用に組み込む方法として最も適切なのはどれですか？',
+      choices: [
+        'エージェントが自己申告する確信度が低いときだけ、人間の承認者へ回す',
+        '処理が失敗した場合のリカバリとしてのみ、人間へ引き継ぐ',
+        '金額と本人確認状態という外部から検証できる条件でルーティングを設計し、該当ケースを承認フローへ渡す',
+        'システムプロンプトで規定を強調し、エスカレーションの判断はエージェントに委ねる',
+      ],
+      explanation: '人による承認は最初から設計する制御点で、金額や本人確認状態のような外部から検証できる条件が基準になります。自己申告の確信度は信頼できず、失敗後のみの引き継ぎでは規定違反を防げず、プロンプトの強調は強制になりません。',
+    },
+    {
+      stem: 'Which approach most appropriately builds the refund policy — above a set amount or without identity verification, escalate to a human approver — into the agent operation?',
+      choices: [
+        'Route to a human approver only when the agent’s self-reported confidence is low',
+        'Hand off to a human only as recovery after processing has failed',
+        'Design the routing on externally verifiable conditions — amount and identity-verification status — and send matching cases into the approval flow',
+        'Emphasize the policy in the system prompt and leave the escalation decision to the agent',
+      ],
+      explanation: 'Human approval is a control point designed from the outset, keyed on externally verifiable conditions such as amount and verification status. Self-reported confidence is unreliable, failure-only handoffs cannot prevent violations, and prompt emphasis is not enforcement.',
+    },
+    ['user-input', 'evals'],
+    { scenarioId: 'sc-support-agents', verifiedAt: SCENARIO_VERIFIED_AT },
+  ),
+  question(
+    'q-sc-support-context', 'd5', ['5.1'], 'multiple', ['b', 'd'],
+    {
+      stem: '長引いた問い合わせで、初期に確認した注文番号や顧客の希望をエージェントが取り違えます。適切な対策を2つ選んでください。',
+      choices: [
+        '取り違えを防ぐため、会話履歴は一切圧縮せず全文を保持し続ける',
+        '確認済みの注文番号・顧客の希望・決定事項を、会話文とは別の構造化した状態として保持する',
+        '古いターンは関連性が低いので、確認済み事項ごと無条件に削除する',
+        '履歴の圧縮を導入しつつ、継続に必要な重要事実は要約と別に保全する',
+      ],
+      explanation: '要約・圧縮は履歴を短くできますが細部を落とすため、ID や決定事項は構造化して分離保持し、圧縮時にも保全します。全文の無制限保持は関連情報の希薄化とコスト増を招き、無条件削除は対応の継続に必要な事実を失います。',
+    },
+    {
+      stem: 'In long-running inquiries the agent mixes up order numbers and preferences confirmed early on. Select the TWO appropriate countermeasures.',
+      choices: [
+        'Never compress the conversation history and keep the full text to prevent mix-ups',
+        'Keep confirmed order numbers, customer preferences, and decisions as structured state separate from the conversation prose',
+        'Old turns have low relevance, so delete them unconditionally, confirmed items included',
+        'Introduce history compaction while preserving the facts needed for continuation separately from the summary',
+      ],
+      explanation: 'Summaries and compaction shorten history but drop detail, so keep IDs and decisions as separated structured state that survives compaction. Unlimited retention dilutes relevance and raises cost, and unconditional deletion loses facts the case still needs.',
+    },
+    ['context-windows', 'context-editing'],
+    { scenarioId: 'sc-support-agents', verifiedAt: SCENARIO_VERIFIED_AT },
+  ),
+
+  question(
+    'q-sc-code-conventions', 'd3', ['3.1'], 'single', ['b'],
+    {
+      stem: 'あおぞらペイでは、規約を毎回プロンプトへ貼る運用で適用がばらついています。チーム全員とCIに同じ規約を適用する置き場所として最も適切なのはどれですか？',
+      choices: [
+        '各開発者の個人用グローバル設定に置き、各自で同期してもらう',
+        'リポジトリのプロジェクトCLAUDE.mdに置き、バージョン管理する',
+        '規約の全文を共有ドキュメントにまとめ、毎回そこからコピーして貼る',
+        'READMEに書いておけば自動で常時読み込まれるため、それで足りる',
+      ],
+      explanation: 'チーム必須のルールは、プロジェクト層のCLAUDE.mdへ置いてバージョン管理すると全員とCIで同一に再現されます。個人設定は共有されず、コピー運用は貼り忘れが残り、READMEは指示として常時読み込まれる場所ではありません。',
+    },
+    {
+      stem: 'At Aozora Pay, pasting the conventions into prompts has made their application inconsistent. Where is the most appropriate place so the same conventions apply to every teammate and to CI?',
+      choices: [
+        'Each developer’s personal global settings, synchronized individually',
+        'The repository’s project CLAUDE.md, under version control',
+        'A shared document holding the full conventions, copied and pasted each time',
+        'The README, which is automatically loaded at all times and therefore sufficient',
+      ],
+      explanation: 'Mandatory team rules reproduce identically for everyone and for CI when kept in the project-level CLAUDE.md under version control. Personal settings are not shared, copy-paste still misses, and the README is not an always-loaded instruction source.',
+    },
+    ['code-memory', 'code-best-practices'],
+    { scenarioId: 'sc-code-rollout', verifiedAt: SCENARIO_VERIFIED_AT },
+  ),
+  question(
+    'q-sc-code-e2e-rules', 'd3', ['3.3'], 'single', ['c'],
+    {
+      stem: 'E2Eテストファイルにだけ適用したい記述規約の置き場所として最も適切なのはどれですか？',
+      choices: [
+        'プロジェクトCLAUDE.mdの全体規約に追記し、常にすべての作業で読み込ませる',
+        'E2Eテストを別リポジトリへ分離し、そちらの全体規約として書く',
+        '対象パスにマッチするglobを指定した、パス固有のルールとして書く',
+        '各開発者の個人設定へ追加してもらい、運用でカバーする',
+      ],
+      explanation: '適用範囲を対象ファイルへ限定すると、無関係な作業への干渉を避けられます。全体規約への追記は常時読み込まれ、リポジトリ分離は規約のためだけには過剰で、個人設定は共有されません。globが意図したファイルに一致するかの確認も必要です。',
+    },
+    {
+      stem: 'Where is the most appropriate place for writing conventions that should apply only to E2E test files?',
+      choices: [
+        'Append them to the general conventions in the project CLAUDE.md, loaded for every task',
+        'Split the E2E tests into a separate repository and write them as its general conventions',
+        'A path-specific rule with a glob that matches the target paths',
+        'Ask each developer to add them to their personal settings and rely on process',
+      ],
+      explanation: 'Scoping the rules to the target files avoids interfering with unrelated work. Adding them to the general conventions loads them everywhere, a repository split is excessive for conventions alone, and personal settings are not shared. Also verify the glob matches the intended files.',
+    },
+    ['code-memory'],
+    { scenarioId: 'sc-code-rollout', verifiedAt: SCENARIO_VERIFIED_AT },
+  ),
+  question(
+    'q-sc-code-skill', 'd3', ['3.2'], 'multiple', ['a', 'd'],
+    {
+      stem: 'リリースノート下書きの定型作業（手順＋テンプレート＋整形スクリプト）を再利用可能にします。適切な設計を2つ選んでください。',
+      choices: [
+        '手順書とテンプレート・スクリプトをSkillとしてまとめ、再利用可能な単位にする',
+        '手順の全文をプロジェクトCLAUDE.mdへ載せ、全セッションで常時読み込ませる',
+        'Skillはユーザーが名前を明示的に入力したときだけ使われるため、起動方法を全員に周知する',
+        'どんなときに使うべきか判断できるよう、Skillの説明文に利用場面を書く',
+      ],
+      explanation: 'Skillは手順と参照資源をパッケージ化し、必要なときに読み込まれる再利用単位です。常時読み込みのCLAUDE.mdへ長い手順を置くと無関係な作業のコンテキストを圧迫します。説明文が利用判断の手掛かりになるため、明示的な起動だけに限定されません。',
+    },
+    {
+      stem: 'You are making the routine release-notes task (procedure + template + formatting script) reusable. Select the TWO appropriate design choices.',
+      choices: [
+        'Bundle the procedure with the template and script as a Skill, forming a reusable unit',
+        'Put the full procedure into the project CLAUDE.md so it is always loaded in every session',
+        'Skills run only when a user explicitly types their name, so document the invocation for everyone',
+        'Write the Skill’s description so it is clear in which situations it should be used',
+      ],
+      explanation: 'A Skill packages a procedure and its reference resources as a reusable unit loaded when needed. Putting long procedures in the always-loaded CLAUDE.md crowds the context of unrelated work. The description informs when to use it, so usage is not limited to explicit invocation.',
+    },
+    ['skills', 'code-memory'],
+    { scenarioId: 'sc-code-rollout', verifiedAt: SCENARIO_VERIFIED_AT },
+  ),
+  question(
+    'q-sc-code-ci', 'd3', ['3.6'], 'multiple', ['b', 'd'],
+    {
+      stem: 'プルリクエストごとに静的チェック結果を要約するCIジョブを設計します。セキュリティレビューを通る構成を2つ選んでください。',
+      choices: [
+        '権限不足での失敗を避けるため、開発者の手元と同じ広い権限をCIへ与える',
+        '非対話モードで実行し、ジョブに必要な最小限の権限だけを与える',
+        '確認プロンプトは残し、必要になったら担当者がCIランナーへ入って応答する',
+        '出力形式と終了状態を固定し、ジョブの成否をCIが機械判定できるようにする',
+      ],
+      explanation: 'CIでは人の確認待ちがパイプラインを止めるため、非対話実行と最小権限が前提です。成否は固定した出力形式と終了状態で機械判定させます。開発者端末と同じ広い権限の付与は、セキュリティレビューで求められる最小権限に反します。',
+    },
+    {
+      stem: 'You are designing a CI job that summarizes static-check results on every pull request. Select the TWO configurations that pass the security review.',
+      choices: [
+        'Grant CI the same broad permissions as a developer workstation to avoid failures from missing permissions',
+        'Run in non-interactive mode and grant only the minimum permissions the job needs',
+        'Keep confirmation prompts and have an engineer log into the CI runner to respond when needed',
+        'Fix the output format and exit behavior so CI can evaluate the job’s success mechanically',
+      ],
+      explanation: 'In CI, waiting on human confirmation stalls the pipeline, so non-interactive execution with least privilege is the baseline, and success is judged mechanically from a fixed output format and exit behavior. Workstation-level permissions contradict the least-privilege requirement.',
+    },
+    ['headless', 'code-best-practices'],
+    { scenarioId: 'sc-code-rollout', verifiedAt: SCENARIO_VERIFIED_AT },
+  ),
+  question(
+    'q-sc-code-mcp-config', 'd2', ['2.4'], 'single', ['a'],
+    {
+      stem: 'チケット管理MCPサーバーの接続設定をチーム全員へ配布する方法として最も適切なのはどれですか？',
+      choices: [
+        '接続定義はプロジェクトスコープの共有設定としてバージョン管理し、認証トークンは各自の環境変数や秘密管理に置く',
+        'トークンを含む設定ファイルごと、プライベートリポジトリで共有する',
+        '全プロジェクト共通のグローバルスコープで公開し、トークンも同じ設定に置いて一元管理する',
+        '設定の共有はせず、各自がチャットの手順書どおりに手動で設定する',
+      ],
+      explanation: '共有できる接続定義と秘密情報の分離が原則です。プロジェクトスコープの共有設定はチーム全員へ同一に再現され、トークンは環境変数や秘密管理へ置きます。プライベートリポジトリは秘密管理の代替にならず、スコープの一律拡大は露出を増やし、手動設定は再現性がありません。',
+    },
+    {
+      stem: 'What is the most appropriate way to distribute the ticket-system MCP server connection settings to the whole team?',
+      choices: [
+        'Version-control the connection definition as a project-scoped shared setting, and keep the auth token in each member’s environment variables or secrets manager',
+        'Share the configuration file through a private repository, token included',
+        'Expose it at a global scope shared by every project, keeping the token in the same configuration for central management',
+        'Skip shared configuration and have each member set it up by hand from a chat message',
+      ],
+      explanation: 'Separate shareable connection definitions from secret values. A project-scoped shared setting reproduces identically for the whole team, while tokens live in environment variables or a secrets manager. A private repository is not secrets management, widening the scope increases exposure, and manual setup is not reproducible.',
+    },
+    ['code-mcp', 'mcp-tools'],
+    { scenarioId: 'sc-code-rollout', verifiedAt: SCENARIO_VERIFIED_AT },
+  ),
+  question(
+    'q-sc-pipe-validation', 'd4', ['4.3'], 'single', ['d'],
+    {
+      stem: 'スキーマには適合するのに「創刊より前の発行日」のような成り立たない値が混ざります。しののめニュースが取るべき対策として最も適切なのはどれですか？',
+      choices: [
+        'structured outputsは内容の正しさも保証するはずなので、モデル側の不具合として報告する',
+        '値の制約をなくす方向へスキーマを緩め、検証エラー自体を発生させない',
+        'プロンプトに「正確な値だけを出力してください」と強調する一文を足す',
+        'スキーマ準拠は形の保証と割り切り、業務ルールの検証をアプリケーション側の層として追加する',
+      ],
+      explanation: 'structured outputsが保証するのは型・必須項目・列挙値といった構造で、日付の前後関係のような業務ルールや事実の正確さは対象外です。中身の検証はアプリケーションの責任として設計します。スキーマの緩和やプロンプトの強調は検証の代わりになりません。',
+    },
+    {
+      stem: 'Outputs comply with the schema yet contain impossible values, such as publication dates earlier than the paper’s founding. Which countermeasure should Shinonome News take?',
+      choices: [
+        'Report it as a model defect, since structured outputs should also guarantee content correctness',
+        'Loosen the schema until value constraints disappear so validation errors cannot occur',
+        'Add an emphatic line to the prompt: “output only accurate values”',
+        'Treat schema compliance as a shape guarantee and add business-rule validation as an application-side layer',
+      ],
+      explanation: 'Structured outputs guarantee structure — types, required fields, enum values — not business rules like date ordering or factual accuracy. Content validation is the application’s responsibility by design. Loosening the schema or emphasizing the prompt is no substitute for validation.',
+    },
+    ['structured'],
+    { scenarioId: 'sc-extraction-pipeline', verifiedAt: SCENARIO_VERIFIED_AT },
+  ),
+  question(
+    'q-sc-pipe-retry', 'd4', ['4.4'], 'single', ['a'],
+    {
+      stem: '検証で1フィールドだけ失敗したときの再試行設計として最も適切なのはどれですか？',
+      choices: [
+        '失敗したフィールド・期待条件・実際の値を伝えて修正範囲を限定し、再試行の上限と超過時のフォールバックを設ける',
+        '同じプロンプトを成功するまで無制限に再実行する',
+        '出力全体を破棄し、毎回ゼロから完全に再生成させる',
+        '該当フィールドの検証ルールを削除して、失敗を発生させなくする',
+      ],
+      explanation: '具体的な検証結果を返すとモデルは修正点に集中でき、上限とフォールバックが暴走を防ぎます。同じ指示の無制限リトライは同じ失敗を再現しやすく、全体再生成は正しかった部分まで危険にさらし、ルール削除は問題を隠すだけです。',
+    },
+    {
+      stem: 'Exactly one field fails validation. Which retry design is most appropriate?',
+      choices: [
+        'Report the failed field, expected condition, and actual value to limit the correction scope, with a retry cap and a fallback when it is exceeded',
+        'Re-run the identical prompt without limit until it succeeds',
+        'Discard the entire output and regenerate everything from scratch each time',
+        'Delete the validation rule for that field so the failure can no longer occur',
+      ],
+      explanation: 'Specific validation feedback focuses the model on the fix, and the cap plus fallback prevents runaway loops. Unlimited identical retries tend to reproduce the same failure, full regeneration endangers the already-correct parts, and deleting the rule merely hides the problem.',
+    },
+    ['structured', 'evals'],
+    { scenarioId: 'sc-extraction-pipeline', verifiedAt: SCENARIO_VERIFIED_AT },
+  ),
+  question(
+    'q-sc-pipe-batch', 'd4', ['4.5'], 'single', ['b'],
+    {
+      stem: '夜間に数万件を処理する抽出ジョブの実行方式として最も適切なのはどれですか？',
+      choices: [
+        '対話型のリアルタイム呼び出しを逐次実行し、1件ごとの応答レイテンシを最適化する',
+        'バッチ処理APIで非同期にまとめて処理し、リクエストと結果を対応付けて個別の失敗を追跡する',
+        'バッチ処理APIへまとめれば個別リクエストは失敗しなくなるため、失敗追跡は省略する',
+        '全件を1つの巨大なプロンプトに連結し、1回の呼び出しで処理する',
+      ],
+      explanation: '即時応答が不要な大量処理はバッチ処理APIの典型的な用途です。バッチ内でも個別リクエストは失敗し得るため、IDと結果の対応付けと失敗追跡は必須です。逐次のリアルタイム呼び出しは大量処理に不向きで、全件連結はコンテキストと信頼性の両面で破綻します。',
+    },
+    {
+      stem: 'Which execution approach is most appropriate for the overnight extraction job processing tens of thousands of items?',
+      choices: [
+        'Run interactive real-time calls sequentially, optimizing per-item response latency',
+        'Process asynchronously in bulk with the batch API, associating each request with its result to track individual failures',
+        'Skip failure tracking because grouping requests into the batch API means individual requests can no longer fail',
+        'Concatenate every item into one giant prompt and process it in a single call',
+      ],
+      explanation: 'High-volume work that does not need immediate responses is the classic batch-API use case. Individual requests can still fail inside a batch, so request-to-result association and failure tracking are essential. Sequential real-time calls do not fit the volume, and one giant prompt breaks down on both context and reliability.',
+    },
+    ['batch'],
+    { scenarioId: 'sc-extraction-pipeline', verifiedAt: SCENARIO_VERIFIED_AT },
+  ),
+  question(
+    'q-sc-pipe-provenance', 'd5', ['5.1', '5.3'], 'multiple', ['a', 'c'],
+    {
+      stem: '「圧縮で確定済みの記事IDが失われる」「どの事実がどの記事に基づくか下流で判別できない」の2つの課題への対策を2つ選んでください。',
+      choices: [
+        '記事IDや同定結果など確定済みの重要事実は、要約とは別の構造化した状態として保全する',
+        '課題の原因である履歴の圧縮をやめ、全セッションで履歴全文を保持する',
+        '各事実とsource IDの対応を構造化出力で受け取り、統合後もその対応を保持して下流へ渡す',
+        'レポート末尾の参照一覧を充実させれば、事実単位の対応付けは不要になる',
+      ],
+      explanation: '圧縮は必要ですが、細部を落とす性質があるため、確定済みの重要事実は構造化して分離保全します。出典はclaim単位の対応を構造化して統合後まで運ばないと、下流で根拠を辿れません。全文保持はコスト・関連性の面で持続せず、末尾一覧は対応付けの代わりになりません。',
+    },
+    {
+      stem: 'Select the TWO countermeasures for the two problems: compaction losing settled article IDs, and downstream consumers unable to tell which fact rests on which article.',
+      choices: [
+        'Preserve settled critical facts such as article IDs and identification results as structured state separate from the summary',
+        'Stop the history compaction that causes the problem and keep the full history in every session',
+        'Receive fact-to-source-ID mappings as structured output and preserve the mapping through integration for downstream use',
+        'Expand the reference list at the end of the report so fact-level mapping becomes unnecessary',
+      ],
+      explanation: 'Compaction is needed but drops detail, so preserve settled critical facts as separated structured state. Provenance must travel as claim-level structured mappings through integration or downstream consumers cannot trace evidence. Full retention does not scale in cost or relevance, and an end-of-report list is no substitute for the mapping.',
+    },
+    ['context-editing', 'structured'],
+    { scenarioId: 'sc-extraction-pipeline', verifiedAt: SCENARIO_VERIFIED_AT },
+  ),
 ];
+
+// The random-quiz pool. Scenario questions only make sense with their case
+// description in view, so they are drawn exclusively through scenario practice.
+export const standaloneQuestions: ChoiceQuestion[] = questions.filter((question) => !question.scenarioId);

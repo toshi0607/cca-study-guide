@@ -22,6 +22,8 @@ The site must never imply Anthropic endorsement and must not contain, reconstruc
 
 In scope since July 2026: a multiple-choice quiz mode built from independently authored questions (single- and multiple-select), with weighted or per-domain draws, immediate feedback with official-source links, and locally stored per-question stats.
 
+Also in scope since July 2026: a scenario-practice mode inside the quiz view. Each scenario is an independently authored fictional case (a 2–4 paragraph background about an invented company plus 3–5 linked questions) for practicing the read-a-long-case-then-answer format. It reuses the quiz answering, scoring, and per-question stats machinery unchanged; the case description stays reachable from every question via a disclosure. Scenarios are original teaching material grounded in public documentation — they do not reproduce, reconstruct, or approximate the live exam's scenarios.
+
 Out of scope: device sync, community submissions, paid content, an exam simulator that claims to reproduce the live test, and pass-probability estimates. The quiz mode practices the answer formats only; it does not mirror live exam questions, difficulty, or scoring.
 
 ## Source-of-truth hierarchy
@@ -40,6 +42,7 @@ The MVP is a single fast page with four views to avoid routing overhead while re
 - `今日`: due-card count, start/restart CTA, five-domain coverage map, weak areas.
 - `ガイド`: five domain sections, 30 task statements, must-remember bullets, official links.
 - `練習`: due/all filters, domain chips, search, one reveal card at a time or browsable stack.
+- `演習`: random quiz (question count and weighted/per-domain draw) and scenario practice (case list → background → linked questions) sharing one answering flow and summary.
 - `進捗`: domain completion, due counts, local-data explanation, export/reset, sources/disclaimer.
 
 On narrow screens, the four views use a bottom navigation bar. On wide screens, a left rail carries the same navigation.

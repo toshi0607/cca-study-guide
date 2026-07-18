@@ -30,6 +30,17 @@ export type Domain = {
   objectives: Objective[];
 };
 
+export type Scenario = {
+  id: string;
+  revision: number;
+  title: LocalizedText;
+  // Independently authored fictional case description, split into 2-4 paragraphs.
+  background: LocalizedText<string[]>;
+  domainIds: string[];
+  sourceIds: string[];
+  verifiedAt: string;
+};
+
 export type ChoiceQuestion = {
   id: string;
   revision: number;
@@ -42,7 +53,7 @@ export type ChoiceQuestion = {
   explanation: LocalizedText;
   sourceIds: string[];
   verifiedAt: string;
-  // Reserved for the upcoming scenario-practice feature; no question sets it yet.
+  // Set only on questions that belong to a scenario-practice case.
   scenarioId?: string;
 };
 

@@ -1,14 +1,15 @@
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import { cards } from '../content/cards';
 import { domains } from '../content/domains';
-import { questions } from '../content/questions';
+import { questions, standaloneQuestions } from '../content/questions';
+import { scenarios } from '../content/scenarios';
 import { sourceById, sources, VERIFIED_AT } from '../content/sources';
-import type { ChoiceQuestion } from '../content/types';
+import type { ChoiceQuestion, Scenario } from '../content/types';
 import { locales, localePaths, type Locale } from '../i18n/locales';
 import { localize, ui, type UiCopy } from '../i18n/ui';
 import { isAnswerCorrect, pickQuizQuestions, type QuizCount, type QuizDomainChoice } from '../lib/quiz';
 import { isDue, scheduleReview, type Rating, type ReviewState } from '../lib/scheduler';
-import { createStudyStorage, type StudyData } from '../lib/storage';
+import { createStudyStorage, type QuizStat, type StudyData } from '../lib/storage';
 import { isWeak } from '../lib/weakness';
 
 type View = 'today' | 'guide' | 'practice' | 'quiz' | 'progress';
@@ -74,9 +75,20 @@ function SourceLinks({ ids, copy }: { ids: string[]; copy: UiCopy }) {
 }
 
 type QuizResult = { question: ChoiceQuestion; selectedIds: string[]; correct: boolean };
+type QuizMode = 'random' | 'scenario';
 
-function QuizView({ locale, copy, onAnswer }: { locale: Locale; copy: UiCopy; onAnswer: (questionId: string, correct: boolean) => void }) {
-  const [phase, setPhase] = useState<'setup' | 'question' | 'summary'>('setup');
+const questionsByScenario = new Map(
+  scenarios.map((scenario) => [scenario.id, questions.filter((question) => question.scenarioId === scenario.id)]),
+);
+
+function ScenarioBackground({ scenario, locale }: { scenario: Scenario; locale: Locale }) {
+  return <>{localize(scenario.background, locale).map((paragraph, index) => <p key={index}>{paragraph}</p>)}</>;
+}
+
+function QuizView({ locale, copy, quizStats, onAnswer }: { locale: Locale; copy: UiCopy; quizStats?: Record<string, QuizStat>; onAnswer: (questionId: string, correct: boolean) => void }) {
+  const [phase, setPhase] = useState<'setup' | 'background' | 'question' | 'summary'>('setup');
+  const [mode, setMode] = useState<QuizMode>('random');
+  const [scenario, setScenario] = useState<Scenario | null>(null);
   const [count, setCount] = useState<QuizCount>(10);
   const [domainChoice, setDomainChoice] = useState<QuizDomainChoice>('weighted');
   const [round, setRound] = useState<ChoiceQuestion[]>([]);
@@ -98,8 +110,7 @@ function QuizView({ locale, copy, onAnswer }: { locale: Locale; copy: UiCopy; on
     { value: 'all', label: copy.quiz.countAll },
   ];
 
-  const start = () => {
-    const picked = pickQuizQuestions(questions, domains, count, domainChoice);
+  const launch = (picked: ChoiceQuestion[]) => {
     if (!picked.length) return;
     answeredIdRef.current = null;
     setRound(picked);
@@ -107,6 +118,16 @@ function QuizView({ locale, copy, onAnswer }: { locale: Locale; copy: UiCopy; on
     setSelected([]);
     setResults([]);
     setPhase('question');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const start = () => {
+    launch(pickQuizQuestions(standaloneQuestions, domains, count, domainChoice));
+  };
+
+  const openScenario = (next: Scenario) => {
+    setScenario(next);
+    setPhase('background');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -131,6 +152,7 @@ function QuizView({ locale, copy, onAnswer }: { locale: Locale; copy: UiCopy; on
 
   const reset = () => {
     setPhase('setup');
+    setScenario(null);
     setRound([]);
     setResults([]);
     setSelected([]);
@@ -140,6 +162,8 @@ function QuizView({ locale, copy, onAnswer }: { locale: Locale; copy: UiCopy; on
   const wrongResults = results.filter((result) => !result.correct);
   const answerText = (question: ChoiceQuestion) =>
     question.choices.filter((choice) => question.correctChoiceIds.includes(choice.id)).map((choice) => localize(choice.text, locale)).join(' / ');
+  const domainBadges = (domainIds: string[]) =>
+    domains.filter((domain) => domainIds.includes(domain.id)).map((domain) => <span key={domain.id} class="card-domain">D{domain.number}</span>);
 
   return (
     <section class="quiz-view" aria-labelledby="quiz-title">
@@ -148,16 +172,53 @@ function QuizView({ locale, copy, onAnswer }: { locale: Locale; copy: UiCopy; on
       </header>
 
       {phase === 'setup' && <div class="quiz-setup">
-        <fieldset><legend>{copy.quiz.countLegend}</legend><div class="chips">{countOptions.map((option) => <button key={String(option.value)} type="button" class={count === option.value ? 'selected' : ''} aria-pressed={count === option.value} onClick={() => setCount(option.value)}>{option.label}</button>)}</div></fieldset>
-        <fieldset><legend>{copy.quiz.domainLegend}</legend><div class="chips"><button type="button" class={domainChoice === 'weighted' ? 'selected' : ''} aria-pressed={domainChoice === 'weighted'} onClick={() => setDomainChoice('weighted')}>{copy.quiz.weightedDomains}</button>{domains.map((domain) => <button key={domain.id} type="button" class={domainChoice === domain.id ? 'selected' : ''} aria-pressed={domainChoice === domain.id} onClick={() => setDomainChoice(domain.id)}>D{domain.number}</button>)}</div></fieldset>
-        <button class="quiz-start" onClick={start}>{copy.quiz.start} <span aria-hidden="true">→</span></button>
+        <fieldset><legend>{copy.quiz.modeLegend}</legend><div class="chips">
+          <button type="button" class={mode === 'random' ? 'selected' : ''} aria-pressed={mode === 'random'} onClick={() => setMode('random')}>{copy.quiz.modeRandom}</button>
+          <button type="button" class={mode === 'scenario' ? 'selected' : ''} aria-pressed={mode === 'scenario'} onClick={() => setMode('scenario')}>{copy.quiz.modeScenario}</button>
+        </div></fieldset>
+        {mode === 'random' && <>
+          <fieldset><legend>{copy.quiz.countLegend}</legend><div class="chips">{countOptions.map((option) => <button key={String(option.value)} type="button" class={count === option.value ? 'selected' : ''} aria-pressed={count === option.value} onClick={() => setCount(option.value)}>{option.label}</button>)}</div></fieldset>
+          <fieldset><legend>{copy.quiz.domainLegend}</legend><div class="chips"><button type="button" class={domainChoice === 'weighted' ? 'selected' : ''} aria-pressed={domainChoice === 'weighted'} onClick={() => setDomainChoice('weighted')}>{copy.quiz.weightedDomains}</button>{domains.map((domain) => <button key={domain.id} type="button" class={domainChoice === domain.id ? 'selected' : ''} aria-pressed={domainChoice === domain.id} onClick={() => setDomainChoice(domain.id)}>D{domain.number}</button>)}</div></fieldset>
+          <button class="quiz-start" onClick={start}>{copy.quiz.start} <span aria-hidden="true">→</span></button>
+        </>}
+        {mode === 'scenario' && <>
+          <p class="scenario-note">{copy.quiz.scenarioIntroduction}</p>
+          <ul class="scenario-list" aria-label={copy.quiz.scenarioListLabel}>{scenarios.map((entry) => {
+            const linked = questionsByScenario.get(entry.id) ?? [];
+            const answeredCount = linked.filter((question) => quizStats?.[question.id]).length;
+            return <li key={entry.id}>
+              <button type="button" class="scenario-item" onClick={() => openScenario(entry)}>
+                <strong>{localize(entry.title, locale)}</strong>
+                <span class="scenario-item-meta">
+                  {domainBadges(entry.domainIds)}
+                  <span>{copy.quiz.scenarioQuestionCount(linked.length)}</span>
+                  <span>{copy.quiz.scenarioAnswered(answeredCount, linked.length)}</span>
+                  <span aria-hidden="true">→</span>
+                </span>
+              </button>
+            </li>;
+          })}</ul>
+        </>}
       </div>}
+
+      {phase === 'background' && scenario && <article class="scenario-brief">
+        <p class="eyebrow">{copy.quiz.backgroundTitle}</p>
+        <h3>{localize(scenario.title, locale)}</h3>
+        <div class="scenario-item-meta">{domainBadges(scenario.domainIds)}<span>{copy.quiz.scenarioQuestionCount((questionsByScenario.get(scenario.id) ?? []).length)}</span></div>
+        <ScenarioBackground scenario={scenario} locale={locale}/>
+        <button class="quiz-start" onClick={() => launch(questionsByScenario.get(scenario.id) ?? [])}>{copy.quiz.proceedToQuestions} <span aria-hidden="true">→</span></button>
+        <button class="quiz-quit" onClick={reset}>{copy.quiz.quit}</button>
+      </article>}
 
       {current && <article class="quiz-question">
         <header>
           <div><span class="card-domain">D{domains.find((domain) => domain.id === current.domainId)!.number}</span><span>{copy.quiz.formats[current.format]}</span></div>
           <code>{copy.quiz.progressLabel(index + 1, round.length)}</code>
         </header>
+        {scenario && <details class="scenario-context">
+          <summary>{copy.quiz.backgroundToggle}</summary>
+          <div><ScenarioBackground scenario={scenario} locale={locale}/></div>
+        </details>}
         <div class="card-prompt"><p class="eyebrow">{copy.practice.question}</p><h3>{localize(current.stem, locale)}</h3></div>
         <p class="quiz-hint">{current.format === 'single' ? copy.quiz.singleHint : copy.quiz.multipleHint}</p>
         <fieldset class="choice-list">
@@ -223,7 +284,7 @@ function QuizView({ locale, copy, onAnswer }: { locale: Locale; copy: UiCopy; on
         <section class="quiz-missed" aria-labelledby="quiz-missed-title">
           <h3 id="quiz-missed-title">{copy.quiz.wrongTitle}</h3>
           {wrongResults.length
-            ? <ul>{wrongResults.map((result) => <li key={result.question.id}><p>{localize(result.question.stem, locale)}</p><p><strong>{copy.quiz.correctAnswerLabel}</strong> {answerText(result.question)}</p></li>)}</ul>
+            ? <ul>{wrongResults.map((result) => <li key={result.question.id}><p>{localize(result.question.stem, locale)}</p><p><strong>{copy.quiz.correctAnswerLabel}</strong> {answerText(result.question)}</p><p>{localize(result.question.explanation, locale)}</p></li>)}</ul>
             : <p>{copy.quiz.noWrong}</p>}
         </section>
         <button class="quiz-start" onClick={reset}>{copy.quiz.retry}</button>
@@ -488,7 +549,7 @@ function App({ locale, analyticsEnabled = false }: { locale: Locale; analyticsEn
           {!filteredCards.length && <div class="empty-state"><strong>{copy.practice.emptyTitle}</strong><p>{copy.practice.emptyDescription}</p></div>}
         </section>}
 
-        {view === 'quiz' && <QuizView locale={locale} copy={copy} onAnswer={recordQuizAnswer}/>}
+        {view === 'quiz' && <QuizView locale={locale} copy={copy} quizStats={data.quizStats} onAnswer={recordQuizAnswer}/>}
 
         {view === 'progress' && <section class="progress-view" aria-labelledby="progress-title">
           <header class="page-header"><p class="eyebrow">{copy.progress.eyebrow}</p><h2 id="progress-title">{copy.progress.title}</h2><p>{copy.progress.introduction}</p></header>

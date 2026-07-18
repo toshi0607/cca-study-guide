@@ -1,99 +1,68 @@
-# Weak-Area Visualization (弱点可視化)
+# シナリオ演習の実装
 
-Previous plan (quiz view, PR #12) completed and merged; this branch was rebased on
-top of it, combining the quiz view with the weak-area visualization below.
+Previous plan (weak-area visualization, PR #11) completed and merged; replaced by
+the scenario-practice plan below.
 
-## Goal
-
-Surface existing ReviewState signals (lapses / lastRating) as a "weak card" concept:
-a practice-view filter chip, a today-view weak-areas section with navigation, and a
-small per-domain weak count in the progress view. Visualization only — no scheduler
-or storage changes.
+Branch: claude/amazing-lehmann-f723d4（origin/main ada1a51 からリセット済み）
 
 ## Constraints
 
 | Constraint | Source | Verify by |
 |------------|--------|-----------|
-| No changes to scheduler.ts / storage.ts | user msg | `git diff --stat` excludes both |
-| No pass-probability / score-prediction UI | user msg + DESIGN.md scope | review diff copy |
-| isWeak is a pure function in src/lib/ with unit tests | user msg | weakness.test.ts passes |
-| ja/en copy for every new string | user msg | UiCopy `satisfies` check via astro check |
-| Same chip UX + aria-pressed for the new filter | user msg | e2e + code match existing chips |
-| Empty state distinguishes "not started" from "all clear" | user msg | e2e/manual |
-| Font subset covers new display-font text (苦手エリア etc.) | README / fonts.test.ts | regen subsets, commit public/fonts |
-| e2e: rate card → weak filter shows it → today weak-areas navigates | user msg | new test in tests/app.spec.ts |
-| Branch off latest origin/main, PR with trailers | user msg + pr.md | done: feat/weak-areas @ 44cf2b5 |
+| 選択式演習の回答UI・採点・保存ロジックを再利用（重複実装禁止） | user msg | App.tsx diff（QuizView内で answer/advance/results を共用） |
+| 実試験のシナリオ・設問の複製・再構成の禁止、独自作成明記 | user msg + cards.ts方針 | 全コンテンツが独自の架空事例、UI/README/DESIGNに明記 |
+| ja/en両ロケール必須 | user msg + ui.ts | content.test.ts のローカライズテスト |
+| Scenario: id/revision/title/background(2〜4段落)/domainIds/sourceIds/verifiedAt | user msg | validate.ts zodスキーマ |
+| シナリオ3本以上、各3〜5問、single/multiple混在、scenarioId紐づけ | user msg | content.test.ts |
+| scenarioId参照整合・設問3問以上を validate/テストで担保 | user msg | validateContent() |
+| quizStats は既存の仕組み（questionId単位）にそのまま乗せる | user msg | storage.ts 変更なし |
+| 設問中にケース記述を参照可能（折りたたみ） | user msg | e2e |
+| e2e にシナリオ演習フロー追加 | user msg | tests/app.spec.ts |
+| pnpm test / test:e2e / build 全パス | user msg + pr.md | exit 0 |
+| フォントサブセット不足時は再生成しコミット | user msg | fonts.test.ts |
+| コミット末尾 Co-Authored-By / PR末尾 Generated with | user msg | git log / PR body |
+| アクセシビリティ既存水準維持（axe wcag2a/aa） | user msg | e2e axe |
 
 ## Assumptions
 
 | Assumption | Status | Evidence |
 |------------|--------|----------|
-| isWeak: review exists AND (lapses >= 2 OR lastRating in {'again','hard'}) | VERIFIED | user spec text |
-| .section-heading h2 uses display font → new today heading needs subset regen | VERIFIED | global.css:310; 苦 absent from public/fonts/manifest.json |
-| Subset glyphs extracted from src/content/*.ts + src/i18n/*.ts → regen picks up new copy | VERIFIED | prior plan notes (subset-fonts.mjs design) |
-| Parallel session may touch App.tsx / ui.ts — rebase carefully at merge | NOTED | user msg |
+| シナリオ設問はケース前提のためランダム演習プールから除外する | DECISION | 設問単体では文脈不足。標準プール＝ !scenarioId でフィルタ |
+| 領域配分テスト（±6%）は非シナリオ設問のみに適用へ変更 | DECISION | 上記除外に伴う整合。既存21問の配分は不変 |
+| 新規UI文言はdisplayフォント要素に載せない → サブセット再生成不要 | VERIFIED | fonts.test.ts / subset-fonts.mjs のdisplay対象は既存見出しのみ |
+| content.test.ts の「scenarioId未使用」テストは置換する | VERIFIED | content.test.ts:64 |
+| background は LocalizedText<string[]>（段落配列）で表現 | DECISION | mustKnow と同じパターン。zodで2〜4段落を検証 |
 
-## Plan
+## Todo
 
-- [x] Read App.tsx / ui.ts / scheduler.ts / storage.ts / global.css / tests
-- [x] src/lib/weakness.ts: isWeak() + weakness.test.ts — evidence: vitest 5/5 in weakness.test.ts
-- [x] ui.ts: ReviewFilter += 'weak'; practice.filters.weak; weakAreas.*; progress.weakCount (ja/en) — evidence: astro check clean in pnpm build
-- [x] App.tsx: stateFilters += 'weak'; filter logic; today weak-areas section (sorted desc, clickable rows, dual empty state); progress row weak count — evidence: e2e weak-flow test passes
-- [x] pnpm test (vitest) passes — evidence: 27/27 (7 files)
-- [x] pnpm build passes; fonts:subset regenerated (subset characters: 616, 苦 covered); public/fonts committed — evidence: exit 0, manifest diff
-- [x] e2e: new weak-flow test; pnpm test:e2e passes — evidence: 40 passed (15.9s)
-- [x] DESIGN.md today-view line check — line 38 already lists "weak areas"; implementation now matches, no edit needed
-- [x] Commit + push + PR (trailers per rules) — evidence: PR #11; rebased on quiz PR #12,
-      conflicts resolved (App.tsx nav/filter consts, ui.ts types, tests, fonts regenerated
-      from merged sources: 639 subset chars), vitest 42/42 + e2e 41/41 post-rebase
-
-## Notes
-
-- fonts.test.ts enforces only wordmark/hero/page-header strings, but `.section-heading h2`
-  also renders in --display; manifest regen keeps the new 苦手エリア heading visually consistent.
-- Barlow subset hash unchanged (ASCII already covered); only zen-kaku-gothic-new-900 re-hashed.
-- Today-view empty state renders the "before start" variant during SSR/pre-hydration (`!ready`),
-  which keeps the no-JS e2e invariant (no enabled buttons) intact.
-- Browser-pane visual spot check: today view renders with existing tone; populated-state
-  screenshots blocked by a pane rendering glitch — functional coverage relies on Playwright.
-- Second rebase (PR #13, 35 new cards): only tasks/todo.md conflicted; tests auto-merged
-  (both sides import cards from src/content). #13's section preserved below.
-
----
-
-# 想起カード拡充（コンテンツ追加のみ）— 2026-07-17〜18
-
-Branch: `claude/mystifying-heyrovsky-a4464f`（origin/main = 44cf2b5 から分岐、PR #13）
-
-## Constraints
-
-| Constraint | Source | Verify by |
-|------------|--------|-----------|
-| 各objectiveが合計2枚以上でカバー | user msg | 集計で全30 objective >= 2 |
-| 約30枚追加、D1最優先→重み順 | user msg | 追加枚数とドメイン別内訳 |
-| kind 3種のバランス、contrast重視 | user msg | kind別集計 |
-| ja/en 4フィールド全記述 | user msg | pnpm test (zod) |
-| sourceIds実在、新規ソースはWebFetch確認 | user msg | pnpm test + validate.ts |
-| 新規ソースは platform.claude.com / code.claude.com / modelcontextprotocol.io 配下のみ | user msg | sources.ts diff |
-| 全主張を公式Docsで裏取り（記憶で書かない） | user msg | Notesのfetch記録 |
-| 試験問題の複製・再構成禁止 | user msg / cards.ts冒頭 | 独自作成のみ |
-| 既存カード改変禁止 | user msg | git diff がカード追加+sources追加のみ |
-| UI・型・スケジューラ変更禁止 | user msg | git diff 対象ファイル |
-| pnpm test / test:e2e / build 全パス | user msg | exit 0 |
-
-## 結果
-
-- [x] cards.ts へ35枚追加（D1:8, D2:7, D3:7, D4:7, D5:6、16→51枚。kind: recall16/contrast15/scenario20）
-- [x] 全30 objective >= 2 カバレッジを一時vitestで機械確認
-- [x] sources.ts へ define-tools を追加（verifiedAt=2026-07-18、WebFetchで実在・内容確認）
-- [x] pnpm test 22/22 / pnpm test:e2e 39/39 / pnpm build 0 errors（マージ前時点）
-- [x] PR #13 作成、Vercelチェック全pass
+- [x] types.ts に Scenario 型追加
+- [x] scenarios.ts 新規作成（独自シナリオ4本 ja/en、うち3本は複数ドメインをまたぐ）
+- [x] questions.ts にシナリオ設問17問追加（scenarioId付き、single/multiple混在）
+- [x] validate.ts: scenarioスキーマ + 参照整合 + 3〜5問・形式混在チェック
+- [x] content.test.ts 更新（scenario検証、配分テストのスコープ変更、ローカライズ）
+- [x] i18n/ui.ts に ja/en 文言追加
+- [x] App.tsx QuizView にモード選択・シナリオ一覧・ケース記述・折りたたみ参照を追加（既存回答ロジック再利用）
+- [x] global.css にシナリオUIスタイル追加
+- [x] e2e: シナリオ演習フロー + axe
+- [x] DESIGN.md / README.md 更新（独自作成であることを明記）
+- [x] pnpm test（44 passed, exit 0）/ pnpm test:e2e（43 passed, exit 0）/ pnpm build（exit 0）
+- [x] コミット・push・PR作成
 
 ## Notes
 
-- WebFetchで裏取りしたページ（2026-07-17〜18）: stop-reasons / how-tool-use-works / subagents / sessions / hooks-guide / agent-sdk claude-code-features / mcp / memory / agent-sdk skills / how-claude-code-works / best-practices / headless / develop-tests(evals) / claude-prompting-best-practices / structured-outputs / batch-processing / context-windows / context-editing / user-input / large-codebases / features-overview / MCP spec tools / define-tools。
-- 逸脱1: 新規カードのverifiedAtを実際の検証日(2026-07-18)にするため、card()ヘルパーへ省略可能なverifiedAt引数を追加（既定値VERIFIED_ATで既存カードのデータは無変更）。
-- 逸脱2: tests/app.spec.ts の2件がカード総数(16枚時代)をハードコードしており失敗（practice一覧15→16枚、進捗「1/4」）。期待値をsrc/content/cards.tsから導出する形に更新。アプリ側は非変更。
-- フォントサブセット再生成は不要: .card-prompt h3 は--display非対象（subset-fonts.mjsの抽出対象はh2/wordmarkのみ）。
-- 既存カードの誤りは発見なし。
-- マージ時: main側のPR #12（quiz view）とコンフリクトは tasks/todo.md のみ。main版を採用し本セクションを追記。tests/app.spec.ts は自動マージ（quizテストと共存）。
+- 2026-07-17: 依存の選択式演習モードが未マージのため停止。
+- 2026-07-18: PR #12 マージ済みを確認、origin/main へリセットして着手。
+- シナリオ4本: MCPツール設計（d2）、マルチエージェント構成（d1/d5）、Claude Codeチーム導入（d3）、構造化出力と信頼性設計（d4/d5）。全て架空企業の独自ケース。
+- サマリの「解説の見直し導線」: 間違えた問題リストに解説本文を追加表示（両モード共通、既存CSSはfirst-child基準に調整）。
+- e2e回答ループは既存quizテストのパターンを踏襲（ヘッダの 第n問/全m問 を利用）。
+- 逸脱: sc-code-rollout に MCP設定共有（d2）の段落と設問を追加し5問構成へ（「複数ドメインをまたぐ題材」の充足のため）。フォント再生成は不要だった（新規文言はdisplayフォント要素に載せず、fonts.test.tsパス）。
+
+## Review
+
+/code-review high（6アングル並列）の結果: バグ指摘0件、クリーンアップ5件を反映済み。
+- 背景段落レンダリングを ScenarioBackground コンポーネントへ共通化（indexキー化）
+- ランダム演習プール standaloneQuestions を questions.ts へ一元化
+- validate.ts に 3〜5問・single/multiple混在のビルド時チェックを追加
+- localizedStringList ファクトリでbackgroundスキーマを共通化
+- 未使用の scenarioById エクスポートを削除
+反映後に pnpm test（44）/ test:e2e（43）/ build すべて exit 0 を再確認。
