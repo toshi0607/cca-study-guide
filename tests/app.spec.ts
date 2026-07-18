@@ -1,6 +1,7 @@
 import { readFile } from 'node:fs/promises';
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
+import { cards } from '../src/content/cards';
 
 test.beforeEach(async ({ page }) => {
   await page.goto('/');
@@ -44,10 +45,10 @@ test('refreshes due cards while a tab remains open', async ({ page }) => {
   })));
   await page.reload();
   await page.getByRole('button', { name: '練習' }).first().click();
-  await expect(page.locator('.practice-card')).toHaveCount(15);
+  await expect(page.locator('.practice-card')).toHaveCount(cards.length - 1);
 
   await page.clock.runFor(60_000);
-  await expect(page.locator('.practice-card')).toHaveCount(16);
+  await expect(page.locator('.practice-card')).toHaveCount(cards.length);
 });
 
 test('reveals an answer, records a rating, and persists progress', async ({ page }) => {
@@ -64,7 +65,8 @@ test('reveals an answer, records a rating, and persists progress', async ({ page
 
   await page.goto('/en/');
   await page.getByRole('button', { name: 'Progress' }).first().click();
-  await expect(page.getByText('1/4').first()).toBeVisible();
+  const d1Total = cards.filter((card) => card.domainId === 'd1').length;
+  await expect(page.getByText(`1/${d1Total}`).first()).toBeVisible();
 });
 
 test('switches between complete localized routes and searches active-locale content', async ({ page }) => {

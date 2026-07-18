@@ -367,3 +367,55 @@ Deploy the current localized and performance-optimized working tree to the exist
 - 逸脱 3: 未使用ウェイト Barlow Condensed 600 / Zen Kaku Gothic New 700 は自前ホストに含めない。--display 使用箇所は .wordmark b (700, latin "CCA") と .today-hero/.page-header h2 (900) のみで、600/700(JA) に解決される要素は存在しない (global.css:108-112, 249-257)。
 - 結果 (項目 7): before 65 / FCP 4,581 / LCP 5,504 → after 97 / FCP 983 / LCP 2,602 / TBT 41 / CLS 0.0000 (3-run median、GA 有効)。en ルートは 98 / LCP 2,455。目標のうち LCP < 2.5 s のみ 4% 超過 (2,602 ms) — 残余は既決の即時 gtag (unused 66 KiB) とフォント転送自体で、フォント導入前の 2,292 ms に対する +310 ms がデザイン維持の実コスト。CI 予算は変動マージンを見て LCP 3,000 ms / score 90 に設定。
 - unminified-css 警告 (項目 5) の実体は Google Fonts CSS だったため、セルフホスト化で消滅。ローカル CSS は minify 済みで設定変更不要。
+
+---
+
+# 想起カード拡充（コンテンツ追加のみ）— 2026-07-17
+
+## Constraints
+
+| Constraint | Source | Verify by |
+|------------|--------|-----------|
+| 各objectiveが合計2枚以上でカバー | user msg | 集計で全30 objective >= 2 |
+| 約30枚追加、D1最優先→重み順 | user msg | 追加枚数とドメイン別内訳 |
+| kind 3種のバランス、contrast重視 | user msg | kind別集計 |
+| ja/en 4フィールド全記述 | user msg | pnpm test (zod) |
+| sourceIds実在、新規ソースはWebFetch確認+verifiedAt=2026-07-17 | user msg | pnpm test + validate.ts |
+| 新規ソースは platform.claude.com / code.claude.com / modelcontextprotocol.io 配下のみ | user msg | sources.ts diff |
+| 全主張を公式Docsで裏取り（記憶で書かない） | user msg | 本セクションNotesにfetch記録 |
+| 試験問題の複製・再構成禁止 | user msg / cards.ts冒頭 | 独自作成のみ |
+| 既存カード改変禁止（誤り発見はPR本文で報告） | user msg | git diff がカード追加+sources追加のみ |
+| UI・型・スケジューラ変更禁止 | user msg | git diff 対象ファイル |
+| main最新からブランチ | user msg | 済: 44cf2b5 == origin/main |
+| pnpm test / test:e2e / build 全パス | user msg | exit 0 |
+| コミット/PR定型文 | user msg | 末尾記載 |
+
+## Assumptions
+
+| Assumption | Status | Evidence |
+|------------|--------|----------|
+| card promptは--displayフォント非対象でfonts再生成不要 | VERIFIED | global.css:442 .card-prompt h3 にfont-family指定なし、subset-fonts.mjsはh2/wordmarkのみ抽出。pnpm testで最終確認 |
+| genericSourceIds以外のソースが各カードに1つ以上必要 | VERIFIED | validate.ts:49 |
+| Exam GuideのTask表記と現行DocsのAgent表記のドリフトは両論併記 | VERIFIED | notes.md:14 |
+
+## Todo
+
+- [x] 必読ファイル読了（cards/domains/sources/notes/validate/test/README）
+- [x] main最新確認（origin/main == HEAD 44cf2b5）
+- [x] pnpm install（exit 0）
+- [x] 公式Docs WebFetchで裏取り（下記Notesの20ページ + define-tools）
+- [x] sources.ts へ新規ソース追加（define-tools のみ、verifiedAt=2026-07-18）
+- [x] cards.ts へ35枚追加（D1:8, D2:7, D3:7, D4:7, D5:6、合計51枚）
+- [x] 全objective >= 2 カバレッジ確認（一時vitestで全30 objective >= 2、kind: recall16/contrast15/scenario20）
+- [x] pnpm test パス（22/22）
+- [x] pnpm test:e2e パス（39/39）
+- [x] pnpm build パス（astro check 0 errors/warnings/hints、4 routes）
+- [ ] コミット & PR作成（CIパス確認）
+
+## Notes
+
+- WebFetchで裏取りしたページ（2026-07-17〜18）: stop-reasons / how-tool-use-works / subagents / sessions / hooks-guide / agent-sdk claude-code-features / mcp / memory / agent-sdk skills / how-claude-code-works / best-practices / headless / develop-tests(evals) / claude-prompting-best-practices / structured-outputs / batch-processing / context-windows / context-editing / user-input / large-codebases / features-overview / MCP spec tools / define-tools。全カードの主張はこのfetch結果に基づく。
+- 逸脱1: 新規カードのverifiedAtを実際の検証日(2026-07-18)にするため、card()ヘルパーへ省略可能なverifiedAt引数を追加（既定値VERIFIED_ATで既存カードのデータは無変更）。
+- 逸脱2: tests/app.spec.ts の2件がカード総数(16枚時代)をハードコードしており失敗（practice一覧15→16枚、進捗「1/4」）。期待値をsrc/content/cards.tsから導出する形に更新。アプリ側のUI・ロジックは非変更。
+- フォントサブセット再生成は不要だった: .card-prompt h3 は--display非対象（global.css:442、subset-fonts.mjsの抽出対象はh2/wordmarkのみ）。fonts.test.ts含めpnpm testパスで確認。
+- 既存カードの誤りは発見なし（改変なし）。

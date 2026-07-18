@@ -30,6 +30,7 @@ export const sources: Source[] = [
   { id: 'code-index', title: 'Claude Code documentation index', publisher: 'Anthropic', url: 'https://code.claude.com/docs/llms.txt', official: true, verifiedAt: VERIFIED_AT },
   { id: 'platform-index', title: 'Claude Platform documentation index', publisher: 'Anthropic', url: 'https://platform.claude.com/docs/llms.txt', official: true, verifiedAt: VERIFIED_AT },
   { id: 'mcp-tools', title: 'MCP specification: tools', publisher: 'MCP Project', url: 'https://modelcontextprotocol.io/specification/2025-11-25/server/tools', official: true, verifiedAt: VERIFIED_AT },
+  { id: 'define-tools', title: 'Define tools', publisher: 'Anthropic', url: 'https://platform.claude.com/docs/en/agents-and-tools/tool-use/define-tools', official: true, verifiedAt: '2026-07-18' },
 ];
 
 export const sourceById = new Map(sources.map((source) => [source.id, source]));
