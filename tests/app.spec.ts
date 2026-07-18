@@ -54,7 +54,9 @@ test('refreshes due cards while a tab remains open', async ({ page }) => {
   await expect(page.locator('.practice-card')).toHaveCount(cards.length);
 });
 
-test('resets practice filters when starting review from the today view', async ({ page }) => {
+test('starts a due-card session with reset filters from the today view', async ({ page }) => {
+  page.on('dialog', (dialog) => dialog.accept());
+
   // #given — practice view narrowed to one domain and a search query
   await page.getByRole('button', { name: '練習' }).first().click();
   await expect(page.locator('.practice-card')).toHaveCount(cards.length);
@@ -67,10 +69,92 @@ test('resets practice filters when starting review from the today view', async (
   await page.getByRole('button', { name: '今日' }).first().click();
   await page.getByRole('button', { name: '復習を始める' }).click();
 
-  // #then — every due card is shown, matching the count next to the CTA
+  // #then — a session starts directly over every due card
+  await expect(page.locator('.session-card')).toBeVisible();
+  await expect(page.locator('.session-progress code')).toHaveText(`1 / ${cards.length}`);
+
+  // #then — stopping the session confirms saved progress and shows the reset filters
+  await page.getByRole('button', { name: 'セッションを中断' }).click();
+  await expect(page.getByText('セッションを中断しました。ここまでの評価は保存済みです。')).toBeFocused();
   await expect(page.locator('.practice-card')).toHaveCount(cards.length);
   await expect(domainChip).toHaveAttribute('aria-pressed', 'false');
   await expect(page.getByRole('searchbox', { name: 'カードを検索' })).toHaveValue('');
+});
+
+test('runs a filtered session that re-queues an again-rated card before the summary', async ({ page }) => {
+  // #given — the practice view filtered down to a single due card
+  await page.goto('/en/');
+  await page.getByRole('button', { name: 'Practice' }).first().click();
+  await page.getByRole('searchbox', { name: 'Search cards' }).fill('iteration count');
+  await expect(page.getByText('Showing 1 card')).toBeVisible();
+
+  // #when — starting a session over the filtered set
+  await page.getByRole('button', { name: 'Start a session' }).click();
+
+  // #then — one card is shown with its progress and the answer stays hidden
+  await expect(page.locator('.session-progress code')).toHaveText('1 / 1');
+  await expect(page.getByText('0 cards left')).toBeVisible();
+  await expect(page.locator('.session-card .answer')).toHaveCount(0);
+
+  // #when — revealing and rating Again re-queues the card at the end of the session
+  await page.getByRole('button', { name: 'Reveal answer' }).click();
+  await expect(page.locator('.session-card .answer')).toBeVisible();
+  await page.getByRole('button', { name: /Again/ }).click();
+  await expect(page.locator('.session-progress code')).toHaveText('2 / 2');
+
+  // #when — the re-queued card is rated Got it
+  await page.getByRole('button', { name: 'Reveal answer' }).click();
+  await page.getByRole('button', { name: /Got it/ }).click();
+
+  // #then — the summary reports the breakdown and both ratings were persisted
+  await expect(page.getByRole('heading', { name: 'Session complete' })).toBeVisible();
+  const breakdown = page.locator('.session-breakdown div');
+  await expect(breakdown.nth(0)).toContainText('Again');
+  await expect(breakdown.nth(0)).toContainText('1');
+  await expect(breakdown.nth(2)).toContainText('Got it');
+  await expect(breakdown.nth(2)).toContainText('1');
+  await expect(page.getByText('2 cards rated')).toBeVisible();
+  const review = await page.evaluate(() => Object.values(JSON.parse(localStorage.getItem('cca-field-notes:v1') ?? '{}').reviews ?? {})[0]) as { lastRating: string; lapses: number };
+  expect(review.lastRating).toBe('good');
+  expect(review.lapses).toBe(1);
+
+  const axe = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa']).analyze();
+  expect(axe.violations).toEqual([]);
+
+  // #then — the rated card left the due filter, so a new session cannot start
+  await page.getByRole('button', { name: 'Back to the list' }).click();
+  await expect(page.getByRole('button', { name: 'Start a session' })).toBeDisabled();
+  await expect(page.getByText('No cards are shown, so a session cannot start.')).toBeVisible();
+});
+
+test('drives a session with keyboard shortcuts and confirms before stopping', async ({ page }) => {
+  page.on('dialog', (dialog) => dialog.accept());
+
+  // #given — a session over the D1 due cards
+  const d1Total = cards.filter((card) => card.domainId === 'd1').length;
+  await page.getByRole('button', { name: '練習' }).first().click();
+  await page.getByRole('button', { name: 'D1', exact: true }).click();
+  await page.getByRole('button', { name: 'セッションを開始' }).click();
+  await expect(page.locator('.session-progress code')).toHaveText(`1 / ${d1Total}`);
+  await expect(page.getByText('Space / Enter：答えを見る')).toBeVisible();
+
+  // #when / #then — Space reveals, 3 rates Got it and advances with focus on the next reveal button
+  await page.keyboard.press('Space');
+  await expect(page.locator('.session-card .answer')).toBeVisible();
+  await page.keyboard.press('3');
+  await expect(page.locator('.session-progress code')).toHaveText(`2 / ${d1Total}`);
+  await expect(page.getByRole('button', { name: '答えを見る' })).toBeFocused();
+
+  // #when / #then — Enter reveals and 1 re-queues the card, growing the session total
+  await page.keyboard.press('Enter');
+  await expect(page.locator('.session-card .answer')).toBeVisible();
+  await page.keyboard.press('1');
+  await expect(page.locator('.session-progress code')).toHaveText(`3 / ${d1Total + 1}`);
+
+  // #when / #then — Escape stops the session after the confirm and progress stays saved
+  await page.keyboard.press('Escape');
+  await expect(page.getByText('セッションを中断しました。ここまでの評価は保存済みです。')).toBeFocused();
+  await expect.poll(() => page.evaluate(() => Object.keys(JSON.parse(localStorage.getItem('cca-field-notes:v1') ?? '{}').reviews ?? {}).length)).toBe(2);
 });
 
 test('reveals an answer, records a rating, and persists progress', async ({ page }) => {

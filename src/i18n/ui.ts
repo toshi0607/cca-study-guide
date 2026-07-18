@@ -107,6 +107,27 @@ export type UiCopy = {
     emptyTitle: string;
     emptyDescription: string;
   };
+  session: {
+    start: string;
+    cannotStart: string;
+    progress: (current: number, total: number) => string;
+    remaining: (count: number) => string;
+    cardAnnouncement: (current: number, total: number) => string;
+    revealAnnouncement: string;
+    shortcutsReveal: string;
+    shortcutsRate: string;
+    shortcutsQuit: string;
+    quit: string;
+    abortConfirm: string;
+    abortedNotice: string;
+    summaryEyebrow: string;
+    summaryTitle: string;
+    breakdownLegend: string;
+    ratedCount: (count: number) => string;
+    dueRemaining: (count: number) => string;
+    restart: string;
+    backToList: string;
+  };
   quiz: {
     eyebrow: string;
     title: string;
@@ -285,6 +306,27 @@ export const ui = {
       emptyTitle: '該当するカードはありません。',
       emptyDescription: '検索語またはフィルターを変えてください。',
     },
+    session: {
+      start: 'セッションを開始',
+      cannotStart: '表示中のカードが0枚のため、セッションを開始できません。検索語やフィルターを変えてください。',
+      progress: (current, total) => `${current} / ${total}`,
+      remaining: (count) => `残り${count}枚`,
+      cardAnnouncement: (current, total) => `カード${current} / ${total}を表示中`,
+      revealAnnouncement: '答えを表示しました。',
+      shortcutsReveal: 'Space / Enter：答えを見る',
+      shortcutsRate: '1：もう一度 · 2：難しい · 3：できた',
+      shortcutsQuit: 'Esc：中断',
+      quit: 'セッションを中断',
+      abortConfirm: 'セッションを中断しますか？ここまでの評価は保存されています。',
+      abortedNotice: 'セッションを中断しました。ここまでの評価は保存済みです。',
+      summaryEyebrow: 'SESSION RESULT',
+      summaryTitle: 'セッション完了',
+      breakdownLegend: '評価の内訳',
+      ratedCount: (count) => `${count}枚を評価`,
+      dueRemaining: (count) => `残りの復習対象：${count}枚`,
+      restart: 'もう一度セッション',
+      backToList: '一覧に戻る',
+    },
     quiz: {
       eyebrow: 'INDEPENDENT CHOICE PRACTICE',
       title: '選択式演習',
@@ -455,6 +497,27 @@ export const ui = {
       ratingGoodExtended: 'Extend interval',
       emptyTitle: 'No cards match.',
       emptyDescription: 'Try a different search term or filter.',
+    },
+    session: {
+      start: 'Start a session',
+      cannotStart: 'No cards are shown, so a session cannot start. Change the search term or filters.',
+      progress: (current, total) => `${current} / ${total}`,
+      remaining: (count) => `${count} ${count === 1 ? 'card' : 'cards'} left`,
+      cardAnnouncement: (current, total) => `Showing card ${current} of ${total}`,
+      revealAnnouncement: 'Answer revealed.',
+      shortcutsReveal: 'Space / Enter: reveal',
+      shortcutsRate: '1: Again · 2: Hard · 3: Got it',
+      shortcutsQuit: 'Esc: stop',
+      quit: 'Stop the session',
+      abortConfirm: 'Stop this session? Ratings so far are already saved.',
+      abortedNotice: 'Session stopped. Ratings up to this point are saved.',
+      summaryEyebrow: 'SESSION RESULT',
+      summaryTitle: 'Session complete',
+      breakdownLegend: 'Rating breakdown',
+      ratedCount: (count) => `${count} ${count === 1 ? 'card' : 'cards'} rated`,
+      dueRemaining: (count) => `${count} ${count === 1 ? 'card' : 'cards'} still due`,
+      restart: 'Run the session again',
+      backToList: 'Back to the list',
     },
     quiz: {
       eyebrow: 'INDEPENDENT CHOICE PRACTICE',

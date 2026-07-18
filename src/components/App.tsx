@@ -1,14 +1,15 @@
-import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
+import { useEffect, useMemo, useRef, useState, type MutableRef } from 'preact/hooks';
 import { cards } from '../content/cards';
 import { domains } from '../content/domains';
 import { questions, standaloneQuestions } from '../content/questions';
 import { scenarios } from '../content/scenarios';
 import { sourceById, sources, VERIFIED_AT } from '../content/sources';
-import type { ChoiceQuestion, Scenario } from '../content/types';
+import type { Card, ChoiceQuestion, Scenario } from '../content/types';
 import { locales, localePaths, type Locale } from '../i18n/locales';
 import { localize, ui, type UiCopy } from '../i18n/ui';
 import { isAnswerCorrect, pickQuizQuestions, type QuizCount, type QuizDomainChoice } from '../lib/quiz';
 import { isDue, scheduleReview, type Rating, type ReviewState } from '../lib/scheduler';
+import { emptyTally, rateSessionCard, type SessionTally } from '../lib/session';
 import { createStudyStorage, type QuizStat, type StudyData } from '../lib/storage';
 import { isWeak } from '../lib/weakness';
 
@@ -293,6 +294,153 @@ function QuizView({ locale, copy, quizStats, onAnswer }: { locale: Locale; copy:
   );
 }
 
+function CardAnswer({ card, review, locale, copy, id, onRate, answerRef }: {
+  card: Card;
+  review: ReviewState | undefined;
+  locale: Locale;
+  copy: UiCopy;
+  id: string;
+  onRate: (rating: Rating) => void;
+  answerRef?: MutableRef<HTMLDivElement | null>;
+}) {
+  return (
+    <div class="answer" id={id} ref={answerRef} tabIndex={answerRef ? -1 : undefined}>
+      <p class="eyebrow">{copy.practice.answer}</p><p class="answer-lead">{localize(card.answer, locale)}</p><p>{localize(card.explanation, locale)}</p>
+      <div class="pitfall"><strong>{copy.practice.pitfall}</strong><p>{localize(card.pitfall, locale)}</p></div>
+      <div class="card-sources"><strong>{copy.practice.officialSources}</strong><SourceLinks ids={card.sourceIds} copy={copy}/><small>{copy.practice.verified(formatDate(card.verifiedAt, locale))}</small></div>
+      <fieldset class="rating"><legend>{copy.practice.ratingLegend}</legend><button onClick={() => onRate('again')}>{copy.practice.ratingAgain}<small>{copy.practice.ratingAgainDelay}</small></button><button onClick={() => onRate('hard')}>{copy.practice.ratingHard}<small>{copy.practice.ratingHardDelay}</small></button><button onClick={() => onRate('good')}>{copy.practice.ratingGood}<small>{review?.lastRating === 'good' ? copy.practice.ratingGoodExtended : copy.practice.ratingGoodDelay}</small></button></fieldset>
+    </div>
+  );
+}
+
+function PracticeSession({ locale, copy, initialCards, reviews, dueCount, onRate, onExit }: {
+  locale: Locale;
+  copy: UiCopy;
+  initialCards: Card[];
+  reviews: Record<string, ReviewState>;
+  dueCount: number;
+  onRate: (cardId: string, rating: Rating) => boolean;
+  onExit: (aborted: boolean) => void;
+}) {
+  const [queue, setQueue] = useState<Card[]>(initialCards);
+  const [index, setIndex] = useState(0);
+  const [tally, setTally] = useState<SessionTally>(emptyTally());
+  const [revealed, setRevealed] = useState(false);
+  const [liveMessage, setLiveMessage] = useState('');
+  const finished = index >= queue.length;
+  const revealRef = useRef<HTMLButtonElement>(null);
+  const answerRef = useRef<HTMLDivElement>(null);
+  const summaryRef = useRef<HTMLElement>(null);
+
+  const current = finished ? undefined : queue[index];
+
+  useEffect(() => {
+    if (finished) {
+      requestAnimationFrame(() => summaryRef.current?.focus());
+      return;
+    }
+    setLiveMessage(copy.session.cardAnnouncement(index + 1, queue.length));
+    requestAnimationFrame(() => revealRef.current?.focus());
+    // queue.length only grows together with an index change, so index + finished cover every card switch.
+  }, [index, finished]);
+
+  const reveal = () => {
+    if (revealed || finished) return;
+    setRevealed(true);
+    setLiveMessage(copy.session.revealAnnouncement);
+    requestAnimationFrame(() => answerRef.current?.focus());
+  };
+
+  const rate = (rating: Rating) => {
+    if (!current || !revealed) return;
+    // A failed save keeps the card in place so the rating can be retried.
+    if (!onRate(current.id, rating)) return;
+    const step = rateSessionCard(queue, index, rating, tally);
+    setQueue(step.queue);
+    setTally(step.tally);
+    setRevealed(false);
+    setIndex(step.index);
+  };
+
+  const requestAbort = () => {
+    if (!window.confirm(copy.session.abortConfirm)) return;
+    onExit(true);
+  };
+
+  const restart = () => {
+    setQueue(initialCards);
+    setIndex(0);
+    setTally(emptyTally());
+    setRevealed(false);
+  };
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.repeat) return;
+      const target = event.target instanceof HTMLElement ? event.target : null;
+      if (target?.closest('input, textarea, select, [contenteditable=""], [contenteditable="true"]')) return;
+      if (event.key === 'Escape') {
+        if (!finished) requestAbort();
+        return;
+      }
+      if (finished) return;
+      if (!revealed && (event.key === ' ' || event.key === 'Enter')) {
+        // Focused interactive controls (reveal button, links, disclosures) keep their native activation.
+        if (target?.closest('button, a, summary')) return;
+        event.preventDefault();
+        reveal();
+        return;
+      }
+      if (revealed && (event.key === '1' || event.key === '2' || event.key === '3')) {
+        event.preventDefault();
+        rate(event.key === '1' ? 'again' : event.key === '2' ? 'hard' : 'good');
+      }
+    };
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  });
+
+  if (finished) {
+    return (
+      <section class="session-summary" aria-labelledby="session-summary-title" ref={summaryRef} tabIndex={-1}>
+        <p class="eyebrow">{copy.session.summaryEyebrow}</p>
+        <h3 id="session-summary-title">{copy.session.summaryTitle}</h3>
+        <dl class="session-breakdown" aria-label={copy.session.breakdownLegend}>
+          <div><dt>{copy.practice.ratingAgain}</dt><dd>{formatNumber(tally.again, locale)}</dd></div>
+          <div><dt>{copy.practice.ratingHard}</dt><dd>{formatNumber(tally.hard, locale)}</dd></div>
+          <div><dt>{copy.practice.ratingGood}</dt><dd>{formatNumber(tally.good, locale)}</dd></div>
+        </dl>
+        <p class="session-summary-meta">{copy.session.ratedCount(queue.length)} · {copy.session.dueRemaining(dueCount)}</p>
+        <div class="session-summary-actions">
+          <button class="quiz-start" onClick={restart}>{copy.session.restart}</button>
+          <button class="quiz-quit" onClick={() => onExit(false)}>{copy.session.backToList}</button>
+        </div>
+      </section>
+    );
+  }
+
+  const card = current!;
+  const domain = domains.find((value) => value.id === card.domainId)!;
+  const review = reviews[card.id];
+
+  return (
+    <div class="session-view">
+      <p class="sr-only" aria-live="polite">{liveMessage}</p>
+      <article class="practice-card session-card">
+        <header>
+          <div><span class="card-domain">D{domain.number}</span><span>{copy.practice.kinds[card.kind]}</span></div>
+          <div class="session-progress"><code>{copy.session.progress(index + 1, queue.length)}</code><span>{copy.session.remaining(queue.length - index - 1)}</span></div>
+        </header>
+        <div class="card-prompt"><p class="eyebrow">{copy.practice.question}</p><h3>{localize(card.prompt, locale)}</h3></div>
+        {!revealed && <button class="reveal-button" ref={revealRef} aria-expanded={false} aria-controls="session-answer" onClick={reveal}>{copy.practice.revealAnswer} <span aria-hidden="true">+</span></button>}
+        {revealed && <CardAnswer card={card} review={review} locale={locale} copy={copy} id="session-answer" onRate={rate} answerRef={answerRef}/>}
+        <button class="quiz-quit" onClick={requestAbort}>{copy.session.quit}</button>
+      </article>
+      <p class="session-shortcuts">{copy.session.shortcutsReveal} · {copy.session.shortcutsRate} · {copy.session.shortcutsQuit}</p>
+    </div>
+  );
+}
+
 function Blueprint({ reviews, ready, locale, copy }: { reviews: Record<string, ReviewState>; ready: boolean; locale: Locale; copy: UiCopy }) {
   const progress = (domainId: string) => {
     const domainCards = cards.filter((card) => card.domainId === domainId);
@@ -332,6 +480,7 @@ function App({ locale, analyticsEnabled = false }: { locale: Locale; analyticsEn
   const [domainFilter, setDomainFilter] = useState('all');
   const [stateFilter, setStateFilter] = useState<(typeof stateFilters)[number]>('due');
   const [revealed, setRevealed] = useState<Record<string, boolean>>({});
+  const [sessionCards, setSessionCards] = useState<Card[] | null>(null);
   const [notice, setNotice] = useState('');
   const noticeRef = useRef<HTMLParagraphElement>(null);
 
@@ -377,19 +526,32 @@ function App({ locale, analyticsEnabled = false }: { locale: Locale; analyticsEn
 
   const focusNotice = () => requestAnimationFrame(() => noticeRef.current?.focus());
 
-  const saveRating = (cardId: string, rating: Rating) => {
+  const persistRating = (cardId: string, rating: Rating) => {
     const currentCard = cards.find((card) => card.id === cardId)!;
     const reviews = { ...data.reviews, [cardId]: scheduleReview(cardId, currentCard.revision, rating, data.reviews[cardId]) };
     const next = { ...data, reviews };
     if (!studyStorage().save(next)) {
       setNotice(copy.notices.saveFailed);
       focusNotice();
-      return;
+      return false;
     }
     setData(next);
+    return true;
+  };
+
+  const saveRating = (cardId: string, rating: Rating) => {
+    if (!persistRating(cardId, rating)) return;
     setRevealed((value) => ({ ...value, [cardId]: false }));
     setNotice(rating === 'again' ? copy.notices.ratingAgain : rating === 'hard' ? copy.notices.ratingHard : copy.notices.ratingGood);
     focusNotice();
+  };
+
+  const endSession = (aborted: boolean) => {
+    setSessionCards(null);
+    if (aborted) {
+      setNotice(copy.session.abortedNotice);
+      focusNotice();
+    }
   };
 
   const recordQuizAnswer = (questionId: string, correct: boolean) => {
@@ -432,6 +594,8 @@ function App({ locale, analyticsEnabled = false }: { locale: Locale; analyticsEn
   };
 
   const navigate = (next: View) => {
+    // Leaving the practice view ends a running session; its ratings are already persisted.
+    if (next !== 'practice') setSessionCards(null);
     setView(next);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -475,7 +639,7 @@ function App({ locale, analyticsEnabled = false }: { locale: Locale; analyticsEn
               <span>{copy.today.dueTitle}</span>
               <strong>{ready && now ? formatNumber(dueCards.length, locale) : '—'}</strong>
               <span>{ready && now ? copy.today.dueCount(dueCards.length) : '—'}</span>
-              <button disabled={!ready} onClick={() => { setQuery(''); setDomainFilter('all'); setStateFilter('due'); navigate('practice'); }}>{copy.today.startReview} <span aria-hidden="true">→</span></button>
+              <button disabled={!ready} onClick={() => { setQuery(''); setDomainFilter('all'); setStateFilter('due'); setSessionCards(dueCards.length ? dueCards : null); navigate('practice'); }}>{copy.today.startReview} <span aria-hidden="true">→</span></button>
             </div>
           </section>
           <Blueprint reviews={data.reviews} ready={ready} locale={locale} copy={copy}/>
@@ -523,10 +687,15 @@ function App({ locale, analyticsEnabled = false }: { locale: Locale; analyticsEn
 
         {view === 'practice' && <section class="practice-view" aria-labelledby="practice-title">
           <header class="page-header compact"><p class="eyebrow">{copy.practice.eyebrow}</p><h2 id="practice-title">{copy.practice.title}</h2><p>{copy.practice.introduction}</p></header>
-          <div class="filter-panel">
+          {sessionCards && <PracticeSession locale={locale} copy={copy} initialCards={sessionCards} reviews={data.reviews} dueCount={dueCards.length} onRate={persistRating} onExit={endSession}/>}
+          {!sessionCards && <><div class="filter-panel">
             <label class="search-label" for="card-search">{copy.practice.searchLabel}<input id="card-search" type="search" value={query} onInput={(event) => setQuery(event.currentTarget.value)} placeholder={copy.practice.searchPlaceholder}/></label>
             <fieldset><legend>{copy.practice.stateLegend}</legend><div class="chips">{stateFilters.map((key) => <button key={key} type="button" class={stateFilter === key ? 'selected' : ''} aria-pressed={stateFilter === key} onClick={() => setStateFilter(key)}>{copy.practice.filters[key]}</button>)}</div></fieldset>
             <fieldset><legend>{copy.practice.domainLegend}</legend><div class="chips"><button type="button" class={domainFilter === 'all' ? 'selected' : ''} aria-pressed={domainFilter === 'all'} onClick={() => setDomainFilter('all')}>{copy.practice.allDomains}</button>{domains.map((domain) => <button key={domain.id} type="button" class={domainFilter === domain.id ? 'selected' : ''} aria-pressed={domainFilter === domain.id} onClick={() => setDomainFilter(domain.id)}>D{domain.number}</button>)}</div></fieldset>
+          </div>
+          <div class="session-start-row">
+            <button class="quiz-start session-start" disabled={!filteredCards.length} onClick={() => setSessionCards(filteredCards)}>{copy.session.start} <span aria-hidden="true">→</span></button>
+            {!filteredCards.length && <p class="session-start-hint">{copy.session.cannotStart}</p>}
           </div>
           <p class="result-count">{copy.practice.resultCount(filteredCards.length)}</p>
           <div class="card-stack">{filteredCards.map((card, index) => {
@@ -538,15 +707,10 @@ function App({ locale, analyticsEnabled = false }: { locale: Locale; analyticsEn
               <header><div><span class="card-domain">D{domain.number}</span><span>{copy.practice.kinds[card.kind]}</span></div><code>{String(index + 1).padStart(2, '0')} / {String(filteredCards.length).padStart(2, '0')}</code></header>
               <div class="card-prompt"><p class="eyebrow">{copy.practice.question}</p><h3>{localize(card.prompt, locale)}</h3></div>
               <button class="reveal-button" aria-expanded={isOpen} aria-controls={answerId} onClick={() => setRevealed((value) => ({ ...value, [card.id]: !isOpen }))}>{isOpen ? copy.practice.hideAnswer : copy.practice.revealAnswer} <span aria-hidden="true">{isOpen ? '−' : '+'}</span></button>
-              {isOpen && <div class="answer" id={answerId}>
-                <p class="eyebrow">{copy.practice.answer}</p><p class="answer-lead">{localize(card.answer, locale)}</p><p>{localize(card.explanation, locale)}</p>
-                <div class="pitfall"><strong>{copy.practice.pitfall}</strong><p>{localize(card.pitfall, locale)}</p></div>
-                <div class="card-sources"><strong>{copy.practice.officialSources}</strong><SourceLinks ids={card.sourceIds} copy={copy}/><small>{copy.practice.verified(formatDate(card.verifiedAt, locale))}</small></div>
-                <fieldset class="rating"><legend>{copy.practice.ratingLegend}</legend><button onClick={() => saveRating(card.id, 'again')}>{copy.practice.ratingAgain}<small>{copy.practice.ratingAgainDelay}</small></button><button onClick={() => saveRating(card.id, 'hard')}>{copy.practice.ratingHard}<small>{copy.practice.ratingHardDelay}</small></button><button onClick={() => saveRating(card.id, 'good')}>{copy.practice.ratingGood}<small>{review?.lastRating === 'good' ? copy.practice.ratingGoodExtended : copy.practice.ratingGoodDelay}</small></button></fieldset>
-              </div>}
+              {isOpen && <CardAnswer card={card} review={review} locale={locale} copy={copy} id={answerId} onRate={(rating) => saveRating(card.id, rating)}/>}
             </article>;
           })}</div>
-          {!filteredCards.length && <div class="empty-state"><strong>{copy.practice.emptyTitle}</strong><p>{copy.practice.emptyDescription}</p></div>}
+          {!filteredCards.length && <div class="empty-state"><strong>{copy.practice.emptyTitle}</strong><p>{copy.practice.emptyDescription}</p></div>}</>}
         </section>}
 
         {view === 'quiz' && <QuizView locale={locale} copy={copy} quizStats={data.quizStats} onAnswer={recordQuizAnswer}/>}

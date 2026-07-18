@@ -41,7 +41,7 @@ The MVP is a single fast page with four views to avoid routing overhead while re
 
 - `今日`: due-card count, start/restart CTA, five-domain coverage map, weak areas.
 - `ガイド`: five domain sections, 30 task statements, must-remember bullets, official links.
-- `練習`: due/all filters, domain chips, search, one reveal card at a time or browsable stack.
+- `練習`: due/all filters, domain chips, search, one reveal card at a time or browsable stack, plus a focused review session that runs the current filtered set one card at a time (the today CTA starts one directly over the due cards).
 - `演習`: random quiz (question count and weighted/per-domain draw) and scenario practice (case list → background → linked questions) sharing one answering flow and summary.
 - `進捗`: domain completion, due counts, local-data explanation, export/reset, sources/disclaimer.
 
@@ -57,6 +57,7 @@ On narrow screens, the four views use a bottom navigation bar. On wide screens, 
    - `難しい`: next day
    - `できた`: 3 days, then a progressively longer interval after consecutive success
 5. Content revision changes preserve history but mark the card for reconfirmation.
+6. A focused review session applies the same reveal-then-rate loop to one card at a time with keyboard shortcuts (Space/Enter reveals, 1/2/3 rates, Esc stops after a confirm). `もう一度` re-queues the card at the end of the running session without changing what is persisted, and a summary reports the rating breakdown plus the remaining due count.
 
 The schedule is intentionally described as a simple study aid, not as a scientifically optimal algorithm.
 
