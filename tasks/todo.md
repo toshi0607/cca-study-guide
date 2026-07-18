@@ -44,7 +44,7 @@ Branch: claude/optimistic-booth-c5c244（origin/main 6687f6b を含む）
 - [x] 6. tests/app.spec.ts — 今日CTAテスト更新 + セッションフロー e2e + キーボード e2e（45 e2e パス）
 - [x] 7. DESIGN.md（IA 1行 + Interaction model 1項）/ README.md（方針 1行）追記
 - [x] 8. pnpm test（49 pass）/ pnpm build（exit 0）/ pnpm test:e2e（45 pass）全パス
-- [ ] 9. コミット & PR 作成
+- [x] 9. コミット & PR 作成（https://github.com/toshi0607/cca-study-guide/pull/23、CI: Vercel pass）
 
 ## Notes
 
