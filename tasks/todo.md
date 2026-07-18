@@ -410,7 +410,7 @@ Deploy the current localized and performance-optimized working tree to the exist
 - [x] pnpm test パス（22/22）
 - [x] pnpm test:e2e パス（39/39）
 - [x] pnpm build パス（astro check 0 errors/warnings/hints、4 routes）
-- [ ] コミット & PR作成（CIパス確認）
+- [x] コミット & PR作成（PR #13、Vercelチェック全pass、Actionsワークフローなし）
 
 ## Notes
 
