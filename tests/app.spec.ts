@@ -225,6 +225,9 @@ test('runs a domain-scoped quiz round with immediate feedback, a summary, and pe
 });
 
 test('runs a scenario practice round with a reviewable case background and persisted stats', async ({ page }) => {
+  // The closing axe scan alone takes ~17-20s, close to the default 30s timeout under parallel workers.
+  test.slow();
+
   const scenario = scenarios[0];
   const scenarioQuestions = questions.filter((question) => question.scenarioId === scenario.id);
 
