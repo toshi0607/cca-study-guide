@@ -376,6 +376,7 @@ function App({ locale, analyticsEnabled = false }: { locale: Locale; analyticsEn
   };
 
   const openWeakPractice = (domainId: string) => {
+    setQuery('');
     setDomainFilter(domainId);
     setStateFilter('weak');
     navigate('practice');

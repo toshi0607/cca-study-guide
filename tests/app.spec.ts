@@ -2,6 +2,7 @@ import { readFile } from 'node:fs/promises';
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
 import { cards } from '../src/content/cards';
+import { domains } from '../src/content/domains';
 
 test.beforeEach(async ({ page }) => {
   await page.goto('/');
@@ -138,6 +139,9 @@ test('runs a domain-scoped quiz round with immediate feedback, a summary, and pe
 });
 
 test('surfaces a struggling card in the weak filter and navigates from the today weak areas', async ({ page }) => {
+  // The flow rates the first card of the default due list, so the expected
+  // domain chip is derived from content order instead of hardcoding D1.
+  const firstDomain = domains.find((domain) => domain.id === cards[0].domainId)!;
   await expect(page.getByText('記録はまだありません。')).toBeVisible();
 
   await page.getByRole('button', { name: '練習' }).first().click();
@@ -159,7 +163,7 @@ test('surfaces a struggling card in the weak filter and navigates from the today
   await weakRow.press('Enter');
   await expect(page.getByRole('heading', { name: '練習カード' })).toBeVisible();
   await expect(page.getByRole('button', { name: '苦手', exact: true })).toHaveAttribute('aria-pressed', 'true');
-  await expect(page.getByRole('button', { name: 'D1', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.getByRole('button', { name: `D${firstDomain.number}`, exact: true })).toHaveAttribute('aria-pressed', 'true');
   await expect(page.locator('.practice-card')).toHaveCount(1);
 });
 
