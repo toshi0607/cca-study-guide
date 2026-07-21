@@ -104,6 +104,15 @@ UI・storage・依存関係は変更しない。
     検査を validate.ts へ移してビルド時に落ちるようにした。
   - m2（`taskStatementIds` と `objectiveIds` の呼び分け）は既存フィールド名の変更を伴うため見送り。
     型にコメントで参照先を明記している。
+- **2 回目のレビュー指摘（Approve、非ブロッキング 3 件）への対応**:
+  - P3 difficulty の単一ソース化: `as const satisfies readonly QuestionDifficulty[]` は
+    union 側にだけ値を足したときの配列への追加漏れを検出できない。`types.ts` の
+    `questionDifficulties` 配列を定義元とし、union をそこから導出する形へ変更した
+    （`questions.ts` は `import type` なのでバンドルサイズは 220,965B のまま不変）。
+  - P3 参照配列の重複検査: Study Guide / Hands-on / Official Scenario の
+    `domainIds` `taskStatementIds` `relatedCardIds` `relatedQuestionIds` `sourceIds` にも
+    `unique()` を適用し、異常系テストを 2 件追加した（118 → 120 tests）。
+  - Nit PR 本文の変更範囲: `DESIGN.md` も対象であることを追記した。
 - **rationale の一括執筆**: 38 問を 5 分割し、それぞれ独立したエージェントに執筆させた上で、
   変更前後の JSON スナップショット比較（id / stem / choices.text / correctChoiceIds / explanation /
   sourceIds / verifiedAt / scenarioId）で既存フィールドが 1 文字も変わっていないことを機械検証した。

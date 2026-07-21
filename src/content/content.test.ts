@@ -6,6 +6,7 @@ import { questions, standaloneQuestions } from './questions';
 import { choiceRationales } from './rationales';
 import { officialScenarioById, officialScenarios, scenarios } from './scenarios';
 import { skillById, skills } from './skills';
+import { questionDifficulties } from './types';
 import { sources } from './sources';
 import { studyGuideSections } from './study-guide';
 import {
@@ -178,7 +179,7 @@ describe('question assessment metadata', () => {
 
     for (const question of questions) {
       // #then
-      expect(['foundation', 'application', 'analysis'], question.id).toContain(question.difficulty);
+      expect(questionDifficulties, question.id).toContain(question.difficulty);
       expect(question.skills.length, question.id).toBeGreaterThanOrEqual(1);
       for (const skill of question.skills) expect(knownSkills.has(skill), `${question.id}: ${skill}`).toBe(true);
     }
@@ -189,7 +190,7 @@ describe('question assessment metadata', () => {
     const levels = new Set(questions.map((question) => question.difficulty));
 
     // #then
-    expect(levels.size).toBe(3);
+    expect(levels.size).toBe(questionDifficulties.length);
   });
 
   it('does not collapse the skill taxonomy onto the domain axis', () => {
@@ -647,6 +648,14 @@ describe('study guide validation', () => {
     expect(errors).toContain('existing calendar date');
   });
 
+  it('rejects a duplicated related card reference', () => {
+    // #when
+    const errors = withSection((section) => { section.relatedCardIds = ['d1-loop-stop', 'd1-loop-stop']; });
+
+    // #then
+    expect(errors).toContain('study guide section sg-fixture relatedCardIds has duplicate IDs: d1-loop-stop');
+  });
+
   it('rejects a duplicated recommended order', () => {
     // #given
     const second = validSection();
@@ -815,6 +824,14 @@ describe('hands-on validation', () => {
 
     // #then
     expect(errors).toContain('hands-on guide ho-fixture: orphan card d3-missing-card');
+  });
+
+  it('rejects a duplicated source reference', () => {
+    // #when
+    const errors = withGuide((guide) => { guide.sourceIds = ['exam-guide', 'headless', 'headless']; });
+
+    // #then
+    expect(errors).toContain('hands-on guide ho-fixture sourceIds has duplicate IDs: headless');
   });
 
   it('rejects duplicated guide IDs', () => {

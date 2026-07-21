@@ -1,5 +1,6 @@
 import { z } from 'zod';
-import type { LocalizedText, QuestionDifficulty } from './types';
+import type { LocalizedText } from './types';
+import { questionDifficulties } from './types';
 import { cards } from './cards';
 import { domains } from './domains';
 import { handsOnGuides } from './hands-on';
@@ -20,8 +21,6 @@ const localizedStringSchema = z.object({
 }).strict();
 const localizedStringList = (items: z.ZodArray<z.ZodString>) => z.object({ ja: items, en: items }).strict();
 const localizedStringArraySchema = localizedStringList(z.array(z.string().trim().min(1)).min(1));
-// `satisfies` keeps this list and the QuestionDifficulty union from drifting apart.
-const questionDifficulties = ['foundation', 'application', 'analysis'] as const satisfies readonly QuestionDifficulty[];
 const idListSchema = z.array(z.string().min(1));
 const requiredIdListSchema = idListSchema.min(1);
 const sourceSchema = z.object({ id: z.string().min(1), title: z.string().min(1), publisher: z.enum(['Anthropic', 'MCP Project']), url: z.string().url(), official: z.literal(true), verifiedAt: date });
@@ -260,6 +259,8 @@ export function validateOfficialScenarios(input: unknown, index: ContentIndex): 
   for (const scenario of parsed) {
     checkSourceIds(scenario, 'official scenario', index, errors);
     checkReferences(scenario.domainIds, index.domainIds, `official scenario ${scenario.id}`, 'domain', errors);
+    unique(scenario.domainIds, `official scenario ${scenario.id} domainIds`, errors);
+    unique(scenario.sourceIds, `official scenario ${scenario.id} sourceIds`, errors);
     if (!index.officialScenarioIds.has(scenario.id)) errors.push(`official scenario ${scenario.id}: id is not part of the official scenario set`);
   }
   for (const id of index.officialScenarioIds) {
@@ -358,6 +359,7 @@ export function validateScenarios(input: unknown, index: ContentIndex): string[]
     checkReferences(scenario.officialScenarioIds, index.officialScenarioIds, label, 'official scenario', errors);
     unique(scenario.domainIds, `${label} domainIds`, errors);
     unique(scenario.officialScenarioIds, `${label} officialScenarioIds`, errors);
+    unique(scenario.sourceIds, `${label} sourceIds`, errors);
   }
   return errors;
 }
@@ -399,6 +401,15 @@ export function validateStudyGuideSections(input: unknown, index: ContentIndex):
     checkReferences(section.taskStatementIds, index.objectiveIds, label, 'task statement', errors);
     checkReferences(section.relatedCardIds, index.cardIds, label, 'card', errors);
     checkReferences(section.relatedQuestionIds, index.questionIds, label, 'question', errors);
+    for (const [field, ids] of [
+      ['domainIds', section.domainIds],
+      ['taskStatementIds', section.taskStatementIds],
+      ['relatedCardIds', section.relatedCardIds],
+      ['relatedQuestionIds', section.relatedQuestionIds],
+      ['sourceIds', section.sourceIds],
+    ] as const) {
+      unique(ids, `${label} ${field}`, errors);
+    }
   }
   return errors;
 }
@@ -414,7 +425,15 @@ export function validateHandsOnGuides(input: unknown, index: ContentIndex): stri
     checkReferences(guide.officialScenarioIds, index.officialScenarioIds, label, 'official scenario', errors);
     checkReferences(guide.relatedCardIds, index.cardIds, label, 'card', errors);
     checkReferences(guide.relatedQuestionIds, index.questionIds, label, 'question', errors);
-    unique(guide.officialScenarioIds, `${label} officialScenarioIds`, errors);
+    for (const [field, ids] of [
+      ['domainIds', guide.domainIds],
+      ['officialScenarioIds', guide.officialScenarioIds],
+      ['relatedCardIds', guide.relatedCardIds],
+      ['relatedQuestionIds', guide.relatedQuestionIds],
+      ['sourceIds', guide.sourceIds],
+    ] as const) {
+      unique(ids, `${label} ${field}`, errors);
+    }
     unique(guide.steps.map((step) => step.id), `${label} steps`, errors);
   }
   return errors;

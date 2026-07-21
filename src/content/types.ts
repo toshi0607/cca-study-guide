@@ -72,11 +72,12 @@ export type Scenario = {
 };
 
 // What a question demands of the learner. Independent of the domain (the exam
-// weighting area) and of the task statement (what the guide covers).
-export type QuestionDifficulty =
-  | 'foundation'
-  | 'application'
-  | 'analysis';
+// weighting area) and of the task statement (what the guide covers). The array
+// is the single definition: the union is derived from it, so a value can never
+// exist in one and not the other.
+export const questionDifficulties = ['foundation', 'application', 'analysis'] as const;
+
+export type QuestionDifficulty = (typeof questionDifficulties)[number];
 
 // The capability a question measures. Cross-cutting on purpose: a skill can be
 // exercised from several domains. The display names live in `skills.ts`.
