@@ -157,6 +157,50 @@ test('drives a session with keyboard shortcuts and confirms before stopping', as
   await expect.poll(() => page.evaluate(() => Object.keys(JSON.parse(localStorage.getItem('cca-field-notes:v1') ?? '{}').reviews ?? {}).length)).toBe(2);
 });
 
+test('leaving the practice view during a running session ends it without losing earlier ratings', async ({ page }) => {
+  // #given — a session started over the due cards, with the first card already rated
+  await page.getByRole('button', { name: '練習' }).first().click();
+  await page.getByRole('button', { name: 'セッションを開始' }).click();
+  await expect(page.locator('.session-card')).toBeVisible();
+  await page.locator('.reveal-button').click();
+  await page.getByRole('button', { name: /できた/ }).click();
+  await expect.poll(() => page.evaluate(() => Object.keys(JSON.parse(localStorage.getItem('cca-field-notes:v1') ?? '{}').reviews ?? {}).length)).toBe(1);
+
+  // #when — navigating to another view and back, instead of stopping the session explicitly
+  await page.getByRole('button', { name: 'ガイド' }).first().click();
+  await page.getByRole('button', { name: '練習' }).first().click();
+
+  // #then — the session ended: the card list shows again and the earlier rating is still saved
+  await expect(page.locator('.session-card')).toHaveCount(0);
+  await expect(page.locator('.practice-card').first()).toBeVisible();
+  expect(await page.evaluate(() => Object.keys(JSON.parse(localStorage.getItem('cca-field-notes:v1') ?? '{}').reviews ?? {}).length)).toBe(1);
+});
+
+test('keeps a session card in place and announces the failure when saving its rating fails', async ({ page }) => {
+  // #given — localStorage.setItem throws for the study-data key, simulating a full or blocked store
+  await page.addInitScript(() => {
+    const original = Storage.prototype.setItem;
+    Storage.prototype.setItem = function (key, value) {
+      if (key === 'cca-field-notes:v1') throw new DOMException('The quota has been exceeded.', 'QuotaExceededError');
+      return original.call(this, key, value);
+    };
+  });
+  await page.goto('/');
+
+  // #when — starting a session and rating its first card
+  await page.getByRole('button', { name: '練習' }).first().click();
+  await page.getByRole('button', { name: 'セッションを開始' }).click();
+  await expect(page.locator('.session-progress code')).toHaveText(/^1 \//);
+  await page.locator('.reveal-button').click();
+  await page.getByRole('button', { name: /できた/ }).click();
+
+  // #then — the failure is announced and focused, and the card stays in place, still revealed
+  await expect(page.getByText('進捗を保存できませんでした。ブラウザのサイトデータ設定または空き容量を確認してください。')).toBeFocused();
+  await expect(page.locator('.session-progress code')).toHaveText(/^1 \//);
+  await expect(page.locator('.session-card .answer')).toBeVisible();
+  expect(await page.evaluate(() => localStorage.getItem('cca-field-notes:v1'))).toBeNull();
+});
+
 test('reveals an answer, records a rating, and persists progress', async ({ page }) => {
   await page.getByRole('button', { name: '練習' }).first().click();
   const reveal = page.locator('.reveal-button').first();
@@ -222,6 +266,51 @@ test('runs a domain-scoped quiz round with immediate feedback, a summary, and pe
 
   const axe = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa']).analyze();
   expect(axe.violations).toEqual([]);
+});
+
+test('records a single-select answer once even when its choice is fired twice before re-render', async ({ page }) => {
+  // #given — a domain-scoped quiz round
+  await page.getByRole('button', { name: '演習' }).first().click();
+  await page.getByRole('button', { name: '10問' }).click();
+  await page.getByRole('button', { name: 'D2', exact: true }).click();
+  await page.getByRole('button', { name: '演習を始める' }).click();
+
+  const total = Number(await page.locator('.quiz-question > header code').innerText().then((text) => /全(\d+)問/.exec(text)?.[1]));
+  let doubleFired = false;
+
+  for (let answered = 1; answered <= total; answered += 1) {
+    await expect(page.locator('.quiz-question > header code')).toHaveText(`第${answered}問 / 全${total}問`);
+    const isSingle = await page.getByText('正しい選択肢を1つ選んでください。選ぶと同時に回答になります。').isVisible();
+
+    if (isSingle && !doubleFired) {
+      // #when — the same choice is clicked twice synchronously, before Preact re-renders it disabled;
+      // the answeredIdRef guard must drop the second call so the question is recorded only once.
+      await page.evaluate(() => {
+        const choice = document.querySelector('.choice-button') as HTMLElement;
+        choice.click();
+        choice.click();
+      });
+      doubleFired = true;
+    } else if (isSingle) {
+      await page.locator('.choice-button').first().click();
+    } else {
+      await page.locator('.choice-button').nth(0).click();
+      await page.locator('.choice-button').nth(1).click();
+      await page.getByRole('button', { name: '回答する' }).click();
+    }
+
+    await expect(page.locator('.quiz-feedback')).toBeVisible();
+    await page.getByRole('button', { name: answered === total ? '結果を見る' : '次の問題へ' }).click();
+  }
+
+  // #then — the double-fired answer produced a single result: the summary still counts exactly `total`
+  // answers (a duplicated result would read `${total + 1}問中`), and every question stat has one attempt.
+  expect(doubleFired).toBe(true);
+  await expect(page.getByRole('heading', { name: '演習結果' })).toBeVisible();
+  await expect(page.locator('.quiz-score-figure')).toContainText(`${total}問中`);
+  const stats = await page.evaluate(() => JSON.parse(localStorage.getItem('cca-field-notes:v1') ?? '{}').quizStats ?? {});
+  expect(Object.keys(stats).length).toBe(total);
+  for (const stat of Object.values(stats) as { attempts: number }[]) expect(stat.attempts).toBe(1);
 });
 
 test('runs a scenario practice round with a reviewable case background and persisted stats', async ({ page }) => {
