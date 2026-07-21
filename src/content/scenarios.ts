@@ -1,9 +1,88 @@
-import type { LocalizedText, Scenario } from './types';
+import type { LocalizedText, OfficialScenario, OfficialScenarioId, Scenario } from './types';
 
 const localized = <T>(ja: T, en: T): LocalizedText<T> => ({ ja, en });
 
 // Scenario cases were re-verified against the cited official pages on this date.
 export const SCENARIO_VERIFIED_AT = '2026-07-18';
+
+// The official scenario list was re-read in Exam Guide v1.0 on this date.
+export const OFFICIAL_SCENARIO_VERIFIED_AT = '2026-07-21';
+
+// The six application contexts the exam draws from (four per sitting). These are
+// a classification axis: the summaries below are original paraphrases of the
+// published scenario framing, not copies of the guide. `OfficialScenarioId` in
+// `types.ts` is the single definition of the allowed IDs, and this record must
+// cover every one of them.
+export const officialScenarioById: Record<OfficialScenarioId, OfficialScenario> = {
+  'customer-support-resolution': {
+    id: 'customer-support-resolution',
+    title: localized('カスタマーサポート解決エージェント', 'Customer Support Resolution Agent'),
+    summary: localized(
+      '返品・請求・アカウントなど曖昧さの高い問い合わせを、業務システムへつないだツールで一次解決し、いつ人へ渡すかを判断する文脈。',
+      'Resolving high-ambiguity requests such as returns, billing, and account issues through tools wired to backend systems, while judging when to escalate to a person.',
+    ),
+    domainIds: ['d1', 'd2', 'd5'],
+    sourceIds: ['exam-guide', 'user-input', 'sdk-features'],
+    verifiedAt: OFFICIAL_SCENARIO_VERIFIED_AT,
+  },
+  'code-generation-claude-code': {
+    id: 'code-generation-claude-code',
+    title: localized('Claude Codeによるコード生成', 'Code Generation with Claude Code'),
+    summary: localized(
+      'Claude Codeを生成・リファクタリング・デバッグ・文書化に使い、コマンドやCLAUDE.mdの設定と実行方式の選択を開発フローへ組み込む文脈。',
+      'Using Claude Code for generation, refactoring, debugging, and documentation, and fitting commands, CLAUDE.md configuration, and execution-mode choices into the development workflow.',
+    ),
+    domainIds: ['d3', 'd5'],
+    sourceIds: ['exam-guide', 'code-features', 'code-best-practices'],
+    verifiedAt: OFFICIAL_SCENARIO_VERIFIED_AT,
+  },
+  'multi-agent-research': {
+    id: 'multi-agent-research',
+    title: localized('マルチエージェント調査システム', 'Multi-Agent Research System'),
+    summary: localized(
+      '調整役のエージェントが検索・分析・統合・レポート生成を専門のサブエージェントへ委譲し、出典付きの成果物をまとめる文脈。',
+      'A coordinator agent delegating search, analysis, synthesis, and report generation to specialized subagents, producing cited deliverables.',
+    ),
+    domainIds: ['d1', 'd2', 'd5'],
+    sourceIds: ['exam-guide', 'subagents', 'structured'],
+    verifiedAt: OFFICIAL_SCENARIO_VERIFIED_AT,
+  },
+  'developer-productivity': {
+    id: 'developer-productivity',
+    title: localized('開発者生産性の支援', 'Developer Productivity with Claude'),
+    summary: localized(
+      '不慣れなコードベースの探索や定型作業の自動化を、組み込みツールとMCPサーバー連携で支援する文脈。',
+      'Supporting exploration of unfamiliar codebases and automation of repetitive work through built-in tools and MCP server integration.',
+    ),
+    domainIds: ['d2', 'd3', 'd1'],
+    sourceIds: ['exam-guide', 'large-codebases', 'code-mcp'],
+    verifiedAt: OFFICIAL_SCENARIO_VERIFIED_AT,
+  },
+  'claude-code-ci': {
+    id: 'claude-code-ci',
+    title: localized('CI/CDでのClaude Code', 'Claude Code for Continuous Integration'),
+    summary: localized(
+      'CI/CDパイプラインでレビューやテスト生成を自動実行し、誤検知を抑えた実行可能なフィードバックを返す文脈。',
+      'Running automated review and test generation inside a CI/CD pipeline, returning actionable feedback with few false positives.',
+    ),
+    domainIds: ['d3', 'd4'],
+    sourceIds: ['exam-guide', 'headless', 'prompting-best'],
+    verifiedAt: OFFICIAL_SCENARIO_VERIFIED_AT,
+  },
+  'structured-data-extraction': {
+    id: 'structured-data-extraction',
+    title: localized('構造化データ抽出', 'Structured Data Extraction'),
+    summary: localized(
+      '非構造の文書から情報を抽出し、JSON Schemaで検証しながら例外を扱い、後段システムへ渡す文脈。',
+      'Extracting information from unstructured documents, validating it against JSON schemas, handling edge cases, and feeding downstream systems.',
+    ),
+    domainIds: ['d4', 'd5'],
+    sourceIds: ['exam-guide', 'structured', 'batch'],
+    verifiedAt: OFFICIAL_SCENARIO_VERIFIED_AT,
+  },
+};
+
+export const officialScenarios: OfficialScenario[] = Object.values(officialScenarioById);
 
 // All cases below are independently authored fiction: the companies, people,
 // and situations are invented for this app, grounded only in public official
@@ -29,6 +108,7 @@ export const scenarios: Scenario[] = [
       ],
     ),
     domainIds: ['d2'],
+    officialScenarioIds: ['developer-productivity'],
     sourceIds: ['mcp-tools', 'tool-use', 'define-tools', 'code-mcp'],
     verifiedAt: SCENARIO_VERIFIED_AT,
   },
@@ -52,6 +132,7 @@ export const scenarios: Scenario[] = [
       ],
     ),
     domainIds: ['d1', 'd5'],
+    officialScenarioIds: ['customer-support-resolution', 'multi-agent-research'],
     sourceIds: ['subagents', 'sdk-features', 'sessions', 'user-input'],
     verifiedAt: SCENARIO_VERIFIED_AT,
   },
@@ -77,6 +158,7 @@ export const scenarios: Scenario[] = [
       ],
     ),
     domainIds: ['d3', 'd2'],
+    officialScenarioIds: ['code-generation-claude-code', 'claude-code-ci', 'developer-productivity'],
     sourceIds: ['code-memory', 'skills', 'headless', 'code-best-practices', 'code-mcp'],
     verifiedAt: SCENARIO_VERIFIED_AT,
   },
@@ -100,6 +182,7 @@ export const scenarios: Scenario[] = [
       ],
     ),
     domainIds: ['d4', 'd5'],
+    officialScenarioIds: ['structured-data-extraction'],
     sourceIds: ['structured', 'batch', 'context-windows', 'context-editing'],
     verifiedAt: SCENARIO_VERIFIED_AT,
   },
