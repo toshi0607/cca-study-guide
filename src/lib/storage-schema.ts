@@ -41,10 +41,11 @@ export function createEmptyStudyData(): StudyData {
 }
 
 const ratings = new Set(['again', 'hard', 'good']);
-// JSON.parse keeps `__proto__` as an own key, and assigning it would reach
-// Object.prototype instead of the accumulator. `constructor` and `prototype` are
-// ordinary own keys under plain assignment, so they stay usable as content ids.
-const unsafeRecordKey = '__proto__';
+// JSON.parse keeps these as own keys, and `__proto__` in particular would reach
+// Object.prototype instead of the accumulator. No content id uses them, so the
+// storage boundary refuses all three rather than relying on how a later merge or
+// copy happens to be written.
+const unsafeRecordKeys = new Set(['__proto__', 'constructor', 'prototype']);
 // Date-only strings and 2026-02-30 style impossible dates must not pass.
 const isoDateTime = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d{1,3})?(?:Z|[+-]\d{2}:\d{2})$/;
 
@@ -106,46 +107,54 @@ function isHandsOnProgress(value: unknown): value is HandsOnProgress {
     && new Set(steps).size === steps.length;
 }
 
-function pickValid<T>(source: Record<string, unknown>, isValid: (value: unknown, key: string) => value is T): Record<string, T> {
+// v1 only: releases before v2 stored data this validator never saw, so a single
+// broken entry salvages the rest instead of discarding a learner's history. The
+// v1 key is never rewritten, so nothing dropped here becomes unrecoverable.
+function salvageValid<T>(source: Record<string, unknown>, isValid: (value: unknown, key: string) => value is T): Record<string, T> {
   const result: Record<string, T> = {};
   for (const [key, value] of Object.entries(source)) {
-    if (key === unsafeRecordKey) continue;
+    if (unsafeRecordKeys.has(key)) continue;
     if (isValid(value, key)) result[key] = value;
+  }
+  return result;
+}
+
+// v2: every entry must validate. Dropping one and writing the rest back would
+// destroy data this build simply failed to understand, so the whole document is
+// rejected instead and the caller refuses to overwrite it.
+function strictRecord<T>(source: unknown, isValid: (value: unknown, key: string) => value is T): Record<string, T> | null {
+  if (!isRecord(source)) return null;
+  const result: Record<string, T> = {};
+  for (const [key, value] of Object.entries(source)) {
+    if (unsafeRecordKeys.has(key) || !isValid(value, key)) return null;
+    result[key] = value;
   }
   return result;
 }
 
 const isQuizStatEntry = (value: unknown): value is QuizStat => isQuizStat(value);
 
-// A missing record is an empty record; a present but non-record value means the
-// document is not what it claims to be, so the caller must reject it.
-function readRecord(source: Record<string, unknown>, key: string): Record<string, unknown> | null {
-  const value = source[key];
-  if (value === undefined) return {};
-  return isRecord(value) ? value : null;
-}
-
+// `quizStats` stayed optional through every v1 release, and a v1 document that
+// carries something else there still has reviews worth keeping — rejecting it
+// would lose more than ignoring the field does.
 export function parseStudyDataV1(value: unknown): StudyDataV1 | null {
   if (!isRecord(value) || value.version !== 1 || !isRecord(value.reviews)) return null;
-  const reviews = pickValid(value.reviews, isReviewState);
+  const reviews = salvageValid(value.reviews, isReviewState);
   if (!isRecord(value.quizStats)) return { version: 1, reviews };
-  return { version: 1, reviews, quizStats: pickValid(value.quizStats, isQuizStatEntry) };
+  return { version: 1, reviews, quizStats: salvageValid(value.quizStats, isQuizStatEntry) };
 }
 
+// Strict: all four records are required and every entry must validate. Anything
+// else is a document this build cannot represent, and the caller must leave it
+// alone rather than store a pruned version of it.
 export function parseStudyDataV2(value: unknown): StudyDataV2 | null {
   if (!isRecord(value) || value.version !== 2) return null;
-  const reviews = readRecord(value, 'reviews');
-  const quizStats = readRecord(value, 'quizStats');
-  const studyGuideProgress = readRecord(value, 'studyGuideProgress');
-  const handsOnProgress = readRecord(value, 'handsOnProgress');
+  const reviews = strictRecord(value.reviews, isReviewState);
+  const quizStats = strictRecord(value.quizStats, isQuizStatEntry);
+  const studyGuideProgress = strictRecord(value.studyGuideProgress, isStudyGuideProgress);
+  const handsOnProgress = strictRecord(value.handsOnProgress, isHandsOnProgress);
   if (!reviews || !quizStats || !studyGuideProgress || !handsOnProgress) return null;
-  return {
-    version: 2,
-    reviews: pickValid(reviews, isReviewState),
-    quizStats: pickValid(quizStats, isQuizStatEntry),
-    studyGuideProgress: pickValid(studyGuideProgress, isStudyGuideProgress),
-    handsOnProgress: pickValid(handsOnProgress, isHandsOnProgress),
-  };
+  return { version: 2, reviews, quizStats, studyGuideProgress, handsOnProgress };
 }
 
 // Pure: no clock, no randomness, no content lookup. v1 carries no Study Guide or

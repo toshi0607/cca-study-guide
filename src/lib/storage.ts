@@ -119,8 +119,9 @@ export function createStudyStorage(storage: StorageLike | undefined) {
         return createEmptyStudyData();
       }
     },
-    // Stores the validated document, so anything reported as saved reloads
-    // identically. Entries the validator drops are ones load would drop anyway.
+    // Validation is strict, so a document is either stored whole or refused —
+    // nothing is silently pruned on the way in, and what is reported as saved
+    // reloads identically. The parsed copy drops only export-wrapper fields.
     save(data: StudyData): boolean {
       const validated = parseStudyDataV2(data);
       if (!validated || !isCurrentKeyWritable()) return false;

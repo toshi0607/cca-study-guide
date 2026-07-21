@@ -169,21 +169,59 @@ describe('parseStudyDataV2', () => {
     expect(parseStudyDataV2({ ...createEmptyStudyData(), version: 3 })).toBeNull();
   });
 
+  it('rejects a document that declares the version but carries no records', () => {
+    // #given / #when / #then
+    expect(parseStudyDataV2({ version: 2 })).toBeNull();
+  });
+
+  it('rejects a document missing any one of the four records', () => {
+    // #given / #when / #then
+    for (const field of ['reviews', 'quizStats', 'studyGuideProgress', 'handsOnProgress'] as const) {
+      const document: Record<string, unknown> = { ...createEmptyStudyData() };
+      delete document[field];
+      expect(parseStudyDataV2(document)).toBeNull();
+    }
+  });
+
+  it('rejects the whole document when a single entry among valid ones is broken', () => {
+    // #given — one unusable entry must not cost the learner the valid ones
+    const document = {
+      ...validV2(),
+      studyGuideProgress: { good: guideProgress(), broken: { ...guideProgress(), status: 'paused' } },
+    };
+
+    // #when / #then
+    expect(parseStudyDataV2(document)).toBeNull();
+  });
+
+  it('rejects a record keyed by a prototype-polluting name', () => {
+    // #given — JSON.parse keeps these as own keys, unlike an object literal
+    for (const field of ['reviews', 'quizStats', 'studyGuideProgress', 'handsOnProgress']) {
+      for (const key of ['__proto__', 'constructor', 'prototype']) {
+        const document = JSON.parse(`{"version":2,"reviews":{},"quizStats":{},"studyGuideProgress":{},"handsOnProgress":{},"${field}":{"${key}":{}}}`);
+
+        // #when / #then
+        expect(parseStudyDataV2(document)).toBeNull();
+      }
+    }
+    expect(Object.prototype).not.toHaveProperty('polluted');
+  });
+
   it('rejects a progress record whose container is an array', () => {
     // #given / #when / #then
     expect(parseStudyDataV2({ ...createEmptyStudyData(), studyGuideProgress: [] })).toBeNull();
     expect(parseStudyDataV2({ ...createEmptyStudyData(), handsOnProgress: [] })).toBeNull();
   });
 
-  it('drops a progress entry with an unknown status', () => {
+  it('rejects a document containing a progress entry with an unknown status', () => {
     // #given
     const document = { ...createEmptyStudyData(), studyGuideProgress: { section: { ...guideProgress(), status: 'paused' } } };
 
     // #when / #then
-    expect(parseStudyDataV2(document)?.studyGuideProgress).toEqual({});
+    expect(parseStudyDataV2(document)).toBeNull();
   });
 
-  it('drops a progress entry whose revision is not a positive integer', () => {
+  it('rejects a document whose progress revision is not a positive integer', () => {
     // #given
     const document = {
       ...createEmptyStudyData(),
@@ -191,10 +229,10 @@ describe('parseStudyDataV2', () => {
     };
 
     // #when / #then
-    expect(parseStudyDataV2(document)?.studyGuideProgress).toEqual({});
+    expect(parseStudyDataV2(document)).toBeNull();
   });
 
-  it('drops a progress entry whose timestamp is not an ISO datetime', () => {
+  it('rejects a document whose progress timestamp is not an ISO datetime', () => {
     // #given
     const document = {
       ...createEmptyStudyData(),
@@ -206,10 +244,10 @@ describe('parseStudyDataV2', () => {
     };
 
     // #when / #then
-    expect(parseStudyDataV2(document)?.studyGuideProgress).toEqual({});
+    expect(parseStudyDataV2(document)).toBeNull();
   });
 
-  it('drops an in_progress entry that still carries a completion timestamp', () => {
+  it('rejects an in_progress entry that still carries a completion timestamp', () => {
     // #given
     const document = {
       ...createEmptyStudyData(),
@@ -217,18 +255,18 @@ describe('parseStudyDataV2', () => {
     };
 
     // #when / #then
-    expect(parseStudyDataV2(document)?.studyGuideProgress).toEqual({});
+    expect(parseStudyDataV2(document)).toBeNull();
   });
 
-  it('drops a completed entry that has no completion timestamp', () => {
+  it('rejects a completed entry that has no completion timestamp', () => {
     // #given
     const document = { ...createEmptyStudyData(), studyGuideProgress: { section: { revision: 1, status: 'completed', updatedAt: '2026-07-20T09:00:00.000Z' } } };
 
     // #when / #then
-    expect(parseStudyDataV2(document)?.studyGuideProgress).toEqual({});
+    expect(parseStudyDataV2(document)).toBeNull();
   });
 
-  it('drops a completed entry finished after its last update', () => {
+  it('rejects a completed entry finished after its last update', () => {
     // #given
     const document = {
       ...createEmptyStudyData(),
@@ -236,10 +274,10 @@ describe('parseStudyDataV2', () => {
     };
 
     // #when / #then
-    expect(parseStudyDataV2(document)?.studyGuideProgress).toEqual({});
+    expect(parseStudyDataV2(document)).toBeNull();
   });
 
-  it('drops a hands-on entry with duplicate completed step ids', () => {
+  it('rejects a hands-on entry with duplicate completed step ids', () => {
     // #given
     const document = {
       ...createEmptyStudyData(),
@@ -247,10 +285,10 @@ describe('parseStudyDataV2', () => {
     };
 
     // #when / #then
-    expect(parseStudyDataV2(document)?.handsOnProgress).toEqual({});
+    expect(parseStudyDataV2(document)).toBeNull();
   });
 
-  it('drops a hands-on entry whose completed step ids are not strings', () => {
+  it('rejects a hands-on entry whose completed step ids are not strings', () => {
     // #given
     const document = {
       ...createEmptyStudyData(),
@@ -258,7 +296,7 @@ describe('parseStudyDataV2', () => {
     };
 
     // #when / #then
-    expect(parseStudyDataV2(document)?.handsOnProgress).toEqual({});
+    expect(parseStudyDataV2(document)).toBeNull();
   });
 
   it('accepts a hands-on entry with no completed steps yet', () => {

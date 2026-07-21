@@ -167,16 +167,14 @@ describe('study storage', () => {
     expect(memory.values.get(STORAGE_KEY)).toBe('{bad json');
   });
 
-  it('drops entries that would not survive a reload instead of storing them', () => {
+  it('refuses a save that carries an entry it could not read back', () => {
     // #given — a review whose revision is out of range, as tampering would produce
     const memory = memoryStorage();
     const broken = { ...createEmptyStudyData(), reviews: { bad: { ...review('bad'), cardRevisionSeen: 0 } } };
 
-    // #when
-    expect(createStudyStorage(memory).save(broken)).toBe(true);
-
-    // #then — what was stored is exactly what the next load returns
-    expect(JSON.parse(memory.values.get(STORAGE_KEY)!)).toEqual(createEmptyStudyData());
+    // #when / #then — no partial write, and the failure is reported
+    expect(createStudyStorage(memory).save(broken)).toBe(false);
+    expect(memory.values.has(STORAGE_KEY)).toBe(false);
   });
 
   it('does not migrate an unknown version stored under the legacy key', () => {
@@ -201,40 +199,39 @@ describe('study storage', () => {
     expect(createStudyStorage(throwingGetter).load()).toEqual(createEmptyStudyData());
   });
 
-  it('drops malformed review records instead of trusting stored data', () => {
-    // #given
+  it('salvages the valid entries of a legacy document rather than dropping a history', () => {
+    // #given — v1 shipped before this validator existed, and its key is never rewritten
     const memory = memoryStorage();
     const valid = review('valid');
-    memory.setItem(STORAGE_KEY, JSON.stringify({
-      ...createEmptyStudyData(),
+    memory.setItem(LEGACY_STORAGE_KEY, JSON.stringify({
+      version: 1,
       reviews: {
         valid,
         wrongKey: { ...valid, cardId: 'different' },
         badDate: { ...valid, cardId: 'badDate', dueAt: 'not-a-date' },
       },
+      quizStats: { valid: stat, negativeAttempts: { ...stat, attempts: -1 }, notARecord: 7 },
     }));
 
     // #when / #then
-    expect(createStudyStorage(memory).load()).toEqual({ ...createEmptyStudyData(), reviews: { valid } });
+    expect(createStudyStorage(memory).load()).toEqual({ ...createEmptyStudyData(), reviews: { valid }, quizStats: { valid: stat } });
   });
 
-  it('drops malformed quiz stat entries instead of trusting stored data', () => {
-    // #given
+  it('does not prune a current-version document it cannot fully read', () => {
+    // #given — one entry this build cannot represent, among valid ones
     const memory = memoryStorage();
-    memory.setItem(STORAGE_KEY, JSON.stringify({
+    const stored = JSON.stringify({
       ...createEmptyStudyData(),
-      quizStats: {
-        valid: stat,
-        negativeAttempts: { ...stat, attempts: -1 },
-        moreCorrectThanAttempts: { ...stat, correct: 5 },
-        badDate: { ...stat, lastAnsweredAt: 'not-a-date' },
-        stringFlag: { ...stat, lastCorrect: 'yes' },
-        notARecord: 7,
-      },
-    }));
+      reviews: { valid: review('valid') },
+      studyGuideProgress: { section: { revision: 1, status: 'paused', updatedAt: '2026-07-20T09:00:00.000Z' } },
+    });
+    memory.setItem(STORAGE_KEY, stored);
+    const storage = createStudyStorage(memory);
 
-    // #when / #then
-    expect(createStudyStorage(memory).load()).toEqual({ ...createEmptyStudyData(), quizStats: { valid: stat } });
+    // #when / #then — reading reports empty and writing is refused, so nothing is lost
+    expect(storage.load()).toEqual(createEmptyStudyData());
+    expect(storage.save({ ...createEmptyStudyData(), reviews: { valid: review('valid') } })).toBe(false);
+    expect(memory.values.get(STORAGE_KEY)).toBe(stored);
   });
 
   it('loads a legacy document without quizStats as empty quiz stats', () => {
@@ -393,6 +390,18 @@ describe('study data import and export', () => {
     expect(imported?.data.reviews['card-from-a-future-release']).toEqual(future);
   });
 
+  it('rejects a current-version import that carries an entry it cannot read', () => {
+    // #given — one broken progress entry among valid data
+    const document = {
+      ...createEmptyStudyData(),
+      reviews: { card: review() },
+      handsOnProgress: { guide: { revision: 1, status: 'completed', completedStepIds: ['a', 'a'], updatedAt: '2026-07-20T09:00:00.000Z', completedAt: '2026-07-20T09:00:00.000Z' } },
+    };
+
+    // #when / #then — the app is told nothing was importable rather than losing the entry
+    expect(parseStudyDataImport(JSON.stringify(document))).toBeNull();
+  });
+
   it('does not let an import reach Object.prototype', () => {
     // #given — JSON.parse keeps __proto__ as an own property, unlike an object literal
     const document = `{"version":2,"reviews":{},"quizStats":{},"handsOnProgress":{},"studyGuideProgress":{"__proto__":{"polluted":true}}}`;
@@ -401,7 +410,7 @@ describe('study data import and export', () => {
     const imported = parseStudyDataImport(document);
 
     // #then
-    expect(imported?.data.studyGuideProgress).toEqual({});
+    expect(imported).toBeNull();
     expect(({} as Record<string, unknown>).polluted).toBeUndefined();
     expect(Object.prototype).not.toHaveProperty('polluted');
   });
