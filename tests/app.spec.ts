@@ -5,6 +5,7 @@ import { cards } from '../src/content/cards';
 import { domains } from '../src/content/domains';
 import { questions } from '../src/content/questions';
 import { scenarios } from '../src/content/scenarios';
+import { LEGACY_STORAGE_KEY, STORAGE_KEY } from '../src/lib/storage';
 
 test.beforeEach(async ({ page }) => {
   await page.goto('/');
@@ -32,7 +33,7 @@ for (const route of [
 
 test('refreshes due cards while a tab remains open', async ({ page }) => {
   await page.clock.install({ time: new Date('2026-07-15T00:00:00.000Z') });
-  await page.evaluate(() => localStorage.setItem('cca-field-notes:v1', JSON.stringify({
+  await page.evaluate((key) => localStorage.setItem(key, JSON.stringify({
     version: 1,
     reviews: {
       'd1-loop-stop': {
@@ -45,13 +46,83 @@ test('refreshes due cards while a tab remains open', async ({ page }) => {
         lastRating: 'again',
       },
     },
-  })));
+  })), LEGACY_STORAGE_KEY);
   await page.reload();
   await page.getByRole('button', { name: '練習' }).first().click();
   await expect(page.locator('.practice-card')).toHaveCount(cards.length - 1);
 
   await page.clock.runFor(60_000);
   await expect(page.locator('.practice-card')).toHaveCount(cards.length);
+});
+
+test('migrates progress saved by an earlier release without losing anything', async ({ page }) => {
+  // #given — a v1 document written by a shipped release, under the legacy key
+  const legacy = {
+    version: 1,
+    reviews: {
+      'd1-loop-stop': {
+        cardId: 'd1-loop-stop',
+        cardRevisionSeen: 1,
+        dueAt: '2027-01-01T00:00:00.000Z',
+        intervalDays: 3,
+        streak: 1,
+        lapses: 0,
+        lastRating: 'good',
+      },
+    },
+    quizStats: { 'q-d1-loop-continue': { attempts: 2, correct: 1, lastAnsweredAt: '2026-07-17T10:00:00.000Z', lastCorrect: true } },
+  };
+  await page.evaluate(([key, document]) => localStorage.setItem(key, document), [LEGACY_STORAGE_KEY, JSON.stringify(legacy)]);
+
+  // #when — the app starts
+  await page.reload();
+  await page.getByRole('button', { name: '進捗' }).first().click();
+
+  // #then — the earlier review is still counted in the progress view
+  const d1Total = cards.filter((card) => card.domainId === 'd1').length;
+  await expect(page.getByText(`1/${d1Total}`).first()).toBeVisible();
+
+  // #then — the migrated document is stored under the current key, with the new
+  // progress records empty and the legacy key left in place for a rollback
+  const migrated = await page.evaluate((key) => JSON.parse(localStorage.getItem(key) ?? 'null'), STORAGE_KEY);
+  expect(migrated).toEqual({
+    version: 2,
+    reviews: legacy.reviews,
+    quizStats: legacy.quizStats,
+    studyGuideProgress: {},
+    handsOnProgress: {},
+  });
+  expect(await page.evaluate((key) => JSON.parse(localStorage.getItem(key) ?? 'null'), LEGACY_STORAGE_KEY)).toEqual(legacy);
+
+  // #then — a reload keeps the migrated values and does not re-read the legacy key
+  await page.evaluate(([key, document]) => localStorage.setItem(key, document), [LEGACY_STORAGE_KEY, JSON.stringify({ ...legacy, reviews: {} })]);
+  await page.reload();
+  await page.getByRole('button', { name: '進捗' }).first().click();
+  await expect(page.getByText(`1/${d1Total}`).first()).toBeVisible();
+  expect(await page.evaluate((key) => JSON.parse(localStorage.getItem(key) ?? 'null'), STORAGE_KEY)).toEqual(migrated);
+});
+
+test('does not bring migrated legacy progress back after a reset', async ({ page }) => {
+  // #given — legacy progress that the app migrated on start
+  page.on('dialog', (dialog) => dialog.accept());
+  await page.evaluate(([key, document]) => localStorage.setItem(key, document), [LEGACY_STORAGE_KEY, JSON.stringify({
+    version: 1,
+    reviews: { 'd1-loop-stop': { cardId: 'd1-loop-stop', cardRevisionSeen: 1, dueAt: '2027-01-01T00:00:00.000Z', intervalDays: 3, streak: 1, lapses: 0, lastRating: 'good' } },
+  })]);
+  await page.reload();
+
+  // #when — the learner deletes the progress of this device
+  await page.getByRole('button', { name: '進捗' }).first().click();
+  await page.getByRole('button', { name: 'この端末の進捗を削除' }).click();
+  await expect(page.getByText('この端末の進捗を削除しました。')).toBeVisible();
+
+  // #then — both storage generations are gone, so a reload cannot migrate it back
+  expect(await page.evaluate((key) => localStorage.getItem(key), STORAGE_KEY)).toBeNull();
+  expect(await page.evaluate((key) => localStorage.getItem(key), LEGACY_STORAGE_KEY)).toBeNull();
+  await page.reload();
+  await page.getByRole('button', { name: '進捗' }).first().click();
+  const d1Total = cards.filter((card) => card.domainId === 'd1').length;
+  await expect(page.getByText(`0/${d1Total}`).first()).toBeVisible();
 });
 
 test('starts a due-card session with reset filters from the today view', async ({ page }) => {
@@ -114,7 +185,7 @@ test('runs a filtered session that re-queues an again-rated card before the summ
   await expect(breakdown.nth(2)).toContainText('Got it');
   await expect(breakdown.nth(2)).toContainText('1');
   await expect(page.getByText('2 cards rated')).toBeVisible();
-  const review = await page.evaluate(() => Object.values(JSON.parse(localStorage.getItem('cca-field-notes:v1') ?? '{}').reviews ?? {})[0]) as { lastRating: string; lapses: number };
+  const review = await page.evaluate((key) => Object.values(JSON.parse(localStorage.getItem(key) ?? '{}').reviews ?? {})[0], STORAGE_KEY) as { lastRating: string; lapses: number };
   expect(review.lastRating).toBe('good');
   expect(review.lapses).toBe(1);
 
@@ -154,7 +225,7 @@ test('drives a session with keyboard shortcuts and confirms before stopping', as
   // #when / #then — Escape stops the session after the confirm and progress stays saved
   await page.keyboard.press('Escape');
   await expect(page.getByText('セッションを中断しました。ここまでの評価は保存済みです。')).toBeFocused();
-  await expect.poll(() => page.evaluate(() => Object.keys(JSON.parse(localStorage.getItem('cca-field-notes:v1') ?? '{}').reviews ?? {}).length)).toBe(2);
+  await expect.poll(() => page.evaluate((key) => Object.keys(JSON.parse(localStorage.getItem(key) ?? '{}').reviews ?? {}).length, STORAGE_KEY)).toBe(2);
 });
 
 test('leaving the practice view during a running session ends it without losing earlier ratings', async ({ page }) => {
@@ -164,7 +235,7 @@ test('leaving the practice view during a running session ends it without losing 
   await expect(page.locator('.session-card')).toBeVisible();
   await page.locator('.reveal-button').click();
   await page.getByRole('button', { name: /できた/ }).click();
-  await expect.poll(() => page.evaluate(() => Object.keys(JSON.parse(localStorage.getItem('cca-field-notes:v1') ?? '{}').reviews ?? {}).length)).toBe(1);
+  await expect.poll(() => page.evaluate((key) => Object.keys(JSON.parse(localStorage.getItem(key) ?? '{}').reviews ?? {}).length, STORAGE_KEY)).toBe(1);
 
   // #when — navigating to another view and back, instead of stopping the session explicitly
   await page.getByRole('button', { name: 'ガイド' }).first().click();
@@ -173,18 +244,18 @@ test('leaving the practice view during a running session ends it without losing 
   // #then — the session ended: the card list shows again and the earlier rating is still saved
   await expect(page.locator('.session-card')).toHaveCount(0);
   await expect(page.locator('.practice-card').first()).toBeVisible();
-  expect(await page.evaluate(() => Object.keys(JSON.parse(localStorage.getItem('cca-field-notes:v1') ?? '{}').reviews ?? {}).length)).toBe(1);
+  expect(await page.evaluate((key) => Object.keys(JSON.parse(localStorage.getItem(key) ?? '{}').reviews ?? {}).length, STORAGE_KEY)).toBe(1);
 });
 
 test('keeps a session card in place and announces the failure when saving its rating fails', async ({ page }) => {
   // #given — localStorage.setItem throws for the study-data key, simulating a full or blocked store
-  await page.addInitScript(() => {
+  await page.addInitScript((studyKey) => {
     const original = Storage.prototype.setItem;
     Storage.prototype.setItem = function (key, value) {
-      if (key === 'cca-field-notes:v1') throw new DOMException('The quota has been exceeded.', 'QuotaExceededError');
+      if (key === studyKey) throw new DOMException('The quota has been exceeded.', 'QuotaExceededError');
       return original.call(this, key, value);
     };
-  });
+  }, STORAGE_KEY);
   await page.goto('/');
 
   // #when — starting a session and rating its first card
@@ -198,7 +269,7 @@ test('keeps a session card in place and announces the failure when saving its ra
   await expect(page.getByText('進捗を保存できませんでした。ブラウザのサイトデータ設定または空き容量を確認してください。')).toBeFocused();
   await expect(page.locator('.session-progress code')).toHaveText(/^1 \//);
   await expect(page.locator('.session-card .answer')).toBeVisible();
-  expect(await page.evaluate(() => localStorage.getItem('cca-field-notes:v1'))).toBeNull();
+  expect(await page.evaluate((key) => localStorage.getItem(key), STORAGE_KEY)).toBeNull();
 });
 
 test('reveals an answer, records a rating, and persists progress', async ({ page }) => {
@@ -211,7 +282,7 @@ test('reveals an answer, records a rating, and persists progress', async ({ page
 
   await page.getByRole('button', { name: /できた/ }).first().press('Enter');
   await expect(page.getByText('できた：次の復習日を更新しました。')).toBeFocused();
-  await expect.poll(() => page.evaluate(() => Object.keys(JSON.parse(localStorage.getItem('cca-field-notes:v1') ?? '{}').reviews ?? {}).length)).toBe(1);
+  await expect.poll(() => page.evaluate((key) => Object.keys(JSON.parse(localStorage.getItem(key) ?? '{}').reviews ?? {}).length, STORAGE_KEY)).toBe(1);
 
   await page.goto('/en/');
   await page.getByRole('button', { name: 'Progress' }).first().click();
@@ -260,7 +331,7 @@ test('runs a domain-scoped quiz round with immediate feedback, a summary, and pe
   await expect(page.locator('.quiz-domains .progress-row')).toHaveCount(1);
   await expect(page.locator('.quiz-domains')).toContainText('D2');
 
-  const stats = await page.evaluate(() => JSON.parse(localStorage.getItem('cca-field-notes:v1') ?? '{}').quizStats ?? {});
+  const stats = await page.evaluate((key) => JSON.parse(localStorage.getItem(key) ?? '{}').quizStats ?? {}, STORAGE_KEY);
   expect(Object.keys(stats).length).toBe(total);
   for (const stat of Object.values(stats) as { attempts: number }[]) expect(stat.attempts).toBe(1);
 
@@ -308,7 +379,7 @@ test('records a single-select answer once even when its choice is fired twice be
   expect(doubleFired).toBe(true);
   await expect(page.getByRole('heading', { name: '演習結果' })).toBeVisible();
   await expect(page.locator('.quiz-score-figure')).toContainText(`${total}問中`);
-  const stats = await page.evaluate(() => JSON.parse(localStorage.getItem('cca-field-notes:v1') ?? '{}').quizStats ?? {});
+  const stats = await page.evaluate((key) => JSON.parse(localStorage.getItem(key) ?? '{}').quizStats ?? {}, STORAGE_KEY);
   expect(Object.keys(stats).length).toBe(total);
   for (const stat of Object.values(stats) as { attempts: number }[]) expect(stat.attempts).toBe(1);
 });
@@ -359,7 +430,7 @@ test('runs a scenario practice round with a reviewable case background and persi
   }
 
   await expect(page.getByRole('heading', { name: '演習結果' })).toBeVisible();
-  const stats = await page.evaluate(() => JSON.parse(localStorage.getItem('cca-field-notes:v1') ?? '{}').quizStats ?? {});
+  const stats = await page.evaluate((key) => JSON.parse(localStorage.getItem(key) ?? '{}').quizStats ?? {}, STORAGE_KEY);
   expect(Object.keys(stats).sort()).toEqual(scenarioQuestions.map((question) => question.id).sort());
 
   const axe = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa']).analyze();
@@ -375,7 +446,7 @@ test('restores exported progress through the JSON import after a reset', async (
   await page.getByRole('button', { name: '練習' }).first().click();
   await page.locator('.reveal-button').first().click();
   await page.getByRole('button', { name: /できた/ }).first().click();
-  await expect.poll(() => page.evaluate(() => Object.keys(JSON.parse(localStorage.getItem('cca-field-notes:v1') ?? '{}').reviews ?? {}).length)).toBe(1);
+  await expect.poll(() => page.evaluate((key) => Object.keys(JSON.parse(localStorage.getItem(key) ?? '{}').reviews ?? {}).length, STORAGE_KEY)).toBe(1);
 
   await page.getByRole('button', { name: '進捗' }).first().click();
   const downloadPromise = page.waitForEvent('download');
@@ -386,7 +457,7 @@ test('restores exported progress through the JSON import after a reset', async (
   page.once('dialog', (dialog) => dialog.accept());
   await page.getByRole('button', { name: 'この端末の進捗を削除' }).click();
   await expect(page.getByText('この端末の進捗を削除しました。')).toBeVisible();
-  expect(await page.evaluate(() => localStorage.getItem('cca-field-notes:v1'))).toBeNull();
+  expect(await page.evaluate((key) => localStorage.getItem(key), STORAGE_KEY)).toBeNull();
 
   // #when — importing the exported file and confirming the overwrite dialog
   const dialogMessage = new Promise<string>((resolve) => page.once('dialog', (dialog) => {
@@ -400,7 +471,7 @@ test('restores exported progress through the JSON import after a reset', async (
   // #then — the dialog summarizes the payload and progress is back without a reload
   expect(await dialogMessage).toContain('復習済みカード1枚');
   await expect(page.getByText('JSONから進捗を読み込みました。')).toBeFocused();
-  await expect.poll(() => page.evaluate(() => Object.keys(JSON.parse(localStorage.getItem('cca-field-notes:v1') ?? '{}').reviews ?? {}).length)).toBe(1);
+  await expect.poll(() => page.evaluate((key) => Object.keys(JSON.parse(localStorage.getItem(key) ?? '{}').reviews ?? {}).length, STORAGE_KEY)).toBe(1);
   const d1Total = cards.filter((card) => card.domainId === 'd1').length;
   await expect(page.getByText(`1/${d1Total}`).first()).toBeVisible();
 });
@@ -418,7 +489,7 @@ test('rejects a file that is not exported progress data', async ({ page }, testI
 
   // #then — the failure is announced and nothing is stored
   await expect(page.getByText('進捗データとして読み込めませんでした。', { exact: false })).toBeFocused();
-  expect(await page.evaluate(() => localStorage.getItem('cca-field-notes:v1'))).toBeNull();
+  expect(await page.evaluate((key) => localStorage.getItem(key), STORAGE_KEY)).toBeNull();
 });
 
 test('surfaces a struggling card in the weak filter and navigates from the today weak areas', async ({ page }) => {
