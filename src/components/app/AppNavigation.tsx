@@ -1,8 +1,7 @@
 import type { Locale } from '../../i18n/locales';
 import type { UiCopy } from '../../i18n/ui';
 import { LanguageNav } from './LanguageNav';
-
-export type View = 'today' | 'guide' | 'practice' | 'quiz' | 'progress';
+import type { View } from './types';
 
 export const viewKeys: View[] = ['today', 'guide', 'practice', 'quiz', 'progress'];
 export const icons: Record<View, string> = { today: '⌂', guide: '▤', practice: '◇', quiz: '☑', progress: '✓' };

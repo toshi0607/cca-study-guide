@@ -58,9 +58,19 @@ Branch: claude/app-tsx-refactor-e3a7fb
 
 1. **最もリスクの高い行は何故安全か**: `App.tsx`の`query`/`domainFilter`/`stateFilter`/`revealed`/`sessionCards`をPracticeViewへcontrolled propsとして渡す変更。安全な理由: これらの値の「所有」はAppのままで、PracticeViewは受け取った値と setter を right通りに使うだけの薄いラッパーであり、状態遷移ロジック自体(persistRating/saveRating/navigate)を一切変更していないため。ブラウザ手動確認でView切替後もフィルタ・検索語・開示状態が保持されることを確認済み(VERIFIED)
 2. **何が壊れるか、テストしたか**: (a) View離脱時のsession終了 → 新規E2Eで検証しGreen。(b) rating保存失敗時にセッションが進まない → 新規E2Eで検証しGreen。(c) list/session二経路の取り違え(saveRating vs persistRating) → props名を`onRateInList`/`onRateInSession`で明示的に分離し、E2Eの両経路(list rating・session rating)がともにGreen
-3. **テストしなかったもの**: Quiz回答二重記録防止(`answeredIdRef`)の直接テスト、`studyStorage()`の`window.localStorage`アクセス自体が例外を投げるケース。どちらも本PR以前から未テストで、`answer()`/`studyStorage()`のロジックは一切変更せず単純移動のみのため、回帰リスクは低いと判断(残課題に記載)
+3. **テストしなかったもの**: `studyStorage()`の`window.localStorage`アクセス自体が例外を投げるケース。本PR以前から未テストで、`studyStorage()`のロジックは一切変更せず単純移動のみのため、回帰リスクは低いと判断(残課題に記載)
 4. **plan/Assumptionと矛盾する点はないか**: なし。B節の状態所有権表どおりに実装し、Constraints(`src/lib`/`src/i18n`/`src/content`無変更、新規依存なし等)はすべて`git diff --stat`で確認済み
 
 ### 元の依頼の再確認
 
 ユーザー依頼(App.tsxの責務分割、挙動変更なし、新機能なし)を文字通り実行。View/機能別の16ファイルへ分割し、`App.tsx`は現在View・StudyData正本・グローバル通知・永続化callback・View間遷移のみを持つ構造に整理した。
+
+### コードレビュー対応(PR #27、2回目のコミット)
+
+レビューでApprove済み。非ブロッキング指摘3件のうち妥当な2件を対応した。
+
+1. **[対応] Quiz二重回答防止のE2E直接保護**: `answeredIdRef`ガードをE2Eで直接守るテストを追加。single問題の選択肢を`page.evaluate`で同期的に2回clickし、再レンダーでdisabledになる前の二重発火をガードが1回に落とすことを検証。resultsの二重追加はsummaryの合計問題数(`${total}問中`が`${total+1}`にならないこと)で検出。単独実行Green(29.2s)、全E2E 50 passed
+2. **[対応] `View`型の配置**: アプリ全体の画面モデルである`View`型を`app/AppNavigation.tsx`(表示コンポーネント)から`app/types.ts`へ分離。`AppNavigation`と`App`が型を独立ファイルからimportする形にし、将来のView追加時の依存方向を自然にした。`quiz/types.ts`と一貫した配置。astro check 0 errors
+3. **[非対応/説明] `tasks/todo.md`の差分**: グローバルルール(task-management.md)で本ファイルは「作業中タスクのsource of truth」として運用しコミットする方針のため現状維持。過去タスク(Remotion)の記録保持は目的ではなく、本ファイルは常に現在作業中のPR計画に置き換える運用
+
+検証: astro check(0 errors) / pnpm test(55 passed) / pnpm test:e2e(50 passed) / pnpm build(Complete)
