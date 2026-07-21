@@ -11,6 +11,7 @@ export const HANDS_ON_VERIFIED_AT = '2026-07-21';
 export const handsOnGuides: HandsOnGuide[] = [
   {
     id: 'ho-ci-review',
+    revision: 1,
     title: localized(
       'CIでClaude Codeを非対話実行する',
       'Run Claude Code non-interactively in CI',
@@ -20,7 +21,7 @@ export const handsOnGuides: HandsOnGuide[] = [
       'Run a diff review non-interactively against your own repository, then make its output machine-readable and its permissions minimal enough for CI.',
     ),
     domainIds: ['d3'],
-    scenarioIds: ['claude-code-ci'],
+    officialScenarioIds: ['claude-code-ci'],
     learningObjectives: localized(
       [
         '対話セッションと非対話実行の違いを、権限と出力の観点で説明できる',

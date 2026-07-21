@@ -13,6 +13,7 @@ export const STUDY_GUIDE_VERIFIED_AT = '2026-07-21';
 export const studyGuideSections: StudyGuideSection[] = [
   {
     id: 'sg-agentic-loop',
+    revision: 1,
     recommendedOrder: 1,
     title: localized('エージェントループから始める', 'Start with the agentic loop'),
     summary: localized(
@@ -53,6 +54,7 @@ export const studyGuideSections: StudyGuideSection[] = [
   },
   {
     id: 'sg-tool-and-mcp',
+    revision: 1,
     recommendedOrder: 2,
     title: localized('ツール契約とMCPの境界', 'Tool contracts and MCP boundaries'),
     summary: localized(
@@ -93,6 +95,7 @@ export const studyGuideSections: StudyGuideSection[] = [
   },
   {
     id: 'sg-context-and-handoff',
+    revision: 1,
     recommendedOrder: 3,
     title: localized('長い処理の文脈と引き継ぎ', 'Context and handoff in long-running work'),
     summary: localized(

@@ -148,6 +148,7 @@ export type Card = {
 // how far. Rendered by a later PR; the content model is complete already.
 export type StudyGuideSection = {
   id: string;
+  revision: number;
   // Position in the recommended reading order; unique across sections.
   recommendedOrder: number;
   title: LocalizedText;
@@ -174,10 +175,11 @@ export type HandsOnStep = {
 // no environment-specific settings and never holds credentials.
 export type HandsOnGuide = {
   id: string;
+  revision: number;
   title: LocalizedText;
   summary: LocalizedText;
   domainIds: string[];
-  scenarioIds: OfficialScenarioId[];
+  officialScenarioIds: OfficialScenarioId[];
   learningObjectives: LocalizedText<string[]>;
   prerequisites: LocalizedText<string[]>;
   estimatedMinutes: number;

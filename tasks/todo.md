@@ -21,6 +21,7 @@ UI・storage・依存関係は変更しない。
 | 型アサーション・any・optional 化で不備を隠さない | user msg | types.ts / validate.ts の差分レビュー |
 | 既存 validator の方式（zod + errors 配列 → throw）を維持 | user msg | validateContent() の公開 API 不変 |
 | 既存 ID（question / card / scenario / source / objective）を変更しない | user msg | スナップショット差分と grep |
+| クライアントバンドル増分は rationale 分（gzip +24KB / +32%）まで許容し、記録を残す | レビュー指摘 M1 | `dist/_astro/App.*.js` の gzip サイズ比較 |
 
 ## Assumptions
 
@@ -77,6 +78,22 @@ UI・storage・依存関係は変更しない。
   純粋関数（`validateQuestions` / `validateStudyGuideSections` / `validateHandsOnGuides` など）へ分割。
   入力を `unknown` で受けるため、テストは型アサーションなしで壊れたデータを渡せる。
   1 件ごとに safeParse するので、1 件の不備で他の不備が隠れない。
+- **レビュー指摘への対応（fresh-context reviewer、Request Changes）**:
+  - M1 バンドル +24KB gzip（+32%）: rationale は次の PR（選択肢別解説・誤答分析）で必ず表示するため、
+    前払いとして許容する判断を Constraints に記録した。実測は origin/main `App.*.js` gzip 76,749B →
+    本ブランチ 101,184B。表示 PR が延びる場合は rationale の動的 import を検討する。
+  - M2 スキル分布の偏り（`agent-loop` / `claude-code-workflow` / `prompt-design` が各 1 問）:
+    問題追加は本 PR のスコープ外のため、taxonomy 側を削らず「全スキルが最低 1 問に使われる」ことを
+    `validateSkillCoverage` としてビルド時検証に追加した。母数が少ないスキルの扱い（最低件数に満たない
+    スキルは弱点判定しない等）は分析 PR の要件として残課題に記載。
+  - m1 `HandsOnGuide.scenarioIds` → `officialScenarioIds` へ改名、m3 `revision` を Study Guide /
+    Hands-on にも追加、m4 統計テストを固定値に、m5 taxonomy validator の異常系テスト追加、
+    m6 `ContentIndex` をキー配列から導出、m7 ID 重複検査を parse 前の生入力に対して実行、
+    m8 未使用 export 削除、m9 difficulty の値リストを `satisfies` で型と同期、m10 アサーションを
+    フィールド名まで厳密化、m11 参照配列の重複検査、m12 rationale の重複・explanation 複製・ja=en の
+    検査を validate.ts へ移してビルド時に落ちるようにした。
+  - m2（`taskStatementIds` と `objectiveIds` の呼び分け）は既存フィールド名の変更を伴うため見送り。
+    型にコメントで参照先を明記している。
 - **rationale の一括執筆**: 38 問を 5 分割し、それぞれ独立したエージェントに執筆させた上で、
   変更前後の JSON スナップショット比較（id / stem / choices.text / correctChoiceIds / explanation /
   sourceIds / verifiedAt / scenarioId）で既存フィールドが 1 文字も変わっていないことを機械検証した。

@@ -12,7 +12,10 @@ import {
   genericSourceIds,
   validateContent,
   validateHandsOnGuides,
+  validateOfficialScenarios,
   validateQuestions,
+  validateSkillCoverage,
+  validateSkills,
   validateStudyGuideSections,
 } from './validate';
 
@@ -26,9 +29,9 @@ describe('study content', () => {
       questionCount: questions.length,
       scenarioCount: scenarios.length,
       officialScenarioCount: 6,
-      skillCount: skills.length,
-      studyGuideSectionCount: studyGuideSections.length,
-      handsOnGuideCount: handsOnGuides.length,
+      skillCount: 14,
+      studyGuideSectionCount: 3,
+      handsOnGuideCount: 1,
     });
     expect(domains.map((domain) => domain.weight)).toEqual([27, 18, 20, 20, 15]);
   });
@@ -220,6 +223,57 @@ describe('question assessment metadata', () => {
   });
 });
 
+describe('taxonomy validation', () => {
+  it('rejects a skill entry that is not part of the taxonomy', () => {
+    // #given — an index that does not know the skill being validated
+    const index = buildContentIndex({ skillIds: ['agent-loop'] });
+
+    // #when
+    const errors = validateSkills(skills, index).join('\n');
+
+    // #then
+    expect(errors).toContain('is not part of the skill taxonomy');
+  });
+
+  it('reports a taxonomy entry that has no data', () => {
+    // #given
+    const index = buildContentIndex({ skillIds: [...Object.keys(skillById), 'rag-design'] });
+
+    // #when
+    const errors = validateSkills(skills, index).join('\n');
+
+    // #then
+    expect(errors).toContain('skills: rag-design is declared but has no entry');
+  });
+
+  it('reports an official scenario that is declared but missing from the data', () => {
+    // #given
+    const index = buildContentIndex();
+
+    // #when
+    const errors = validateOfficialScenarios(officialScenarios.slice(1), index).join('\n');
+
+    // #then
+    expect(errors).toContain('official scenarios: customer-support-resolution is declared but has no entry');
+  });
+
+  it('keeps every skill in the taxonomy attached to at least one question', () => {
+    // #then
+    expect(validateSkillCoverage(skills, questions)).toEqual([]);
+  });
+
+  it('reports a skill that no question uses', () => {
+    // #given
+    const unusedSkill = { id: 'rag-design' };
+
+    // #when
+    const errors = validateSkillCoverage([...skills, unusedSkill], questions).join('\n');
+
+    // #then
+    expect(errors).toContain('skill rag-design: no question uses this skill');
+  });
+});
+
 describe('official scenario classification', () => {
   it('defines exactly the six official scenarios with matching record keys', () => {
     // #then
@@ -287,8 +341,7 @@ describe('question validation', () => {
     const errors = withQuestion((question) => { question.difficulty = 'hard'; });
 
     // #then
-    expect(errors).toContain('question q-fixture');
-    expect(errors).toContain('difficulty');
+    expect(errors).toContain('question q-fixture: difficulty');
   });
 
   it('rejects an empty skill list', () => {
@@ -397,6 +450,7 @@ describe('study guide validation', () => {
   const localizedList = (ja: string[], en: string[]) => ({ ja, en });
   const validSection = () => ({
     id: 'sg-fixture',
+    revision: 1,
     recommendedOrder: 1,
     title: localized('固定のセクション', 'A fixed section'),
     summary: localized('セクションの概要', 'The section summary'),
@@ -518,10 +572,11 @@ describe('hands-on validation', () => {
   const localizedList = (ja: string[], en: string[]) => ({ ja, en });
   const validGuide = () => ({
     id: 'ho-fixture',
+    revision: 1,
     title: localized('固定のハンズオン', 'A fixed hands-on guide'),
     summary: localized('ハンズオンの概要', 'The guide summary'),
     domainIds: ['d3'],
-    scenarioIds: ['claude-code-ci'],
+    officialScenarioIds: ['claude-code-ci'],
     learningObjectives: localizedList(['非対話実行を説明できる'], ['Explain non-interactive execution']),
     prerequisites: localizedList(['実行できる端末'], ['A machine that can run the CLI']),
     estimatedMinutes: 45,
@@ -606,7 +661,7 @@ describe('hands-on validation', () => {
 
   it('rejects an official scenario that does not exist', () => {
     // #when
-    const errors = withGuide((guide) => { guide.scenarioIds = ['agentic-rag']; });
+    const errors = withGuide((guide) => { guide.officialScenarioIds = ['agentic-rag']; });
 
     // #then
     expect(errors).toContain('hands-on guide ho-fixture: orphan official scenario agentic-rag');

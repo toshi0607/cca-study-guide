@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import type { QuestionDifficulty } from './types';
 import { cards } from './cards';
 import { domains } from './domains';
 import { handsOnGuides } from './hands-on';
@@ -18,6 +19,8 @@ const localizedStringSchema = z.object({
 }).strict();
 const localizedStringList = (items: z.ZodArray<z.ZodString>) => z.object({ ja: items, en: items }).strict();
 const localizedStringArraySchema = localizedStringList(z.array(z.string().trim().min(1)).min(1));
+// `satisfies` keeps this list and the QuestionDifficulty union from drifting apart.
+const questionDifficulties = ['foundation', 'application', 'analysis'] as const satisfies readonly QuestionDifficulty[];
 const idListSchema = z.array(z.string().min(1));
 const requiredIdListSchema = idListSchema.min(1);
 const sourceSchema = z.object({ id: z.string().min(1), title: z.string().min(1), publisher: z.enum(['Anthropic', 'MCP Project']), url: z.string().url(), official: z.literal(true), verifiedAt: date });
@@ -30,7 +33,7 @@ const choiceQuestionSchema = z.object({
   domainId: z.string().min(1),
   objectiveIds: requiredIdListSchema,
   format: z.enum(['single', 'multiple']),
-  difficulty: z.enum(['foundation', 'application', 'analysis']),
+  difficulty: z.enum(questionDifficulties),
   skills: requiredIdListSchema,
   stem: localizedStringSchema,
   choices: z.array(z.object({ id: z.string().min(1), text: localizedStringSchema, rationale: localizedStringSchema }).strict()).min(2),
@@ -61,6 +64,7 @@ const officialScenarioSchema = z.object({
 const skillSchema = z.object({ id: z.string().min(1), title: localizedStringSchema, summary: localizedStringSchema });
 const studyGuideSectionSchema = z.object({
   id: z.string().min(1),
+  revision: z.number().int().positive(),
   recommendedOrder: z.number().int().positive(),
   title: localizedStringSchema,
   summary: localizedStringSchema,
@@ -81,10 +85,11 @@ const handsOnStepSchema = z.object({
 });
 const handsOnGuideSchema = z.object({
   id: z.string().min(1),
+  revision: z.number().int().positive(),
   title: localizedStringSchema,
   summary: localizedStringSchema,
   domainIds: requiredIdListSchema,
-  scenarioIds: requiredIdListSchema,
+  officialScenarioIds: requiredIdListSchema,
   learningObjectives: localizedStringArraySchema,
   prerequisites: localizedStringArraySchema,
   estimatedMinutes: z.number().int().positive(),
@@ -130,6 +135,13 @@ function parseEach<T>(schema: z.ZodType<T>, input: unknown, label: string, error
   return parsed;
 }
 
+// Duplicate IDs are checked on the raw input: an entry that fails its schema is
+// dropped from `parsed`, and its duplicated ID would otherwise go unreported.
+const rawIds = (input: unknown): string[] =>
+  Array.isArray(input)
+    ? input.flatMap((item) => (isRecord(item) && typeof item.id === 'string' ? [item.id] : []))
+    : [];
+
 const checkReferences = (
   ids: string[],
   known: ReadonlySet<string>,
@@ -140,16 +152,11 @@ const checkReferences = (
   for (const id of ids) if (!known.has(id)) errors.push(`${label}: orphan ${kind} ${id}`);
 };
 
-export type ContentIndex = {
-  sourceIds: ReadonlySet<string>;
-  domainIds: ReadonlySet<string>;
-  objectiveIds: ReadonlySet<string>;
-  cardIds: ReadonlySet<string>;
-  questionIds: ReadonlySet<string>;
-  scenarioIds: ReadonlySet<string>;
-  officialScenarioIds: ReadonlySet<string>;
-  skillIds: ReadonlySet<string>;
-};
+// The key list is the definition, so a new reference kind cannot be added to the
+// type without becoming overridable in tests.
+const contentIndexKeys = ['sourceIds', 'domainIds', 'objectiveIds', 'cardIds', 'questionIds', 'scenarioIds', 'officialScenarioIds', 'skillIds'] as const;
+
+export type ContentIndex = Record<(typeof contentIndexKeys)[number], ReadonlySet<string>>;
 
 // The reference index of the real content. Tests override single entries to
 // exercise a broken reference without rebuilding the whole content set.
@@ -165,8 +172,7 @@ export function buildContentIndex(overrides: Partial<Record<keyof ContentIndex, 
     skillIds: new Set(Object.keys(skillById)),
   };
   const merged = { ...base };
-  const keys: (keyof ContentIndex)[] = ['sourceIds', 'domainIds', 'objectiveIds', 'cardIds', 'questionIds', 'scenarioIds', 'officialScenarioIds', 'skillIds'];
-  for (const key of keys) {
+  for (const key of contentIndexKeys) {
     const override = overrides[key];
     if (override) merged[key] = new Set(override);
   }
@@ -183,7 +189,7 @@ const checkSourceIds = (item: { id: string; sourceIds: string[] }, label: string
 export function validateSources(input: unknown): string[] {
   const errors: string[] = [];
   const parsed = parseEach(sourceSchema, input, 'source', errors);
-  unique(parsed.map((item) => item.id), 'sources', errors);
+  unique(rawIds(input), 'sources', errors);
   const allowedHosts = new Set(['anthropic-partners.skilljar.com', 'www.anthropic.com', 'platform.claude.com', 'code.claude.com', 'modelcontextprotocol.io', 'everpath-course-content.s3-accelerate.amazonaws.com']);
   for (const source of parsed) {
     if (!allowedHosts.has(new URL(source.url).hostname)) errors.push(`source ${source.id}: unofficial host`);
@@ -194,7 +200,7 @@ export function validateSources(input: unknown): string[] {
 export function validateDomains(input: unknown, index: ContentIndex): string[] {
   const errors: string[] = [];
   const parsed = parseEach(domainSchema, input, 'domain', errors);
-  unique(parsed.map((item) => item.id), 'domains', errors);
+  unique(rawIds(input), 'domains', errors);
   const objectives = parsed.flatMap((domain) => domain.objectives);
   unique(objectives.map((item) => item.id), 'objectives', errors);
   if (parsed.reduce((sum, domain) => sum + domain.weight, 0) !== 100) errors.push('domain weights must total 100');
@@ -207,7 +213,7 @@ export function validateDomains(input: unknown, index: ContentIndex): string[] {
 export function validateCards(input: unknown, index: ContentIndex): string[] {
   const errors: string[] = [];
   const parsed = parseEach(cardSchema, input, 'card', errors);
-  unique(parsed.map((item) => item.id), 'cards', errors);
+  unique(rawIds(input), 'cards', errors);
   for (const card of parsed) {
     checkSourceIds(card, 'card', index, errors);
     checkReferences([card.domainId], index.domainIds, `card ${card.id}`, 'domain', errors);
@@ -219,7 +225,7 @@ export function validateCards(input: unknown, index: ContentIndex): string[] {
 export function validateQuestions(input: unknown, index: ContentIndex): string[] {
   const errors: string[] = [];
   const parsed = parseEach(choiceQuestionSchema, input, 'question', errors);
-  unique(parsed.map((item) => item.id), 'questions', errors);
+  unique(rawIds(input), 'questions', errors);
   for (const question of parsed) {
     const label = `question ${question.id}`;
     checkSourceIds(question, 'question', index, errors);
@@ -239,6 +245,28 @@ export function validateQuestions(input: unknown, index: ContentIndex): string[]
     if (question.format === 'multiple' && question.correctChoiceIds.length < 2) errors.push(`${label}: multiple format requires at least two correct choices`);
     if (question.correctChoiceIds.length >= question.choices.length) errors.push(`${label}: at least one choice must be incorrect`);
 
+    // A rationale has to explain this choice: repeating a sibling's text, the
+    // question-level explanation, or the other language means it does not.
+    for (const locale of ['ja', 'en'] as const) {
+      const seen = new Set<string>();
+      for (const choice of question.choices) {
+        if (seen.has(choice.rationale[locale])) {
+          errors.push(`${label}: choice ${choice.id} rationale.${locale} repeats another choice`);
+        }
+        seen.add(choice.rationale[locale]);
+      }
+      for (const choice of question.choices) {
+        if (choice.rationale[locale] === question.explanation[locale]) {
+          errors.push(`${label}: choice ${choice.id} rationale.${locale} repeats the question explanation`);
+        }
+      }
+    }
+    for (const choice of question.choices) {
+      if (choice.rationale.ja === choice.rationale.en) {
+        errors.push(`${label}: choice ${choice.id} rationale is identical in both languages`);
+      }
+    }
+
     if (question.scenarioId !== undefined) {
       checkReferences([question.scenarioId], index.scenarioIds, label, 'scenario', errors);
     }
@@ -249,7 +277,7 @@ export function validateQuestions(input: unknown, index: ContentIndex): string[]
 export function validateOfficialScenarios(input: unknown, index: ContentIndex): string[] {
   const errors: string[] = [];
   const parsed = parseEach(officialScenarioSchema, input, 'official scenario', errors);
-  unique(parsed.map((item) => item.id), 'official scenarios', errors);
+  unique(rawIds(input), 'official scenarios', errors);
   for (const scenario of parsed) {
     checkSourceIds(scenario, 'official scenario', index, errors);
     checkReferences(scenario.domainIds, index.domainIds, `official scenario ${scenario.id}`, 'domain', errors);
@@ -264,7 +292,7 @@ export function validateOfficialScenarios(input: unknown, index: ContentIndex): 
 export function validateSkills(input: unknown, index: ContentIndex): string[] {
   const errors: string[] = [];
   const parsed = parseEach(skillSchema, input, 'skill', errors);
-  unique(parsed.map((item) => item.id), 'skills', errors);
+  unique(rawIds(input), 'skills', errors);
   for (const skill of parsed) {
     if (!index.skillIds.has(skill.id)) errors.push(`skill ${skill.id}: id is not part of the skill taxonomy`);
   }
@@ -274,15 +302,29 @@ export function validateSkills(input: unknown, index: ContentIndex): string[] {
   return errors;
 }
 
+// A skill nobody tags is a classification the later analysis views can never
+// report on, so the taxonomy and the question bank have to stay in step.
+export function validateSkillCoverage(
+  skillInput: Array<{ id: string }>,
+  questionInput: Array<{ skills: string[] }>,
+): string[] {
+  const used = new Set(questionInput.flatMap((question) => question.skills));
+  return skillInput
+    .filter((skill) => !used.has(skill.id))
+    .map((skill) => `skill ${skill.id}: no question uses this skill`);
+}
+
 export function validateScenarios(input: unknown, index: ContentIndex): string[] {
   const errors: string[] = [];
   const parsed = parseEach(scenarioSchema, input, 'scenario', errors);
-  unique(parsed.map((item) => item.id), 'scenarios', errors);
+  unique(rawIds(input), 'scenarios', errors);
   for (const scenario of parsed) {
     const label = `scenario ${scenario.id}`;
     checkSourceIds(scenario, 'scenario', index, errors);
     checkReferences(scenario.domainIds, index.domainIds, label, 'domain', errors);
     checkReferences(scenario.officialScenarioIds, index.officialScenarioIds, label, 'official scenario', errors);
+    unique(scenario.domainIds, `${label} domainIds`, errors);
+    unique(scenario.officialScenarioIds, `${label} officialScenarioIds`, errors);
   }
   return errors;
 }
@@ -315,7 +357,7 @@ export function validateScenarioQuestionLinks(
 export function validateStudyGuideSections(input: unknown, index: ContentIndex): string[] {
   const errors: string[] = [];
   const parsed = parseEach(studyGuideSectionSchema, input, 'study guide section', errors);
-  unique(parsed.map((item) => item.id), 'study guide sections', errors);
+  unique(rawIds(input), 'study guide sections', errors);
   unique(parsed.map((item) => String(item.recommendedOrder)), 'study guide recommendedOrder', errors);
   for (const section of parsed) {
     const label = `study guide section ${section.id}`;
@@ -331,14 +373,15 @@ export function validateStudyGuideSections(input: unknown, index: ContentIndex):
 export function validateHandsOnGuides(input: unknown, index: ContentIndex): string[] {
   const errors: string[] = [];
   const parsed = parseEach(handsOnGuideSchema, input, 'hands-on guide', errors);
-  unique(parsed.map((item) => item.id), 'hands-on guides', errors);
+  unique(rawIds(input), 'hands-on guides', errors);
   for (const guide of parsed) {
     const label = `hands-on guide ${guide.id}`;
     checkSourceIds(guide, 'hands-on guide', index, errors);
     checkReferences(guide.domainIds, index.domainIds, label, 'domain', errors);
-    checkReferences(guide.scenarioIds, index.officialScenarioIds, label, 'official scenario', errors);
+    checkReferences(guide.officialScenarioIds, index.officialScenarioIds, label, 'official scenario', errors);
     checkReferences(guide.relatedCardIds, index.cardIds, label, 'card', errors);
     checkReferences(guide.relatedQuestionIds, index.questionIds, label, 'question', errors);
+    unique(guide.officialScenarioIds, `${label} officialScenarioIds`, errors);
     unique(guide.steps.map((step) => step.id), `${label} steps`, errors);
   }
   return errors;
@@ -350,6 +393,7 @@ export function validateContent() {
     ...validateSources(sources),
     ...validateDomains(domains, index),
     ...validateSkills(skills, index),
+    ...validateSkillCoverage(skills, questions),
     ...validateCards(cards, index),
     ...validateQuestions(questions, index),
     ...validateOfficialScenarios(officialScenarios, index),
