@@ -88,6 +88,10 @@ UI・storage・依存関係は変更しない。
     （main は 218,062B/gzip 76,749B、差分は difficulty と skills の分のみ）。
     型の情報量は落としていない（全選択肢に ja/en の rationale が必須である点は
     `validateChoiceRationales` がビルド時に強制する）。後続 UI は動的 import で読み込む。
+    なお分離後も CI の Lighthouse が一度 LCP 3057ms で落ちたため、ローカルで origin/main と
+    本ブランチを同一マシンで A/B 計測した（main LCP 2319ms / 本ブランチ 2278ms、いずれも合格）。
+    CI 再実行では LCP 2110ms・score 99 で合格しており、あの失敗は runner 側のばらつきと判断した。
+    それでも分離自体は 24KB gzip をクイズ画面から外す改善なので維持する。
   - M2 スキル分布の偏り（`agent-loop` / `claude-code-workflow` / `prompt-design` が各 1 問）:
     問題追加は本 PR のスコープ外のため、taxonomy 側を削らず「全スキルが最低 1 問に使われる」ことを
     `validateSkillCoverage` としてビルド時検証に追加した。母数が少ないスキルの扱い（最低件数に満たない
