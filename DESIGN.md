@@ -118,6 +118,8 @@ type ReviewState = {
 
 Content validation must fail the build for duplicate IDs, invalid domain totals, orphan source IDs, missing sources, or missing verification dates.
 
+The sketch above is the MVP shape. `src/content/types.ts` is the authoritative model and also carries the later additions: quiz questions (`ChoiceQuestion`, with a `difficulty` of `foundation` / `application` / `analysis` and `skills` drawn from the taxonomy in `src/content/skills.ts`), per-choice review copy (`ChoiceRationales` in `src/content/rationales.ts`, deliberately outside the question bank so the quiz island does not ship review-only text), fictional practice cases (`Scenario`), the six official exam scenarios used as a classification axis (`OfficialScenarioId`), and the study-guide and hands-on models (`StudyGuideSection`, `HandsOnGuide`). Domain, task statement, and skill stay distinct axes: a domain carries exam weight, a task statement names an area of the guide, and a skill names the capability a question measures. Validation covers every one of these types, including reference integrity between them.
+
 ## Technical architecture
 
 - Astro static output + TypeScript.

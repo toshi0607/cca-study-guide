@@ -1,4 +1,11 @@
-import type { ChoiceQuestion, LocalizedText } from './types';
+import type {
+  ChoiceQuestion,
+  LocalizedText,
+  PracticeScenarioId,
+  QuestionDifficulty,
+  SkillId,
+  StandaloneQuestion,
+} from './types';
 import { SCENARIO_VERIFIED_AT } from './scenarios';
 import { VERIFIED_AT } from './sources';
 
@@ -6,6 +13,12 @@ type QuestionCopy = {
   stem: string;
   choices: string[];
   explanation: string;
+};
+
+// What the question demands of the learner and which capability it measures.
+type Assessment = {
+  difficulty: QuestionDifficulty;
+  skills: SkillId[];
 };
 
 const localized = <T>(ja: T, en: T): LocalizedText<T> => ({ ja, en });
@@ -18,16 +31,19 @@ const question = (
   objectiveIds: string[],
   format: ChoiceQuestion['format'],
   correctChoiceIds: string[],
+  assessment: Assessment,
   ja: QuestionCopy,
   en: QuestionCopy,
   sourceIds: string[],
-  extra?: { scenarioId: string; verifiedAt: string },
+  extra?: { scenarioId: PracticeScenarioId; verifiedAt: string },
 ): ChoiceQuestion => ({
   id,
   revision: 1,
   domainId,
   objectiveIds,
   format,
+  difficulty: assessment.difficulty,
+  skills: assessment.skills,
   stem: localized(ja.stem, en.stem),
   choices: ja.choices.map((text, index) => ({ id: choiceIds[index], text: localized(text, en.choices[index]) })),
   correctChoiceIds,
@@ -43,6 +59,7 @@ const question = (
 export const questions: ChoiceQuestion[] = [
   question(
     'q-d1-loop-continue', 'd1', ['1.1'], 'single', ['b'],
+    { difficulty: 'foundation', skills: ['agent-loop'] },
     {
       stem: 'エージェントループの実装で、ツールを実行してループを継続するかどうかの判断に最も適した情報はどれですか？',
       choices: [
@@ -67,6 +84,7 @@ export const questions: ChoiceQuestion[] = [
   ),
   question(
     'q-d1-fanout', 'd1', ['1.2', '1.6'], 'single', ['c'],
+    { difficulty: 'application', skills: ['orchestration'] },
     {
       stem: '複数のサブタスクを並列fan-outで実行する判断として最も適切なのはどれですか？',
       choices: [
@@ -91,6 +109,7 @@ export const questions: ChoiceQuestion[] = [
   ),
   question(
     'q-d1-subagent-input', 'd1', ['1.3'], 'single', ['a'],
+    { difficulty: 'application', skills: ['orchestration', 'context-management'] },
     {
       stem: 'サブエージェントへ調査タスクを委譲します。起動時の設計として最も適切なのはどれですか？',
       choices: [
@@ -115,6 +134,7 @@ export const questions: ChoiceQuestion[] = [
   ),
   question(
     'q-d1-enforcement', 'd1', ['1.4', '1.5'], 'multiple', ['a', 'c'],
+    { difficulty: 'analysis', skills: ['workflow-enforcement', 'human-oversight'] },
     {
       stem: '「返金処理の前に本人確認を必ず行う」という業務ルールを確実に守らせたいです。適切な手段を2つ選んでください。',
       choices: [
@@ -139,6 +159,7 @@ export const questions: ChoiceQuestion[] = [
   ),
   question(
     'q-d1-hook-timing', 'd1', ['1.5'], 'single', ['d'],
+    { difficulty: 'foundation', skills: ['workflow-enforcement'] },
     {
       stem: '破壊的なコマンドを検査し、条件を満たさない場合は実行させたくありません。処理を差し込むライフサイクルポイントとして最も適切なのはどれですか？',
       choices: [
@@ -163,6 +184,7 @@ export const questions: ChoiceQuestion[] = [
   ),
   question(
     'q-d1-session-state', 'd1', ['1.7'], 'multiple', ['b', 'd'],
+    { difficulty: 'application', skills: ['context-management', 'orchestration'] },
     {
       stem: '長期タスクのセッション設計について、適切なものを2つ選んでください。',
       choices: [
@@ -188,6 +210,7 @@ export const questions: ChoiceQuestion[] = [
 
   question(
     'q-d2-tool-contract', 'd2', ['2.1'], 'single', ['c'],
+    { difficulty: 'application', skills: ['tool-design'] },
     {
       stem: 'モデルがツールを誤選択したり不正な引数を作ったりします。ツール定義の改善として最も適切なのはどれですか？',
       choices: [
@@ -212,6 +235,7 @@ export const questions: ChoiceQuestion[] = [
   ),
   question(
     'q-d2-transient-error', 'd2', ['2.2'], 'single', ['b'],
+    { difficulty: 'application', skills: ['failure-handling', 'tool-design'] },
     {
       stem: 'ツールが呼び出す外部APIが一時的なレート制限で失敗しました。エージェントが適切に回復できる返し方はどれですか？',
       choices: [
@@ -236,6 +260,7 @@ export const questions: ChoiceQuestion[] = [
   ),
   question(
     'q-d2-mcp-secrets', 'd2', ['2.4'], 'multiple', ['a', 'd'],
+    { difficulty: 'application', skills: ['mcp-integration', 'workflow-enforcement'] },
     {
       stem: 'チームでMCPサーバーの設定を共有します。適切な運用を2つ選んでください。',
       choices: [
@@ -260,6 +285,7 @@ export const questions: ChoiceQuestion[] = [
   ),
   question(
     'q-d2-tool-overload', 'd2', ['2.3'], 'single', ['d'],
+    { difficulty: 'application', skills: ['tool-design', 'orchestration'] },
     {
       stem: '数十個のツールを1つのエージェントへ同時に公開したところ、選択ミスが増えました。まず検討すべき対策はどれですか？',
       choices: [
@@ -285,6 +311,7 @@ export const questions: ChoiceQuestion[] = [
 
   question(
     'q-d3-claudemd', 'd3', ['3.1'], 'single', ['b'],
+    { difficulty: 'foundation', skills: ['claude-code-configuration'] },
     {
       stem: 'チーム全員とCIの両方に適用したいコーディング規約があります。どこに置くのが最も適切ですか？',
       choices: [
@@ -309,6 +336,7 @@ export const questions: ChoiceQuestion[] = [
   ),
   question(
     'q-d3-skill', 'd3', ['3.2'], 'multiple', ['a', 'c'],
+    { difficulty: 'foundation', skills: ['claude-code-configuration'] },
     {
       stem: 'Skillの性質として正しいものを2つ選んでください。',
       choices: [
@@ -333,6 +361,7 @@ export const questions: ChoiceQuestion[] = [
   ),
   question(
     'q-d3-glob', 'd3', ['3.3'], 'single', ['c'],
+    { difficulty: 'application', skills: ['claude-code-configuration'] },
     {
       stem: 'E2Eテストファイルにだけ適用したい記述規約があります。置き場所として最も適切なのはどれですか？',
       choices: [
@@ -357,6 +386,7 @@ export const questions: ChoiceQuestion[] = [
   ),
   question(
     'q-d3-ci-design', 'd3', ['3.6'], 'multiple', ['b', 'd'],
+    { difficulty: 'analysis', skills: ['workflow-enforcement', 'claude-code-workflow'] },
     {
       stem: 'Claude CodeをCIパイプラインで実行する設計として適切なものを2つ選んでください。',
       choices: [
@@ -382,6 +412,7 @@ export const questions: ChoiceQuestion[] = [
 
   question(
     'q-d4-rubric', 'd4', ['4.1', '4.2'], 'single', ['a'],
+    { difficulty: 'application', skills: ['prompt-design', 'evaluation'] },
     {
       stem: '「良いコードレビューをして」という指示では結果がばらつきます。再現性を上げる方法として最も適切なのはどれですか？',
       choices: [
@@ -406,6 +437,7 @@ export const questions: ChoiceQuestion[] = [
   ),
   question(
     'q-d4-structured-guarantee', 'd4', ['4.3'], 'single', ['d'],
+    { difficulty: 'foundation', skills: ['structured-output'] },
     {
       stem: 'structured outputsでJSON Schemaを指定しました。出力について保証されるのはどれですか？',
       choices: [
@@ -430,6 +462,7 @@ export const questions: ChoiceQuestion[] = [
   ),
   question(
     'q-d4-retry-feedback', 'd4', ['4.4'], 'single', ['b'],
+    { difficulty: 'application', skills: ['failure-handling', 'structured-output'] },
     {
       stem: '構造化出力の検証で1つのフィールドだけが失敗しました。再試行の設計として最も適切なのはどれですか？',
       choices: [
@@ -454,6 +487,7 @@ export const questions: ChoiceQuestion[] = [
   ),
   question(
     'q-d4-batch', 'd4', ['4.5'], 'multiple', ['a', 'c'],
+    { difficulty: 'foundation', skills: ['throughput-and-cost', 'failure-handling'] },
     {
       stem: 'バッチ処理APIの利用について正しいものを2つ選んでください。',
       choices: [
@@ -479,6 +513,7 @@ export const questions: ChoiceQuestion[] = [
 
   question(
     'q-d5-summarize', 'd5', ['5.1'], 'single', ['c'],
+    { difficulty: 'application', skills: ['context-management', 'structured-output'] },
     {
       stem: '長いセッションの履歴を圧縮します。重要な決定事項や識別子の扱いとして最も適切なのはどれですか？',
       choices: [
@@ -503,6 +538,7 @@ export const questions: ChoiceQuestion[] = [
   ),
   question(
     'q-d5-escalation', 'd5', ['5.2', '5.5'], 'single', ['d'],
+    { difficulty: 'application', skills: ['human-oversight', 'workflow-enforcement'] },
     {
       stem: '高額な返金の承認を人へエスカレーションする条件の設計として最も適切なのはどれですか？',
       choices: [
@@ -527,6 +563,7 @@ export const questions: ChoiceQuestion[] = [
   ),
   question(
     'q-d5-provenance', 'd5', ['5.3', '5.6'], 'multiple', ['b', 'c'],
+    { difficulty: 'analysis', skills: ['structured-output', 'orchestration'] },
     {
       stem: '複数の調査エージェントの結果を統合するとき、出典の扱いとして適切なものを2つ選んでください。',
       choices: [
@@ -555,6 +592,7 @@ export const questions: ChoiceQuestion[] = [
   // standalone random quiz pool. Independently authored like everything above.
   question(
     'q-sc-mcp-surface', 'd2', ['2.3'], 'single', ['c'],
+    { difficulty: 'analysis', skills: ['tool-design', 'mcp-integration'] },
     {
       stem: '北斗ロジスティクスの「40エンドポイントを1対1でツール化した」構成を見直します。ツール取り違えを減らす最初の一手として最も適切なのはどれですか？',
       choices: [
@@ -580,6 +618,7 @@ export const questions: ChoiceQuestion[] = [
   ),
   question(
     'q-sc-mcp-args', 'd2', ['2.1'], 'single', ['b'],
+    { difficulty: 'application', skills: ['tool-design', 'mcp-integration'] },
     {
       stem: '日付やIDの引数形式の誤りが続いています。ツール定義側の対策として最も適切なのはどれですか？',
       choices: [
@@ -605,6 +644,7 @@ export const questions: ChoiceQuestion[] = [
   ),
   question(
     'q-sc-mcp-carrier-error', 'd2', ['2.2'], 'multiple', ['a', 'c'],
+    { difficulty: 'analysis', skills: ['failure-handling', 'tool-design'] },
     {
       stem: '配送業者APIのレート制限で失敗したとき、エージェントが適切に回復できるツール応答を2つ選んでください。',
       choices: [
@@ -630,6 +670,7 @@ export const questions: ChoiceQuestion[] = [
   ),
   question(
     'q-sc-mcp-token', 'd2', ['2.4'], 'single', ['a'],
+    { difficulty: 'application', skills: ['mcp-integration'] },
     {
       stem: 'コミットされてしまった配送業者APIトークンへの対処として最も適切なのはどれですか？',
       choices: [
@@ -656,6 +697,7 @@ export const questions: ChoiceQuestion[] = [
 
   question(
     'q-sc-support-parallel', 'd1', ['1.2', '1.6'], 'single', ['d'],
+    { difficulty: 'application', skills: ['orchestration', 'throughput-and-cost'] },
     {
       stem: 'さくらマーケットの試作は、独立した照会も1つずつ順番に実行しています。オーケストレーター型へ移行する際の実行設計として最も適切なのはどれですか？',
       choices: [
@@ -681,6 +723,7 @@ export const questions: ChoiceQuestion[] = [
   ),
   question(
     'q-sc-support-worker-contract', 'd1', ['1.3'], 'single', ['b'],
+    { difficulty: 'application', skills: ['orchestration', 'context-management'] },
     {
       stem: 'オーケストレーターから分類別のワーカーエージェントへ問い合わせ対応を委譲します。起動時の設計として最も適切なのはどれですか？',
       choices: [
@@ -706,6 +749,7 @@ export const questions: ChoiceQuestion[] = [
   ),
   question(
     'q-sc-support-escalation', 'd5', ['5.2', '5.5'], 'single', ['c'],
+    { difficulty: 'analysis', skills: ['human-oversight', 'workflow-enforcement'] },
     {
       stem: '返金規定（一定額超・本人確認未完了は人間の承認者へ）をエージェント運用に組み込む方法として最も適切なのはどれですか？',
       choices: [
@@ -731,6 +775,7 @@ export const questions: ChoiceQuestion[] = [
   ),
   question(
     'q-sc-support-context', 'd5', ['5.1'], 'multiple', ['b', 'd'],
+    { difficulty: 'analysis', skills: ['context-management'] },
     {
       stem: '長引いた問い合わせで、初期に確認した注文番号や顧客の希望をエージェントが取り違えます。適切な対策を2つ選んでください。',
       choices: [
@@ -757,6 +802,7 @@ export const questions: ChoiceQuestion[] = [
 
   question(
     'q-sc-code-conventions', 'd3', ['3.1'], 'single', ['b'],
+    { difficulty: 'foundation', skills: ['claude-code-configuration'] },
     {
       stem: 'あおぞらペイでは、規約を毎回プロンプトへ貼る運用で適用がばらついています。チーム全員とCIに同じ規約を適用する置き場所として最も適切なのはどれですか？',
       choices: [
@@ -782,6 +828,7 @@ export const questions: ChoiceQuestion[] = [
   ),
   question(
     'q-sc-code-e2e-rules', 'd3', ['3.3'], 'single', ['c'],
+    { difficulty: 'application', skills: ['claude-code-configuration'] },
     {
       stem: 'E2Eテストファイルにだけ適用したい記述規約の置き場所として最も適切なのはどれですか？',
       choices: [
@@ -807,6 +854,7 @@ export const questions: ChoiceQuestion[] = [
   ),
   question(
     'q-sc-code-skill', 'd3', ['3.2'], 'multiple', ['a', 'd'],
+    { difficulty: 'application', skills: ['claude-code-configuration', 'context-management'] },
     {
       stem: 'リリースノート下書きの定型作業（手順＋テンプレート＋整形スクリプト）を再利用可能にします。適切な設計を2つ選んでください。',
       choices: [
@@ -832,6 +880,7 @@ export const questions: ChoiceQuestion[] = [
   ),
   question(
     'q-sc-code-ci', 'd3', ['3.6'], 'multiple', ['b', 'd'],
+    { difficulty: 'analysis', skills: ['workflow-enforcement', 'evaluation'] },
     {
       stem: 'プルリクエストごとに静的チェック結果を要約するCIジョブを設計します。セキュリティレビューを通る構成を2つ選んでください。',
       choices: [
@@ -857,6 +906,7 @@ export const questions: ChoiceQuestion[] = [
   ),
   question(
     'q-sc-code-mcp-config', 'd2', ['2.4'], 'single', ['a'],
+    { difficulty: 'application', skills: ['mcp-integration', 'claude-code-configuration'] },
     {
       stem: 'チケット管理MCPサーバーの接続設定をチーム全員へ配布する方法として最も適切なのはどれですか？',
       choices: [
@@ -882,6 +932,7 @@ export const questions: ChoiceQuestion[] = [
   ),
   question(
     'q-sc-pipe-validation', 'd4', ['4.3'], 'single', ['d'],
+    { difficulty: 'application', skills: ['structured-output', 'failure-handling'] },
     {
       stem: 'スキーマには適合するのに「創刊より前の発行日」のような成り立たない値が混ざります。しののめニュースが取るべき対策として最も適切なのはどれですか？',
       choices: [
@@ -907,6 +958,7 @@ export const questions: ChoiceQuestion[] = [
   ),
   question(
     'q-sc-pipe-retry', 'd4', ['4.4'], 'single', ['a'],
+    { difficulty: 'application', skills: ['failure-handling', 'structured-output'] },
     {
       stem: '検証で1フィールドだけ失敗したときの再試行設計として最も適切なのはどれですか？',
       choices: [
@@ -932,6 +984,7 @@ export const questions: ChoiceQuestion[] = [
   ),
   question(
     'q-sc-pipe-batch', 'd4', ['4.5'], 'single', ['b'],
+    { difficulty: 'foundation', skills: ['throughput-and-cost', 'failure-handling'] },
     {
       stem: '夜間に数万件を処理する抽出ジョブの実行方式として最も適切なのはどれですか？',
       choices: [
@@ -957,6 +1010,7 @@ export const questions: ChoiceQuestion[] = [
   ),
   question(
     'q-sc-pipe-provenance', 'd5', ['5.1', '5.3'], 'multiple', ['a', 'c'],
+    { difficulty: 'analysis', skills: ['context-management', 'structured-output'] },
     {
       stem: '「圧縮で確定済みの記事IDが失われる」「どの事実がどの記事に基づくか下流で判別できない」の2つの課題への対策を2つ選んでください。',
       choices: [
@@ -984,4 +1038,6 @@ export const questions: ChoiceQuestion[] = [
 
 // The random-quiz pool. Scenario questions only make sense with their case
 // description in view, so they are drawn exclusively through scenario practice.
-export const standaloneQuestions: ChoiceQuestion[] = questions.filter((question) => !question.scenarioId);
+export const standaloneQuestions: StandaloneQuestion[] = questions.filter(
+  (question): question is StandaloneQuestion => !question.scenarioId,
+);
