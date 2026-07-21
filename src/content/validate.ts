@@ -1,9 +1,10 @@
 import { z } from 'zod';
-import type { QuestionDifficulty } from './types';
+import type { LocalizedText, QuestionDifficulty } from './types';
 import { cards } from './cards';
 import { domains } from './domains';
 import { handsOnGuides } from './hands-on';
 import { questions } from './questions';
+import { choiceRationales } from './rationales';
 import { officialScenarioById, officialScenarios, scenarios } from './scenarios';
 import { skillById, skills } from './skills';
 import { sources } from './sources';
@@ -36,7 +37,7 @@ const choiceQuestionSchema = z.object({
   difficulty: z.enum(questionDifficulties),
   skills: requiredIdListSchema,
   stem: localizedStringSchema,
-  choices: z.array(z.object({ id: z.string().min(1), text: localizedStringSchema, rationale: localizedStringSchema }).strict()).min(2),
+  choices: z.array(z.object({ id: z.string().min(1), text: localizedStringSchema }).strict()).min(2),
   correctChoiceIds: requiredIdListSchema,
   explanation: localizedStringSchema,
   sourceIds: requiredIdListSchema,
@@ -245,28 +246,6 @@ export function validateQuestions(input: unknown, index: ContentIndex): string[]
     if (question.format === 'multiple' && question.correctChoiceIds.length < 2) errors.push(`${label}: multiple format requires at least two correct choices`);
     if (question.correctChoiceIds.length >= question.choices.length) errors.push(`${label}: at least one choice must be incorrect`);
 
-    // A rationale has to explain this choice: repeating a sibling's text, the
-    // question-level explanation, or the other language means it does not.
-    for (const locale of ['ja', 'en'] as const) {
-      const seen = new Set<string>();
-      for (const choice of question.choices) {
-        if (seen.has(choice.rationale[locale])) {
-          errors.push(`${label}: choice ${choice.id} rationale.${locale} repeats another choice`);
-        }
-        seen.add(choice.rationale[locale]);
-      }
-      for (const choice of question.choices) {
-        if (choice.rationale[locale] === question.explanation[locale]) {
-          errors.push(`${label}: choice ${choice.id} rationale.${locale} repeats the question explanation`);
-        }
-      }
-    }
-    for (const choice of question.choices) {
-      if (choice.rationale.ja === choice.rationale.en) {
-        errors.push(`${label}: choice ${choice.id} rationale is identical in both languages`);
-      }
-    }
-
     if (question.scenarioId !== undefined) {
       checkReferences([question.scenarioId], index.scenarioIds, label, 'scenario', errors);
     }
@@ -298,6 +277,60 @@ export function validateSkills(input: unknown, index: ContentIndex): string[] {
   }
   for (const id of index.skillIds) {
     if (!parsed.some((skill) => skill.id === id)) errors.push(`skills: ${id} is declared but has no entry`);
+  }
+  return errors;
+}
+
+// Choice rationales live outside `questions.ts` so the quiz bundle stays lean,
+// which means nothing but this check keeps the two in correspondence: every
+// choice needs exactly one rationale, and no rationale may exist without a
+// choice. Quality rules are enforced here too, since a rationale that repeats a
+// sibling, the question explanation, or the other language teaches nothing.
+export function validateChoiceRationales(
+  input: unknown,
+  questionInput: Array<{ id: string; choices: Array<{ id: string }>; explanation: LocalizedText }>,
+): string[] {
+  const errors: string[] = [];
+  if (!isRecord(input)) {
+    errors.push('choice rationales: expected an object keyed by question ID');
+    return errors;
+  }
+  const questionIds = new Set(questionInput.map((question) => question.id));
+  for (const id of Object.keys(input)) {
+    if (!questionIds.has(id)) errors.push(`choice rationales: orphan question ${id}`);
+  }
+  for (const question of questionInput) {
+    const label = `choice rationales ${question.id}`;
+    const entry = input[question.id];
+    if (!isRecord(entry)) {
+      errors.push(`${label}: missing rationales for this question`);
+      continue;
+    }
+    const choiceIds = new Set(question.choices.map((choice) => choice.id));
+    for (const id of Object.keys(entry)) {
+      if (!choiceIds.has(id)) errors.push(`${label}: orphan choice ${id}`);
+    }
+    const texts = new Map<string, string>();
+    for (const choice of question.choices) {
+      const result = localizedStringSchema.safeParse(entry[choice.id]);
+      if (!result.success) {
+        for (const issue of result.error.issues) {
+          errors.push(`${label}: choice ${choice.id} ${issue.path.join('.') || '(root)'} ${issue.message}`);
+        }
+        continue;
+      }
+      const rationale = result.data;
+      if (rationale.ja === rationale.en) errors.push(`${label}: choice ${choice.id} is identical in both languages`);
+      for (const locale of ['ja', 'en'] as const) {
+        if (rationale[locale] === question.explanation[locale]) {
+          errors.push(`${label}: choice ${choice.id} ${locale} repeats the question explanation`);
+        }
+        const key = `${locale}:${rationale[locale]}`;
+        const owner = texts.get(key);
+        if (owner) errors.push(`${label}: choice ${choice.id} ${locale} repeats choice ${owner}`);
+        else texts.set(key, choice.id);
+      }
+    }
   }
   return errors;
 }
@@ -396,6 +429,7 @@ export function validateContent() {
     ...validateSkillCoverage(skills, questions),
     ...validateCards(cards, index),
     ...validateQuestions(questions, index),
+    ...validateChoiceRationales(choiceRationales, questions),
     ...validateOfficialScenarios(officialScenarios, index),
     ...validateScenarios(scenarios, index),
     ...validateScenarioQuestionLinks(scenarios, questions),
@@ -417,6 +451,7 @@ export function validateContent() {
     objectiveCount: index.objectiveIds.size,
     cardCount: cards.length,
     questionCount: questions.length,
+    choiceRationaleCount: Object.values(choiceRationales).reduce((sum, entry) => sum + Object.keys(entry).length, 0),
     scenarioCount: scenarios.length,
     officialScenarioCount: officialScenarios.length,
     skillCount: skills.length,

@@ -105,9 +105,13 @@ export type Skill = {
 export type Choice = {
   id: string;
   text: LocalizedText;
-  // Why this specific choice is correct or incorrect for this specific stem.
-  rationale: LocalizedText;
 };
+
+// Why each individual choice is correct or incorrect for its stem, keyed by
+// question ID and then by choice ID. Stored apart from the questions (see
+// `rationales.ts`) so the quiz bundle does not carry review-only copy;
+// validation guarantees the two stay in exact correspondence.
+export type ChoiceRationales = Record<string, Record<string, LocalizedText>>;
 
 type ChoiceQuestionBase = {
   id: string;

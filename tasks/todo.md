@@ -21,7 +21,7 @@ UI・storage・依存関係は変更しない。
 | 型アサーション・any・optional 化で不備を隠さない | user msg | types.ts / validate.ts の差分レビュー |
 | 既存 validator の方式（zod + errors 配列 → throw）を維持 | user msg | validateContent() の公開 API 不変 |
 | 既存 ID（question / card / scenario / source / objective）を変更しない | user msg | スナップショット差分と grep |
-| クライアントバンドル増分は rationale 分（gzip +24KB / +32%）まで許容し、記録を残す | レビュー指摘 M1 | `dist/_astro/App.*.js` の gzip サイズ比較 |
+| Lighthouse の performance budget（LCP 3000ms）を満たす | CI (`scripts/check-lighthouse-budget.mjs`) | perf.yml の実行結果 |
 
 ## Assumptions
 
@@ -79,9 +79,15 @@ UI・storage・依存関係は変更しない。
   入力を `unknown` で受けるため、テストは型アサーションなしで壊れたデータを渡せる。
   1 件ごとに safeParse するので、1 件の不備で他の不備が隠れない。
 - **レビュー指摘への対応（fresh-context reviewer、Request Changes）**:
-  - M1 バンドル +24KB gzip（+32%）: rationale は次の PR（選択肢別解説・誤答分析）で必ず表示するため、
-    前払いとして許容する判断を Constraints に記録した。実測は origin/main `App.*.js` gzip 76,749B →
-    本ブランチ 101,184B。表示 PR が延びる場合は rationale の動的 import を検討する。
+  - M1 バンドル +24KB gzip（+32%）: 当初は「次の PR で表示するので前払い」と判断したが、CI の
+    Lighthouse budget が実際に落ちた（LCP main 2112ms → 本ブランチ 3062/3176ms、budget 3000ms）。
+    レビュー指摘が正しかったため、rationale を `src/content/rationales.ts` へ分離し、
+    `ChoiceRationales`（questionId → choiceId → LocalizedText）として持つ形へ変更した。
+    このモジュールを静的に import するのはサーバー側で動く `validate.ts` だけなので、
+    island バンドルには入らない。結果: `App.*.js` 287,681B/gzip 101,184B → 220,965B/gzip 77,475B
+    （main は 218,062B/gzip 76,749B、差分は difficulty と skills の分のみ）。
+    型の情報量は落としていない（全選択肢に ja/en の rationale が必須である点は
+    `validateChoiceRationales` がビルド時に強制する）。後続 UI は動的 import で読み込む。
   - M2 スキル分布の偏り（`agent-loop` / `claude-code-workflow` / `prompt-design` が各 1 問）:
     問題追加は本 PR のスコープ外のため、taxonomy 側を削らず「全スキルが最低 1 問に使われる」ことを
     `validateSkillCoverage` としてビルド時検証に追加した。母数が少ないスキルの扱い（最低件数に満たない

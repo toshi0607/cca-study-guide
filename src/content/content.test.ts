@@ -3,6 +3,7 @@ import { cards } from './cards';
 import { domains } from './domains';
 import { handsOnGuides } from './hands-on';
 import { questions, standaloneQuestions } from './questions';
+import { choiceRationales } from './rationales';
 import { officialScenarioById, officialScenarios, scenarios } from './scenarios';
 import { skillById, skills } from './skills';
 import { sources } from './sources';
@@ -11,6 +12,7 @@ import {
   buildContentIndex,
   genericSourceIds,
   validateContent,
+  validateChoiceRationales,
   validateHandsOnGuides,
   validateOfficialScenarios,
   validateQuestions,
@@ -27,6 +29,7 @@ describe('study content', () => {
       objectiveCount: 30,
       cardCount: cards.length,
       questionCount: questions.length,
+      choiceRationaleCount: 152,
       scenarioCount: scenarios.length,
       officialScenarioCount: 6,
       skillCount: 14,
@@ -158,7 +161,7 @@ describe('study content', () => {
       expectLocalizedText(question.explanation);
       for (const choice of question.choices) {
         expectLocalizedText(choice.text);
-        expectLocalizedText(choice.rationale);
+        expectLocalizedText(choiceRationales[question.id][choice.id]);
       }
     }
     for (const scenario of scenarios) {
@@ -205,21 +208,8 @@ describe('question assessment metadata', () => {
   });
 
   it('gives every choice a rationale that is neither a copy of the explanation nor shared with a sibling', () => {
-    for (const question of questions) {
-      for (const locale of ['ja', 'en'] as const) {
-        // #when
-        const rationales = question.choices.map((choice) => choice.rationale[locale]);
-
-        // #then
-        expect(new Set(rationales).size, `${question.id} ${locale}`).toBe(rationales.length);
-        for (const rationale of rationales) {
-          expect(rationale, `${question.id} ${locale}`).not.toBe(question.explanation[locale]);
-        }
-      }
-      for (const choice of question.choices) {
-        expect(choice.rationale.ja, `${question.id} ${choice.id}`).not.toBe(choice.rationale.en);
-      }
-    }
+    // #then
+    expect(validateChoiceRationales(choiceRationales, questions)).toEqual([]);
   });
 });
 
@@ -312,8 +302,8 @@ describe('question validation', () => {
     skills: ['agent-loop'],
     stem: localized('固定の設問文', 'A fixed stem'),
     choices: [
-      { id: 'a', text: localized('選択肢A', 'Choice A'), rationale: localized('Aが誤りである理由', 'Why A is wrong') },
-      { id: 'b', text: localized('選択肢B', 'Choice B'), rationale: localized('Bが正しい理由', 'Why B is right') },
+      { id: 'a', text: localized('選択肢A', 'Choice A') },
+      { id: 'b', text: localized('選択肢B', 'Choice B') },
     ],
     correctChoiceIds: ['b'],
     explanation: localized('全体の解説', 'The overall explanation'),
@@ -366,22 +356,6 @@ describe('question validation', () => {
 
     // #then
     expect(errors).toContain('question q-fixture skills has duplicate IDs: agent-loop');
-  });
-
-  it('rejects a choice whose Japanese rationale is empty', () => {
-    // #when
-    const errors = withQuestion((question) => { question.choices[0].rationale = localized('  ', 'Why A is wrong'); });
-
-    // #then
-    expect(errors).toContain('question q-fixture: choices.0.rationale.ja');
-  });
-
-  it('rejects a choice whose English rationale is empty', () => {
-    // #when
-    const errors = withQuestion((question) => { question.choices[1].rationale = localized('Bが正しい理由', ''); });
-
-    // #then
-    expect(errors).toContain('question q-fixture: choices.1.rationale.en');
   });
 
   it('rejects a correct choice that does not exist', () => {
@@ -441,6 +415,134 @@ describe('question validation', () => {
     // #then
     expect(errors).toContain('question q-fixture: difficulty');
     expect(errors).toContain('question q-fixture-2: skills');
+  });
+});
+
+describe('choice rationale validation', () => {
+  const localized = (ja: string, en: string) => ({ ja, en });
+  const validQuestions = () => [{
+    id: 'q-fixture',
+    choices: [{ id: 'a' }, { id: 'b' }],
+    explanation: localized('全体の解説', 'The overall explanation'),
+  }];
+  const validRationales = (): Record<string, Record<string, { ja: string; en: string }>> => ({
+    'q-fixture': {
+      a: localized('Aは問題文の条件を満たさない', 'A does not meet the stated condition'),
+      b: localized('Bは条件をすべて満たす', 'B satisfies every stated condition'),
+    },
+  });
+
+  it('accepts the real rationale map', () => {
+    // #then
+    expect(validateChoiceRationales(choiceRationales, questions)).toEqual([]);
+  });
+
+  it('accepts a well-formed fixture', () => {
+    // #then
+    expect(validateChoiceRationales(validRationales(), validQuestions())).toEqual([]);
+  });
+
+  it('rejects a question with no rationales at all', () => {
+    // #when
+    const errors = validateChoiceRationales({}, validQuestions()).join('\n');
+
+    // #then
+    expect(errors).toContain('choice rationales q-fixture: missing rationales for this question');
+  });
+
+  it('rejects a choice with no rationale', () => {
+    // #given
+    const rationales = validRationales();
+    delete rationales['q-fixture'].b;
+
+    // #when
+    const errors = validateChoiceRationales(rationales, validQuestions()).join('\n');
+
+    // #then
+    expect(errors).toContain('choice rationales q-fixture: choice b');
+  });
+
+  it('rejects an empty Japanese rationale', () => {
+    // #given
+    const rationales = validRationales();
+    rationales['q-fixture'].a = localized('  ', 'A does not meet the stated condition');
+
+    // #when
+    const errors = validateChoiceRationales(rationales, validQuestions()).join('\n');
+
+    // #then
+    expect(errors).toContain('choice rationales q-fixture: choice a ja');
+  });
+
+  it('rejects an empty English rationale', () => {
+    // #given
+    const rationales = validRationales();
+    rationales['q-fixture'].b = localized('Bは条件をすべて満たす', '');
+
+    // #when
+    const errors = validateChoiceRationales(rationales, validQuestions()).join('\n');
+
+    // #then
+    expect(errors).toContain('choice rationales q-fixture: choice b en');
+  });
+
+  it('rejects a rationale shared by two choices', () => {
+    // #given
+    const rationales = validRationales();
+    rationales['q-fixture'].b = rationales['q-fixture'].a;
+
+    // #when
+    const errors = validateChoiceRationales(rationales, validQuestions()).join('\n');
+
+    // #then
+    expect(errors).toContain('choice rationales q-fixture: choice b ja repeats choice a');
+  });
+
+  it('rejects a rationale copied from the question explanation', () => {
+    // #given
+    const rationales = validRationales();
+    rationales['q-fixture'].a = localized('全体の解説', 'A does not meet the stated condition');
+
+    // #when
+    const errors = validateChoiceRationales(rationales, validQuestions()).join('\n');
+
+    // #then
+    expect(errors).toContain('choice rationales q-fixture: choice a ja repeats the question explanation');
+  });
+
+  it('rejects a rationale that is the same string in both languages', () => {
+    // #given
+    const rationales = validRationales();
+    rationales['q-fixture'].a = localized('same text', 'same text');
+
+    // #when
+    const errors = validateChoiceRationales(rationales, validQuestions()).join('\n');
+
+    // #then
+    expect(errors).toContain('choice rationales q-fixture: choice a is identical in both languages');
+  });
+
+  it('rejects rationales for a question that does not exist', () => {
+    // #given
+    const rationales = { ...validRationales(), 'q-ghost': { a: localized('あ', 'a') } };
+
+    // #when
+    const errors = validateChoiceRationales(rationales, validQuestions()).join('\n');
+
+    // #then
+    expect(errors).toContain('choice rationales: orphan question q-ghost');
+  });
+
+  it('rejects a rationale for a choice that does not exist', () => {
+    // #given
+    const rationales = validRationales();
+    rationales['q-fixture'].z = localized('存在しない選択肢', 'A choice that does not exist');
+
+    // #when
+    const errors = validateChoiceRationales(rationales, validQuestions()).join('\n');
+
+    // #then
+    expect(errors).toContain('choice rationales q-fixture: orphan choice z');
   });
 });
 
