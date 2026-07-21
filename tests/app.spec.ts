@@ -157,6 +157,50 @@ test('drives a session with keyboard shortcuts and confirms before stopping', as
   await expect.poll(() => page.evaluate(() => Object.keys(JSON.parse(localStorage.getItem('cca-field-notes:v1') ?? '{}').reviews ?? {}).length)).toBe(2);
 });
 
+test('leaving the practice view during a running session ends it without losing earlier ratings', async ({ page }) => {
+  // #given — a session started over the due cards, with the first card already rated
+  await page.getByRole('button', { name: '練習' }).first().click();
+  await page.getByRole('button', { name: 'セッションを開始' }).click();
+  await expect(page.locator('.session-card')).toBeVisible();
+  await page.locator('.reveal-button').click();
+  await page.getByRole('button', { name: /できた/ }).click();
+  await expect.poll(() => page.evaluate(() => Object.keys(JSON.parse(localStorage.getItem('cca-field-notes:v1') ?? '{}').reviews ?? {}).length)).toBe(1);
+
+  // #when — navigating to another view and back, instead of stopping the session explicitly
+  await page.getByRole('button', { name: 'ガイド' }).first().click();
+  await page.getByRole('button', { name: '練習' }).first().click();
+
+  // #then — the session ended: the card list shows again and the earlier rating is still saved
+  await expect(page.locator('.session-card')).toHaveCount(0);
+  await expect(page.locator('.practice-card').first()).toBeVisible();
+  expect(await page.evaluate(() => Object.keys(JSON.parse(localStorage.getItem('cca-field-notes:v1') ?? '{}').reviews ?? {}).length)).toBe(1);
+});
+
+test('keeps a session card in place and announces the failure when saving its rating fails', async ({ page }) => {
+  // #given — localStorage.setItem throws for the study-data key, simulating a full or blocked store
+  await page.addInitScript(() => {
+    const original = Storage.prototype.setItem;
+    Storage.prototype.setItem = function (key, value) {
+      if (key === 'cca-field-notes:v1') throw new DOMException('The quota has been exceeded.', 'QuotaExceededError');
+      return original.call(this, key, value);
+    };
+  });
+  await page.goto('/');
+
+  // #when — starting a session and rating its first card
+  await page.getByRole('button', { name: '練習' }).first().click();
+  await page.getByRole('button', { name: 'セッションを開始' }).click();
+  await expect(page.locator('.session-progress code')).toHaveText(/^1 \//);
+  await page.locator('.reveal-button').click();
+  await page.getByRole('button', { name: /できた/ }).click();
+
+  // #then — the failure is announced and focused, and the card stays in place, still revealed
+  await expect(page.getByText('進捗を保存できませんでした。ブラウザのサイトデータ設定または空き容量を確認してください。')).toBeFocused();
+  await expect(page.locator('.session-progress code')).toHaveText(/^1 \//);
+  await expect(page.locator('.session-card .answer')).toBeVisible();
+  expect(await page.evaluate(() => localStorage.getItem('cca-field-notes:v1'))).toBeNull();
+});
+
 test('reveals an answer, records a rating, and persists progress', async ({ page }) => {
   await page.getByRole('button', { name: '練習' }).first().click();
   const reveal = page.locator('.reveal-button').first();

@@ -1,72 +1,66 @@
-# Remotion製SNS告知動画（video/）制作
+# Task: App.tsx の責務分割 (PR1)
 
-Previous plan (progress-import, PR #24) completed and merged; replaced by the
-promo-video plan below.
+Branch: claude/app-tsx-refactor-e3a7fb
 
-Branch: claude/remotion-promo-video（origin/main 0b435d0 から作成）
+前回のtasks/todo.md(Remotion動画PR)は完了・無関係のため本内容に置き換え。承認済みプラン: `/Users/toshi0607/.claude/plans/cozy-growing-glacier.md`
 
 ## Constraints
 
 | Constraint | Source | Verify by |
 |------------|--------|-----------|
-| video/ は独立プロジェクト（自前package.json）でアプリ本体に無影響 | user msg | `git diff origin/main --stat` が video/・README・.gitignore・tasks/ のみ |
-| アプリ側 pnpm test / pnpm build がパスし続ける | user msg | 両コマンド exit 0 |
-| MP4はコミットしない（.gitignore対象） | user msg | `git status` にmp4が出ない |
-| 1920×1080・約30秒・H.264 | user msg | ffprobe 出力 |
-| 最新Remotionドキュメント参照で実装（記憶で書かない） | user msg (MUST) | librarianレポート出典 |
-| scaffold は公式手段（create-video）+ pnpm | user msg (MUST) | コマンド履歴 |
-| フォントは @remotion/google-fonts のフル版（public/fonts/のサブセット版は使わない） | user msg | video/ 内 import 記述 |
-| デザイントーンは global.css 踏襲（ink#173447/cyan#087e9b/方眼紙/Barlow Condensed/Zen Kaku Gothic New） | user msg | フレームPNG目視 |
-| 実画面スクショを video/assets/ に取り込みモックフレーム内で動き | user msg | コンポジション実装 |
-| 動画・投稿文に「Anthropic非公式・非提携」明記 | user msg (MUST) | フレームPNG目視 + PR本文 |
-| 試験問題・Exam Guide本文の引用禁止 | user msg (MUST NOT) | 字幕テキストレビュー |
-| Anthropicロゴ・公式ブランド素材の使用禁止 | user msg (MUST NOT) | アセット一覧確認 |
-| アプリ本体コード変更禁止（video/追加とREADME追記以外） | user msg (MUST NOT) | git diff --stat |
-| SNS投稿はしない（草案のみ） | user msg (MUST NOT) | — |
-| README に video/ 説明とレンダリング手順を1段落追記 | user msg (MUST) | README diff |
-| コミット末尾 Co-Authored-By / PR末尾 Generated with | user msg + rules | git log / PR body |
-| 音声なしで伝わる字幕構成（BGM・ナレーション不要） | user msg | コンポジション実装 |
-| 文字は大きく1画面1メッセージ | user msg | フレームPNG目視 |
+| ユーザーから見える挙動(文言/レイアウト/CSS/デザイン/ナビ項目/復習アルゴリズム/採点/即時フィードバック/シナリオ進行)を変更しない | user msg | 手動確認 + Playwright全緑 |
+| `STORAGE_KEY`/`StudyData.version`/`ReviewState`/`QuizStat`型を変更しない | user msg | `src/lib/storage.ts` diff 0行 |
+| export/import形式・resetの挙動を変更しない | user msg | storage.test.ts全緑 + import/export E2E緑 |
+| 日英表示・言語切替・locale依存フォーマット・aria-labelを変更しない | user msg | ロケールE2E緑 + i18n/*無変更 |
+| 学習データをGA等へ送信しない(現状維持) | user msg | check-no-analytics.mjs緑 + lib/analytics.ts無変更 |
+| 新機能を実装しない | user msg | src/content/*無変更 |
+| 新しいnpm dependencyを追加しない | user msg | package.json diff 0行 |
+| src/content/*, src/i18n/*, src/lib/* は移動・変更しない | user msg | 各diff 0行(import追加のみ許容) |
+| CSS classは維持、DOM構造の大幅変更を避ける | user msg | 既存Playwright selectorが緑のまま |
+| import順/formatのみの大量差分・無関係ファイル整形をしない | user msg | diffの範囲を分割対象のみに限定 |
+| pnpm test / build / test:e2e / (該当時)test:no-analytics が成功 | user msg | exit code 0 |
+| 抽出単位ごとに小さく変更し都度確認 | user msg | 各Stepでtsc/test確認 |
 
 ## Assumptions
 
 | Assumption | Status | Evidence |
 |------------|--------|----------|
-| サイトURLは https://cca.toshi0607.com | VERIFIED | astro.config.mjs:5 |
-| .vercelignore は存在しない。Vercelはstatic Astroビルドで video/ は出力に含まれない | VERIFIED | ls結果 NO .vercelignore / astro.config output:static |
-| pnpm-workspace.yaml なし → video/package.json はrootのpnpmに干渉しない | VERIFIED | リポジトリrootのls に存在せず |
-| ビュー切替は rail nav の button クリック（today/guide/practice/quiz/progress） | VERIFIED | App.tsx:660 |
-| シナリオ演習は quiz ビュー内のモード | VERIFIED | App.tsx quiz-view + README |
-| 領域重み D1 27% / D2 18% / D3 20% / D4 20% / D5 15% | VERIFIED | today/guideビュー実スクショの表示と一致 |
-| Remotionの正確なAPI | UNVERIFIED | librarianレポート待ち（実装開始前に受領） |
+| App.tsxの呼び出し元はsrc/pages/index.astroとsrc/pages/en/index.astroのみ | VERIFIED | grep結果2件、共にdefault import |
+| ファイル分割はPreact islandの単一バンドルのためLighthouse予算に影響しない | VERIFIED | `pnpm build`後の`dist/_astro/`確認: コンポーネント17ファイルに分割後もJSは単一の`App.[hash].js`(217,802 bytes)のみで、チャンク分割は発生していない |
+| tests/app.spec.ts(490行)が既存挙動を広くカバーしている | VERIFIED | 全文精読済み |
+| vitestはnode環境でDOM非依存、分割の影響を受けない | VERIFIED | vitest.config.ts:5 |
+| pnpm install後の現状ベースラインが全緑かどうか | VERIFIED | Step 1で確認: `node_modules`が`package.json`と不一致(vitest実体3.2.7 vs 指定^4.1.10等)だったため`pnpm install`で同期後、`pnpm test`(55 passed)/`pnpm build`(0 errors)/`pnpm test:e2e`(47 passed)/`pnpm test:no-analytics`(pass)すべて変更前の時点でグリーンと確認 |
 
 ## Plan
 
-- [x] 1. リポジトリ調査（デザイントーン・URL・ビュー構造）
-- [x] 2. origin/main から新ブランチ claude/remotion-promo-video 作成
-- [x] 3. Remotion最新ドキュメント調査（librarian）→ レポート受領（v4.0.490、一次情報出典付き）
-- [x] 4. アプリを dev 起動し、Playwrightで7枚（today/guide/practice/quiz/scenario-list/scenario/weak）の高解像度スクショ（3200×2000, devToolbar除去, 進捗データseed済み）
-      検証: 全PNGをReadで目視済み（文字化け・崩れなし）→ video/assets/ へコピー済み
-- [x] 5. `pnpm create video@latest --yes --blank video` で scaffold（tailwind除去、@remotion/google-fonts追加、nested .gitなし）
-      検証: pnpm install 成功、npx tsc exit 0
-- [x] 6. コンポジション実装（900frames@30fps=30秒・1920×1080・6シーン・BarlowCondensed/ZenKakuGothicNew）
-      検証: npx tsc / eslint 0 error、render成功
-- [x] 7. レンダリング + 目視検証3周（白帯→object-fit cover修正、見出し折返し→72px修正、演習スクショ不正解表示→未回答で撮り直し）
-      検証: ffprobe = 30.06s / 1920x1080 / h264 / 30fps。f70/220/390/490/555/600/700/850 目視OK
-- [x] 8. MP4はvideo/.gitignoreの`out`で除外（git check-ignoreで確認）+ README 1段落追記
-- [x] 9. アプリ側 pnpm test（55 passed）/ pnpm build（Complete）exit 0
-- [ ] 10. コミット・push・PR作成（本文にSNS投稿草案）
-- [ ] 11. 最終報告（MP4絶対パス・尺・解像度・サイズ・フレームPNGパス）
+- [x] 1. ベースライン確認: pnpm test(55 passed) / pnpm build(0 errors) / pnpm test:e2e(47 passed)。node_modulesがpackage.jsonと不一致だったためpnpm installで同期
+- [x] 2. 共有小コンポーネント抽出: LanguageNav → SourceLinks → Blueprint → AppNavigation(AppHeader/AppBottomNav)。都度astro check(0 errors)確認
+- [x] 3. 低state View抽出: GuideView → TodayView → ProgressView
+- [x] 4. Practice抽出: CardAnswer → PracticeSession → PracticeView
+- [x] 5. Quiz抽出: ScenarioBackground → QuizSetup/QuizQuestion/QuizSummary → QuizView
+- [x] 6. App.tsxを最終形に整理(782行 → 228行)
+- [x] 7. 新規E2Eテスト2件追加(Practice離脱でsession終了 / rating保存失敗時にカードが進まない)
+- [x] 8. 最終テスト: pnpm test(55 passed) / build(0 errors) / test:e2e(49 passed) / test:no-analytics(pass)
+- [x] 9. 手動確認: 日本語/英語/mobile/practice一覧+session/quiz random+scenario/今日→練習遷移。すべてブラウザで目視確認、console error無し
+- [x] 10. 完了報告作成(本ファイル + チャット報告)
 
 ## Notes
 
-- 実行環境は worktree: .claude/worktrees/performance-optimization-plan-1fff03（ブランチ claude/remotion-promo-video）
-- スクショはアプリの @playwright/test を node_modules 経由で利用（アプリのコードは変更しない）
-- 【指示との乖離】想起カードは指示の「約70枚」ではなく実数51枚（src/content/cards.ts、進捗ビュー表示とも一致）。動画・投稿文は実数51枚を採用
-- 【制約衝突の解消】`astro check`がvideo/のReact TSXをPreact設定で型検査し73エラー→アプリbuild失敗。「build必須」と「アプリ設定変更禁止」が衝突するため、ランタイム無影響の最小変更として root tsconfig.json に `"exclude": ["dist", "video"]` を追加（dist は astro base tsconfig の既定excludeを維持するため明記）。PR本文で明示する
-- scaffold直後の`--yes --blank`はTailwind込みだったため、ドキュメント記載の素のblank構成に合わせて除去
-- レンダリングMP4には無音AACトラックが含まれる（Remotion既定。SNS投稿には無害）
+- state所有権の判断で計画時の想定を1点修正: `query`/`domainFilter`/`stateFilter`/`revealed`(一覧モード)/`sessionCards`はPracticeViewへ完全移管せずAppに残した。理由はplan file(B節)に記載の通り、View切替をまたいでこれらが保持される現状挙動を壊さないため
+- 実装中に新規発見: `views/QuizView.tsx`(コンテナ)が`quiz/QuizQuestion.tsx`等をコンポーネントとしてimportする一方、`QuizResult`/`QuizMode`型を子から親へimportし返すと循環参照になることが判明。計画にはなかった`src/components/quiz/types.ts`を追加してこれらの型の単一の置き場所とし、循環を回避した(No circular dependenciesルール準拠)
+- `node_modules`が`package.json`/lockfileと不一致(vitest 3.2.7 実体 vs ^4.1.10 指定)だったため、Step 1で`pnpm install`を実行して同期。既存の依存関係更新PR(#18-22)の内容そのもので、本PRの変更ではない
+- ブラウザでの手動確認中、`computer`ツールのkey送信がPracticeSessionのdocumentレベルkeydownリスナーに届かない(event.key不一致と推測されるツール側の制約)ことを確認したが、変更していない既存コードであり、Playwright E2E(「drives a session with keyboard shortcuts」)が正確にこの経路を検証し緑であることを確認した
+- `.claude/launch.json`をブラウザプレビュー用に一時作成したが、本PRのスコープ外のため作業完了後に削除した
 
 ## Review
 
-（未実施）
+### セルフクイズ(unknowns.md 3.1)
+
+1. **最もリスクの高い行は何故安全か**: `App.tsx`の`query`/`domainFilter`/`stateFilter`/`revealed`/`sessionCards`をPracticeViewへcontrolled propsとして渡す変更。安全な理由: これらの値の「所有」はAppのままで、PracticeViewは受け取った値と setter を right通りに使うだけの薄いラッパーであり、状態遷移ロジック自体(persistRating/saveRating/navigate)を一切変更していないため。ブラウザ手動確認でView切替後もフィルタ・検索語・開示状態が保持されることを確認済み(VERIFIED)
+2. **何が壊れるか、テストしたか**: (a) View離脱時のsession終了 → 新規E2Eで検証しGreen。(b) rating保存失敗時にセッションが進まない → 新規E2Eで検証しGreen。(c) list/session二経路の取り違え(saveRating vs persistRating) → props名を`onRateInList`/`onRateInSession`で明示的に分離し、E2Eの両経路(list rating・session rating)がともにGreen
+3. **テストしなかったもの**: Quiz回答二重記録防止(`answeredIdRef`)の直接テスト、`studyStorage()`の`window.localStorage`アクセス自体が例外を投げるケース。どちらも本PR以前から未テストで、`answer()`/`studyStorage()`のロジックは一切変更せず単純移動のみのため、回帰リスクは低いと判断(残課題に記載)
+4. **plan/Assumptionと矛盾する点はないか**: なし。B節の状態所有権表どおりに実装し、Constraints(`src/lib`/`src/i18n`/`src/content`無変更、新規依存なし等)はすべて`git diff --stat`で確認済み
+
+### 元の依頼の再確認
+
+ユーザー依頼(App.tsxの責務分割、挙動変更なし、新機能なし)を文字通り実行。View/機能別の16ファイルへ分割し、`App.tsx`は現在View・StudyData正本・グローバル通知・永続化callback・View間遷移のみを持つ構造に整理した。
