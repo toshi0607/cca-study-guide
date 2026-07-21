@@ -4,7 +4,7 @@ import type { Card } from '../content/types';
 import { localePaths, type Locale } from '../i18n/locales';
 import { ui } from '../i18n/ui';
 import { isDue, scheduleReview, type Rating } from '../lib/scheduler';
-import { buildStudyDataExport, createStudyStorage, parseStudyDataImport, type ImportedStudyData, type StudyData } from '../lib/storage';
+import { buildStudyDataExport, createEmptyStudyData, createStudyStorage, parseStudyDataImport, type ImportedStudyData, type StudyData } from '../lib/storage';
 import { AppBottomNav, AppHeader } from './app/AppNavigation';
 import { formatDate } from './app/format';
 import type { View } from './app/types';
@@ -25,7 +25,7 @@ function studyStorage() {
 function App({ locale, analyticsEnabled = false }: { locale: Locale; analyticsEnabled?: boolean }) {
   const copy = ui[locale];
   const [view, setView] = useState<View>('today');
-  const [data, setData] = useState<StudyData>({ version: 1, reviews: {} });
+  const [data, setData] = useState<StudyData>(createEmptyStudyData);
   const [now, setNow] = useState<Date | null>(null);
   const [ready, setReady] = useState(false);
   const [query, setQuery] = useState('');
@@ -93,7 +93,7 @@ function App({ locale, analyticsEnabled = false }: { locale: Locale; analyticsEn
   };
 
   const recordQuizAnswer = (questionId: string, correct: boolean) => {
-    const previous = data.quizStats?.[questionId];
+    const previous = data.quizStats[questionId];
     const stat = {
       attempts: (previous?.attempts ?? 0) + 1,
       correct: (previous?.correct ?? 0) + (correct ? 1 : 0),
@@ -159,7 +159,7 @@ function App({ locale, analyticsEnabled = false }: { locale: Locale; analyticsEn
       focusNotice();
       return;
     }
-    setData({ version: 1, reviews: {} });
+    setData(createEmptyStudyData());
     setRevealed({});
     setNotice(copy.notices.resetDone);
   };
