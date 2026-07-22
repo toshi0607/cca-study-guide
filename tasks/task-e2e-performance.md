@@ -69,7 +69,7 @@
 - [x] **P7 build/preview 再利用**: `PW_REUSE_SERVER=1`(→`test:e2e:reuse`) で明示 opt-in。default(`test:e2e`)/CI は `reuseExistingServer:false` で必ず build。検証: reuse で標準 spec 5.1s 実行済。
 - [x] **P8 exhaustive→unit 化**: **移行不要**。純ロジックは既存 Vitest 12 file が網羅（storage/scheduler/quiz/session/study-guide-progress/hands-on-progress/content/weakness/analytics/assets/fonts/storage-schema）。E2E は代表フローのみで exhaustive-combo の重複は無し。→ 引き継ぎ表は「既存 unit が既にカバー」。
 - [x] **P9 CI 設計**: **E2E workflow は元々存在しない**（perf.yml=Lighthouse のみ、E2E は CI 未ゲート）。最小の `e2e.yml`（1 job, workers=config default(1), chromium, build via webServer, report artifact）を追加。perf.yml は変更せず（役割分離）。
-- [ ] **P10 最終計測 3回 + 5連続安定 + subagent review + PR**。
+- [x] **P10 最終計測 + 5連続安定 + subagent review + PR**。5 fresh-build runs 全 81 passed / flaky0 / retry0。PR #35 作成（未マージ）。
 
 ## P3 spec-split mapping (81 tests → 13 specs + 3 fixtures, 全保存)
 
@@ -142,4 +142,18 @@ fixtures:
 
 ## Review section
 
-（P10 で記入）
+### 最終結果（workers=1, median）
+- Total `test:e2e`: 310.9s → **105.9s（-66%）**、Browser Σ per-test: 258.3s → **77.8s（-70%）**。両目標（30%/40%）超過。
+- 5連続 fresh-build: 全 81 passed / flaky0 / retry0（101.7/105.9/105.9/106.1/101.4s）。
+- vitest 259 passed / build ✓ / no-analytics ✓。fast 40（~58s warm）/ a11y 8（27.5s）。
+- PR: #35（base d1dc280 / head 分割後 commit、未マージ）。
+
+### subagent reviewer（opus, fresh context）指摘と対応
+- **Approve**（Critical/High なし）。invariant「81 tests 1:1・assertion 不変・axe coverage/契約保存・retry/skip なし」を独立検証（title diff IDENTICAL, tsc clean, src 変更 0, test:e2e 81 passed, fast 40 passed）。
+- Low1: e2e.yml コメントが workers"(2)"と誤記 → config default(1) に修正。
+- Low2: fixtures/app.ts コメントが analytics test を「page 未使用」と誤記 → 実際は page を使い close する旨に修正。
+- Low3: fast「≤60s」は reused server 前提（cold は fresh build で ~2.6m）→ README/plan/PR に明記。
+
+### 主要判断
+- 速度の主因は二重 navigation 削減（P2, -70% browser）。並列は 5連続 gate 未達（timing race）で workers=1 維持。
+- keyboard-shortcuts の pre-existing flake（新旧 beforeEach 同率で本 PR の regression でないと差分実験で確認）を toBeFocused 待ちで root fix。
