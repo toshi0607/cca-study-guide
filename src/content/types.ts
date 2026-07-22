@@ -50,6 +50,72 @@ export type OfficialScenario = {
   verifiedAt: string;
 };
 
+// A single decision a learner must make inside an official scenario, plus the
+// requirements or constraints that move the answer one way or another. Kept
+// structured (not a flat sentence list) so the UI can render the decision and
+// its deciding factors distinctly and a later analysis view can key on the id.
+export type OfficialScenarioDecisionPoint = {
+  id: string;
+  decision: LocalizedText;
+  // Requirements or constraints that change which option is right.
+  considerations: LocalizedText<string[]>;
+};
+
+// A common wrong choice for an official scenario and why it fails. Structured so
+// the mistake and its consequence render as a distinct warning, never blended
+// into the recommended approach.
+export type OfficialScenarioAntiPattern = {
+  id: string;
+  mistake: LocalizedText;
+  consequence: LocalizedText;
+};
+
+// How the recommended judgment shifts when a condition changes. This is the
+// "it depends" axis: the same scenario resolves differently under a different
+// constraint, and naming the condition is what makes the design decision real.
+export type OfficialScenarioTradeoff = {
+  id: string;
+  condition: LocalizedText;
+  shift: LocalizedText;
+};
+
+// The design-judgment learning layer over an official scenario. It is a separate
+// type from `OfficialScenario` (the lightweight classification axis) so the
+// axis stays lean where it is referenced from question/hands-on chunks, while
+// this long-form teaching content lives in its own deferred module. Identity
+// (title/summary) is not duplicated: the UI joins to `officialScenarioById[id]`.
+export type OfficialScenarioLearning = {
+  id: OfficialScenarioId;
+  revision: number;
+  domainIds: string[];
+  // Objective (task statement) IDs such as '1.1'. domainIds must be exactly the
+  // set of domains these task statements belong to.
+  taskStatementIds: string[];
+  skillIds: SkillId[];
+  estimatedMinutes: number;
+  learningObjectives: LocalizedText<string[]>;
+  // Scenario-specific requirements and constraints that frame the design.
+  requirements: LocalizedText<string[]>;
+  decisionPoints: OfficialScenarioDecisionPoint[];
+  // This app's recommended design direction. Independent author guidance, not an
+  // official prescription; the sources support the underlying technical claims.
+  recommendedApproach: LocalizedText<string[]>;
+  // Why the recommended approach holds.
+  rationale: LocalizedText<string[]>;
+  antiPatterns: OfficialScenarioAntiPattern[];
+  tradeoffs: OfficialScenarioTradeoff[];
+  // Practice cases (this app's fiction) that exercise this scenario. Each must
+  // list this official scenario in its own officialScenarioIds.
+  relatedPracticeScenarioIds: PracticeScenarioId[];
+  // Hands-on guides for this scenario. May be empty: not every official
+  // scenario has a matching guide. Each listed guide must reference this id.
+  relatedHandsOnGuideIds: string[];
+  relatedCardIds: string[];
+  relatedQuestionIds: string[];
+  sourceIds: string[];
+  verifiedAt: string;
+};
+
 // Practice cases authored for this app. Kept as a closed union so questions and
 // hands-on material cannot reference a case that does not exist.
 export type PracticeScenarioId =

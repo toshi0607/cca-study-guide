@@ -20,11 +20,12 @@ type Props = {
   onOpenCard: (cardId: string) => void;
   onOpenQuestion: (questionId: string) => void;
   onOpenHandsOn: () => void;
+  onOpenOfficialScenarios: () => void;
 };
 
 const diagnosisStarts = ['sg-agentic-loop', 'sg-tool-and-mcp', 'sg-context-and-handoff'];
 
-export function GuideView({ locale, copy, records, onProgressAction, onOpenCard, onOpenQuestion, onOpenHandsOn }: Props) {
+export function GuideView({ locale, copy, records, onProgressAction, onOpenCard, onOpenQuestion, onOpenHandsOn, onOpenOfficialScenarios }: Props) {
   const [diagnosis, setDiagnosis] = useState('');
   const [recommendation, setRecommendation] = useState<string | null>(null);
   const resultRef = useRef<HTMLParagraphElement>(null);
@@ -69,7 +70,9 @@ export function GuideView({ locale, copy, records, onProgressAction, onOpenCard,
             <strong>{index + 1}.</strong>{' '}
             {stage.target === 'hands-on'
               ? <button type="button" class="guide-path-link" onClick={onOpenHandsOn}>{stage.label}</button>
-              : stage.label}
+              : stage.target === 'official-scenarios'
+                ? <button type="button" class="guide-path-link" onClick={onOpenOfficialScenarios}>{stage.label}</button>
+                : stage.label}
             <span class={stage.available ? 'guide-now' : 'guide-later'}> — {stage.available ? copy.guide.availabilityNow : copy.guide.availabilityLater}</span>
           </li>
         ))}</ol>
@@ -79,6 +82,12 @@ export function GuideView({ locale, copy, records, onProgressAction, onOpenCard,
         <h3 id="guide-handson-title">{copy.handsOn.entryTitle}</h3>
         <p>{copy.handsOn.entryBody}</p>
         <button type="button" class="guide-handson-open" onClick={onOpenHandsOn}>{copy.handsOn.openList}</button>
+      </section>
+
+      <section class="guide-handson-entry" aria-labelledby="guide-official-title">
+        <h3 id="guide-official-title">{copy.officialScenarios.entryTitle}</h3>
+        <p>{copy.officialScenarios.entryBody}</p>
+        <button type="button" class="guide-handson-open" onClick={onOpenOfficialScenarios}>{copy.officialScenarios.openList}</button>
       </section>
 
       <section class="guide-calendar" aria-labelledby="guide-calendar-title"><h3 id="guide-calendar-title">{copy.guide.calendarTitle}</h3><p>{copy.guide.calendarBody}</p></section>

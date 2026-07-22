@@ -20,7 +20,7 @@ const questionsByScenario = new Map(
 const domainBadges = (domainIds: string[]) =>
   domains.filter((domain) => domainIds.includes(domain.id)).map((domain) => <span key={domain.id} class="card-domain">D{domain.number}</span>);
 
-export function QuizView({ locale, copy, quizStats, onAnswer, targetQuestionId, onTargetOpened }: { locale: Locale; copy: UiCopy; quizStats?: Record<string, QuizStat>; onAnswer: (questionId: string, correct: boolean) => boolean; targetQuestionId: string | null; onTargetOpened: () => void }) {
+export function QuizView({ locale, copy, quizStats, onAnswer, targetQuestionId, onTargetOpened, targetScenarioId, onTargetScenarioOpened }: { locale: Locale; copy: UiCopy; quizStats?: Record<string, QuizStat>; onAnswer: (questionId: string, correct: boolean) => boolean; targetQuestionId: string | null; onTargetOpened: () => void; targetScenarioId: string | null; onTargetScenarioOpened: () => void }) {
   const [phase, setPhase] = useState<'setup' | 'background' | 'question' | 'summary'>('setup');
   const [mode, setMode] = useState<QuizMode>('random');
   const [scenario, setScenario] = useState<Scenario | null>(null);
@@ -31,8 +31,10 @@ export function QuizView({ locale, copy, quizStats, onAnswer, targetQuestionId, 
   const [selected, setSelected] = useState<string[]>([]);
   const [results, setResults] = useState<QuizResult[]>([]);
   const [targetAnnouncement, setTargetAnnouncement] = useState('');
+  const [focusBackground, setFocusBackground] = useState(false);
   const feedbackRef = useRef<HTMLDivElement>(null);
   const targetAnnouncementRef = useRef<HTMLParagraphElement>(null);
+  const backgroundHeadingRef = useRef<HTMLHeadingElement>(null);
   // Synchronous re-entrancy guard: `answered` only flips on the next render,
   // so a double-fired click could otherwise record the same question twice.
   const answeredIdRef = useRef<string | null>(null);
@@ -78,6 +80,26 @@ export function QuizView({ locale, copy, quizStats, onAnswer, targetQuestionId, 
     setPhase('background');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
+
+  // Exact-target entry from the official scenarios view: open the requested
+  // practice case's background directly and move focus to its heading, then clear
+  // the target. The existing quit button returns the learner to the quiz setup.
+  useEffect(() => {
+    if (!targetScenarioId) return;
+    const target = scenarios.find((candidate) => candidate.id === targetScenarioId);
+    if (target) {
+      openScenario(target);
+      setFocusBackground(true);
+    }
+    onTargetScenarioOpened();
+  }, [targetScenarioId]);
+
+  useEffect(() => {
+    if (focusBackground && phase === 'background') {
+      requestAnimationFrame(() => backgroundHeadingRef.current?.focus());
+      setFocusBackground(false);
+    }
+  }, [focusBackground, phase]);
 
   const answer = (question: ChoiceQuestion, selectedIds: string[]) => {
     if (answeredIdRef.current === question.id) return;
@@ -126,7 +148,7 @@ export function QuizView({ locale, copy, quizStats, onAnswer, targetQuestionId, 
 
       {phase === 'background' && scenario && <article class="scenario-brief">
         <p class="eyebrow">{copy.quiz.backgroundTitle}</p>
-        <h3>{localize(scenario.title, locale)}</h3>
+        <h3 tabIndex={-1} ref={backgroundHeadingRef}>{localize(scenario.title, locale)}</h3>
         <div class="scenario-item-meta">{domainBadges(scenario.domainIds)}<span>{copy.quiz.scenarioQuestionCount((questionsByScenario.get(scenario.id) ?? []).length)}</span></div>
         <ScenarioBackground scenario={scenario} locale={locale}/>
         <button class="quiz-start" onClick={() => launch(questionsByScenario.get(scenario.id) ?? [])}>{copy.quiz.proceedToQuestions} <span aria-hidden="true">→</span></button>

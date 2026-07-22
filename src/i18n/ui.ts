@@ -1,7 +1,7 @@
 import type { LocalizedText } from '../content/types';
 import type { Locale } from './locales';
 
-type View = 'today' | 'guide' | 'practice' | 'quiz' | 'progress' | 'hands-on';
+type View = 'today' | 'guide' | 'practice' | 'quiz' | 'progress' | 'hands-on' | 'official-scenarios';
 type HandsOnStatus = 'not_started' | 'in_progress' | 'completed' | 'stale' | 'future';
 type CardKind = 'recall' | 'contrast' | 'scenario';
 type QuestionFormat = 'single' | 'multiple';
@@ -166,6 +166,49 @@ export type UiCopy = {
       unstep: (completed: number, total: number) => string;
     };
   };
+  officialScenarios: {
+    eyebrow: string;
+    title: string;
+    introduction: string;
+    // Guide entry section that links into this sub-area.
+    entryTitle: string;
+    entryBody: string;
+    openList: string;
+    loading: string;
+    loadError: string;
+    retry: string;
+    // Distinguishes the official exam scenarios from this app's practice cases.
+    officialBadge: string;
+    officialNote: string;
+    practiceBadge: string;
+    recommendationNote: string;
+    backToList: string;
+    minutes: (count: number) => string;
+    relatedCounts: (handsOn: number, practice: number) => string;
+    domains: string;
+    taskStatements: string;
+    skills: string;
+    objectives: string;
+    requirements: string;
+    decisionPoints: string;
+    considerations: string;
+    recommendedApproach: string;
+    rationale: string;
+    antiPatterns: string;
+    antiPatternMistake: string;
+    antiPatternConsequence: string;
+    tradeoffs: string;
+    tradeoffCondition: string;
+    tradeoffShift: string;
+    relatedPracticeScenarios: string;
+    relatedPracticeNote: string;
+    relatedHandsOn: string;
+    noHandsOn: string;
+    relatedCards: string;
+    relatedQuestions: string;
+    officialSources: string;
+    estimatedTime: string;
+  };
   practice: {
     eyebrow: string;
     title: string;
@@ -313,7 +356,7 @@ export const ui = {
       opensNewTab: '（新しいタブで開く）',
     },
     languageNames: { ja: '日本語', en: 'English' },
-    views: { today: '今日', guide: 'ガイド', practice: '練習', quiz: '演習', progress: '進捗', 'hands-on': 'ハンズオン' },
+    views: { today: '今日', guide: 'ガイド', practice: '練習', quiz: '演習', progress: '進捗', 'hands-on': 'ハンズオン', 'official-scenarios': '公式シナリオ' },
     pageTitle: 'CCA Field Notes — Claude Certified Architect非公式学習ガイド',
     notices: {
       saveFailed: '進捗を保存できませんでした。ブラウザのサイトデータ設定または空き容量を確認してください。',
@@ -387,8 +430,8 @@ export const ui = {
       serviceTitle: 'このサービスでできること／できないこと',
       serviceBody: '公開資料に基づく独自のガイド、カード、選択式演習を提供します。非公式であり、実試験問題やexam dumpは使用せず、合格を保証しません。Claude Code、API、MCP、CIの実システム経験は、ご自身の環境で別途行ってください。',
       pathTitle: '8段階の学習パス（独自の学習上の提案）',
-      path: [{ label: '初回診断', available: true }, { label: 'D1/D2/D5 基礎', available: true }, { label: 'D3/D4 実装・運用', available: true }, { label: 'Hands-on', available: true, target: 'hands-on' }, { label: 'シナリオ判断', available: true }, { label: '模試', available: false }, { label: '誤答修正', available: false }, { label: '本番直前チェック', available: false }],
-      availabilityNow: '現在利用可能: Guide、Hands-on、Practice、Quiz', availabilityLater: 'この段階の詳細機能は今後の学習計画です。実環境での作業はこのサービス外で行ってください。',
+      path: [{ label: '初回診断', available: true }, { label: 'D1/D2/D5 基礎', available: true }, { label: 'D3/D4 実装・運用', available: true }, { label: 'Hands-on', available: true, target: 'hands-on' }, { label: 'シナリオ判断', available: true, target: 'official-scenarios' }, { label: '模試', available: false }, { label: '誤答修正', available: false }, { label: '本番直前チェック', available: false }],
+      availabilityNow: '現在利用可能: Guide、Hands-on、公式シナリオ、Practice、Quiz', availabilityLater: 'この段階の詳細機能は今後の学習計画です。実環境での作業はこのサービス外で行ってください。',
       calendarTitle: '8月末までの進め方', calendarBody: '残り期間では、先にガイドで範囲を確認し、カードで想起し、選択式演習で判断を言語化する順に繰り返してください。遅れた場合は未完了セクションを優先し、固定の日数や合格可能性は前提にしません。',
     },
     handsOn: {
@@ -444,6 +487,47 @@ export const ui = {
         step: (completed, total) => `ステップを完了として記録しました（${completed}/${total}）。`,
         unstep: (completed, total) => `ステップの完了を取り消しました（${completed}/${total}）。`,
       },
+    },
+    officialScenarios: {
+      eyebrow: 'OFFICIAL SCENARIO LEARNING',
+      title: '公式シナリオで設計判断を学ぶ',
+      introduction: 'Exam Guide v1.0が挙げる6つの応用文脈を、ラベルではなく設計判断として学びます。各シナリオで何を設計し、どの要件が判断を変え、何が適切で、よくある誤りがなぜ失敗するかを扱います。',
+      entryTitle: '公式シナリオで設計判断を練習する',
+      entryBody: '試験が示す6つの応用文脈それぞれについて、要件・判断ポイント・推奨方針・アンチパターン・トレードオフと、次に学ぶ関連コンテンツへの導線をまとめています。',
+      openList: '公式シナリオ一覧へ',
+      loading: '公式シナリオを読み込んでいます…',
+      loadError: '公式シナリオの読み込みに失敗しました。',
+      retry: 'ページを再読み込み',
+      officialBadge: '公式シナリオ',
+      officialNote: 'Exam Guide v1.0に記載された応用文脈です。タイトルと概要は原文の要約で、逐語転載ではありません。',
+      practiceBadge: '練習ケース（当アプリ独自）',
+      recommendationNote: '「推奨方針」は当アプリ独自の学習上の提案です。公式の指示ではなく、出典は根拠となる技術的事実を示すものです。',
+      backToList: '公式シナリオ一覧に戻る',
+      minutes: (count) => `約${count}分`,
+      relatedCounts: (handsOn, practice) => `関連ハンズオン ${handsOn}・練習ケース ${practice}`,
+      domains: 'ドメイン',
+      taskStatements: 'タスクステートメント',
+      skills: 'スキル',
+      objectives: '学習目標',
+      requirements: '要件・制約',
+      decisionPoints: '判断ポイント',
+      considerations: '判断を変える条件',
+      recommendedApproach: '推奨方針（当アプリの提案）',
+      rationale: '推奨方針が成立する理由',
+      antiPatterns: 'よくある誤り（アンチパターン）',
+      antiPatternMistake: '誤った選択',
+      antiPatternConsequence: 'なぜ失敗するか',
+      tradeoffs: 'トレードオフ（条件が変わると判断がどう変わるか）',
+      tradeoffCondition: '条件',
+      tradeoffShift: '判断の変化',
+      relatedPracticeScenarios: '関連する練習ケース',
+      relatedPracticeNote: 'これらは当アプリが独自に作成した架空のケースです。実試験のシナリオではありません。',
+      relatedHandsOn: '関連ハンズオン',
+      noHandsOn: 'このシナリオに直接対応するハンズオンは現在ありません。',
+      relatedCards: '関連カード',
+      relatedQuestions: '関連問題',
+      officialSources: '公式の出典',
+      estimatedTime: '目安時間',
     },
     practice: {
       eyebrow: 'INDEPENDENT RETRIEVAL PRACTICE',
@@ -585,7 +669,7 @@ export const ui = {
       opensNewTab: ' (opens in a new tab)',
     },
     languageNames: { ja: '日本語', en: 'English' },
-    views: { today: 'Today', guide: 'Guide', practice: 'Practice', quiz: 'Quiz', progress: 'Progress', 'hands-on': 'Hands-on' },
+    views: { today: 'Today', guide: 'Guide', practice: 'Practice', quiz: 'Quiz', progress: 'Progress', 'hands-on': 'Hands-on', 'official-scenarios': 'Official scenarios' },
     pageTitle: 'CCA Field Notes — Unofficial Claude Certified Architect study guide',
     notices: {
       saveFailed: 'Your progress could not be saved. Check this browser’s site-data settings or available storage.',
@@ -659,8 +743,8 @@ export const ui = {
       serviceTitle: 'What this service provides — and does not',
       serviceBody: 'It provides independently written guides, cards, and choice practice grounded in public sources. It is unofficial, uses no live exam questions or exam dumps, and offers no pass guarantee. Gain real Claude Code, API, MCP, and CI experience separately in your own environment.',
       pathTitle: 'Eight-stage learning path (independent study guidance)',
-      path: [{ label: 'Initial orientation', available: true }, { label: 'D1/D2/D5 foundations', available: true }, { label: 'D3/D4 implementation and operations', available: true }, { label: 'Hands-on work', available: true, target: 'hands-on' }, { label: 'Scenario judgment', available: true }, { label: 'Mock exam', available: false }, { label: 'Incorrect-answer repair', available: false }, { label: 'Final check', available: false }],
-      availabilityNow: 'Available now: Guide, Hands-on, Practice, and Quiz', availabilityLater: 'Detailed tooling for this stage is a future study-plan step. Do real-environment work outside this service.',
+      path: [{ label: 'Initial orientation', available: true }, { label: 'D1/D2/D5 foundations', available: true }, { label: 'D3/D4 implementation and operations', available: true }, { label: 'Hands-on work', available: true, target: 'hands-on' }, { label: 'Scenario judgment', available: true, target: 'official-scenarios' }, { label: 'Mock exam', available: false }, { label: 'Incorrect-answer repair', available: false }, { label: 'Final check', available: false }],
+      availabilityNow: 'Available now: Guide, Hands-on, Official scenarios, Practice, and Quiz', availabilityLater: 'Detailed tooling for this stage is a future study-plan step. Do real-environment work outside this service.',
       calendarTitle: 'How to use the time through the end of August', calendarBody: 'Use the remaining time in cycles: map the scope in the guide, retrieve it with cards, then articulate decisions in choice practice. If time gets tight, prioritize unfinished sections; this plan does not assume fixed days or predict an outcome.',
     },
     handsOn: {
@@ -716,6 +800,47 @@ export const ui = {
         step: (completed, total) => `Step marked complete (${completed}/${total}).`,
         unstep: (completed, total) => `Step completion cleared (${completed}/${total}).`,
       },
+    },
+    officialScenarios: {
+      eyebrow: 'OFFICIAL SCENARIO LEARNING',
+      title: 'Learn design judgment from the official scenarios',
+      introduction: 'Study the six application contexts named by Exam Guide v1.0 as design judgments, not labels. Each scenario covers what you design, which requirements move the decision, what is appropriate, and why common mistakes fail.',
+      entryTitle: 'Practice design judgment on the official scenarios',
+      entryBody: 'For each of the six application contexts the exam draws from, this collects the requirements, decision points, recommended approach, anti-patterns, and trade-offs, plus links to what to study next.',
+      openList: 'Go to the official scenarios',
+      loading: 'Loading the official scenarios.',
+      loadError: 'The official scenarios could not be loaded. Try again.',
+      retry: 'Reload page',
+      officialBadge: 'Official scenario',
+      officialNote: 'An application context named in Exam Guide v1.0. The title and summary are original paraphrases, not verbatim copies of the guide.',
+      practiceBadge: 'Practice case (this app’s own)',
+      recommendationNote: 'The “recommended approach” is this app’s independent study guidance, not an official prescription. Sources support the underlying technical facts.',
+      backToList: 'Back to the official scenarios',
+      minutes: (count) => `about ${count} min`,
+      relatedCounts: (handsOn, practice) => `${handsOn} hands-on · ${practice} practice case${practice === 1 ? '' : 's'}`,
+      domains: 'Domains',
+      taskStatements: 'Task statements',
+      skills: 'Skills',
+      objectives: 'Learning objectives',
+      requirements: 'Requirements and constraints',
+      decisionPoints: 'Decision points',
+      considerations: 'What shifts the decision',
+      recommendedApproach: 'Recommended approach (this app’s guidance)',
+      rationale: 'Why the recommendation holds',
+      antiPatterns: 'Common mistakes (anti-patterns)',
+      antiPatternMistake: 'The wrong choice',
+      antiPatternConsequence: 'Why it fails',
+      tradeoffs: 'Trade-offs (how the judgment shifts when conditions change)',
+      tradeoffCondition: 'Condition',
+      tradeoffShift: 'How the judgment shifts',
+      relatedPracticeScenarios: 'Related practice cases',
+      relatedPracticeNote: 'These are fictional cases this app authored independently. They are not live exam scenarios.',
+      relatedHandsOn: 'Related hands-on guides',
+      noHandsOn: 'No hands-on guide maps directly to this scenario yet.',
+      relatedCards: 'Related cards',
+      relatedQuestions: 'Related questions',
+      officialSources: 'Official sources',
+      estimatedTime: 'Estimated time',
     },
     practice: {
       eyebrow: 'INDEPENDENT RETRIEVAL PRACTICE',

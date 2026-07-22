@@ -540,6 +540,42 @@ main {
 .handson-actions button:disabled { opacity: .5; cursor: not-allowed; }
 .handson-complete-hint { color: var(--ink-soft); font-size: .85rem; }
 
+/* Official scenario learning view. Mirrors the hands-on list/detail patterns. */
+.official-view { width: min(1180px, 100%); margin-inline: auto; }
+.official-back { margin: 0 0 8px; }
+.official-badge { display: inline-block; padding: 3px 8px; font: 700 .72rem var(--mono); }
+.official-badge--official { border: 1px solid var(--cyan-dark); background: var(--cyan-pale); color: var(--cyan-dark); }
+.official-badge--practice { border: 1px solid var(--amber); background: var(--amber-pale); color: var(--ink); }
+.official-source-note { margin: 10px 0 0; padding: 10px; border-left: 4px solid var(--grid-strong); background: var(--surface); color: var(--ink-soft); font-size: .85rem; }
+.official-recommendation-note, .official-practice-note { margin: 0 0 8px; padding: 10px; border-left: 4px solid var(--amber); background: var(--amber-pale); color: var(--ink); font-size: .85rem; }
+.official-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 6px 0 0; }
+.official-minutes { font: 700 .82rem var(--mono); color: var(--ink-soft); }
+.official-badges { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px 24px; margin: 24px 0; padding: 20px; border: 1px solid var(--grid); background: var(--surface); }
+.official-badges h3 { margin: 0 0 6px; font-size: .85rem; }
+.official-badges p { margin: 0; color: var(--ink-soft); }
+.official-view > section { margin-top: 22px; }
+.official-view > section > h3 { font: 700 1.35rem var(--display); }
+.official-view section ul, .official-view section ol { padding-left: 1.25em; }
+.official-view section li { margin: 3px 0; }
+.official-sublabel { font-weight: 700; color: var(--cyan-dark); }
+.official-decisions > div, .official-antipatterns > div, .official-tradeoffs > div { padding: 12px 0; border-top: 1px solid var(--grid); }
+.official-decisions > div:first-child, .official-antipatterns > div:first-child, .official-tradeoffs > div:first-child { border-top: 0; }
+.official-decisions dt, .official-antipatterns dt, .official-tradeoffs dt { font-weight: 700; }
+.official-decisions dd, .official-antipatterns dd, .official-tradeoffs dd { margin: 6px 0 0; color: var(--ink-soft); }
+.official-decisions dd ul { margin: 4px 0 0; }
+.official-empty { color: var(--ink-soft); }
+.official-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px; margin: 16px 0 0; padding: 0; list-style: none; }
+.official-card { padding: clamp(16px, 3vw, 24px); border: 1px solid var(--grid-strong); border-left: 6px solid var(--cyan-dark); background: var(--surface); }
+.official-card-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.official-card-minutes { font: 700 .78rem var(--mono); color: var(--ink-soft); }
+.official-card h3 { margin: 8px 0 0; font: 700 1.2rem var(--display); }
+.official-open { border: 0; background: transparent; color: var(--cyan-dark); font: inherit; text-align: left; cursor: pointer; padding: 0; min-height: 44px; }
+.official-card-summary { color: var(--ink-soft); }
+.official-card-badges { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 0; }
+.official-card-statements { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 0; }
+.official-card-skills { margin: 8px 0 0; color: var(--ink-soft); font-size: .85rem; }
+.official-card-related { margin: 8px 0 0; font: 700 .78rem var(--mono); color: var(--cyan-dark); }
+
 .filter-panel {
   margin-top: 24px;
   padding: 20px;

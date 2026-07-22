@@ -13,6 +13,7 @@ export function GuideEntry(props: {
   onOpenCard: (cardId: string) => void;
   onOpenQuestion: (questionId: string) => void;
   onOpenHandsOn: () => void;
+  onOpenOfficialScenarios: () => void;
 }) {
   const [Guide, setGuide] = useState<GuideComponent | null>(null);
   const [error, setError] = useState(false);
