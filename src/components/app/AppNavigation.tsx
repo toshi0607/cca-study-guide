@@ -3,8 +3,12 @@ import type { UiCopy } from '../../i18n/ui';
 import { LanguageNav } from './LanguageNav';
 import type { View } from './types';
 
-export const viewKeys: View[] = ['today', 'guide', 'practice', 'quiz', 'progress'];
-export const icons: Record<View, string> = { today: '⌂', guide: '▤', practice: '◇', quiz: '☑', progress: '✓' };
+// Hands-on is reached from inside the Guide view (its learning path and entry
+// section), not from the bottom navigation, so the 360px five-item bar stays
+// uncrowded. It is therefore deliberately excluded from the navigable keys.
+type NavKey = Exclude<View, 'hands-on'>;
+export const viewKeys: NavKey[] = ['today', 'guide', 'practice', 'quiz', 'progress'];
+export const icons: Record<NavKey, string> = { today: '⌂', guide: '▤', practice: '◇', quiz: '☑', progress: '✓' };
 
 type NavProps = { locale: Locale; copy: UiCopy; view: View; ready: boolean; onNavigate: (next: View) => void };
 
@@ -12,7 +16,9 @@ function NavButtons({ view, ready, copy, onNavigate }: Omit<NavProps, 'locale'>)
   return (
     <>
       {viewKeys.map((key) => (
-        <button key={key} disabled={!ready} aria-current={view === key ? 'page' : undefined} onClick={() => onNavigate(key)}>
+        // Hands-on is a Guide sub-view (not its own nav item), so the Guide
+        // button stays marked current while the learner is inside hands-on.
+        <button key={key} disabled={!ready} aria-current={view === key || (key === 'guide' && view === 'hands-on') ? 'page' : undefined} onClick={() => onNavigate(key)}>
           <span aria-hidden="true">{icons[key]}</span>{copy.views[key]}
         </button>
       ))}

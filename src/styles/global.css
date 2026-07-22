@@ -478,6 +478,7 @@ main {
 .guide-domain-badges, .guide-statement-ids { display: flex; flex-wrap: wrap; gap: 7px; margin: 0; }
 .guide-statement-ids code { padding: 3px 6px; background: var(--cyan-pale); color: var(--cyan-dark); font: 700 .72rem var(--mono); }
 .guide-state-note { padding: 10px; border-left: 4px solid var(--amber); background: var(--amber-pale); }
+.guide-state-note--completed { border-left-color: var(--green); background: #eef7f2; }
 .guide-targets { display: flex; flex-wrap: wrap; gap: 8px; }
 .guide-targets button { min-height: 44px; padding: 0 10px; border: 1px solid var(--grid-strong); background: var(--surface); color: var(--cyan-dark); cursor: pointer; font: 700 .75rem var(--mono); }
 .guide-actions { margin-top: 22px; }
@@ -485,6 +486,59 @@ main {
 .practice-target { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; justify-content: space-between; }
 .practice-target p, .quiz-target { margin: 0; }
 .practice-target button { min-height: 44px; padding: 0 12px; border: 1px solid var(--cyan-dark); background: var(--surface); color: var(--cyan-dark); cursor: pointer; font-weight: 700; }
+
+/* Hands-on: entry from the guide */
+.guide-path-link { min-height: 34px; padding: 2px 4px; border: 0; background: transparent; color: var(--cyan-dark); font: inherit; font-weight: 700; text-decoration: underline; cursor: pointer; }
+.guide-handson-entry { margin-top: 24px; padding: clamp(22px, 4vw, 38px); border: 1px solid var(--grid-strong); border-left: 6px solid var(--cyan-dark); background: var(--surface); }
+.guide-handson-entry h3 { margin-top: 0; font: 700 1.55rem var(--display); }
+.guide-handson-entry p { max-width: 800px; color: var(--ink-soft); }
+.guide-handson-open { min-height: 44px; margin-top: 6px; padding: 0 16px; border: 1px solid var(--cyan-dark); background: var(--cyan-dark); color: #fff; cursor: pointer; font-weight: 700; }
+
+/* Hands-on: list and detail */
+.handson-view { width: min(1180px, 100%); margin-inline: auto; }
+.handson-back { margin: 0 0 8px; }
+.link-back { min-height: 44px; padding: 0 6px 0 0; border: 0; background: transparent; color: var(--cyan-dark); font-weight: 700; cursor: pointer; }
+.handson-list-progress { margin: 0; color: var(--ink-soft); font: 700 .95rem var(--mono); }
+.handson-list { display: grid; gap: 16px; margin: 8px 0 0; padding: 0; list-style: none; }
+.handson-card { padding: clamp(16px, 3vw, 24px); border: 1px solid var(--grid-strong); background: var(--surface); }
+.handson-card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; }
+.handson-card-head h3 { margin: 0; font: 700 1.25rem var(--display); }
+.handson-open { min-height: 34px; padding: 0; border: 0; background: transparent; color: var(--ink); font: inherit; text-align: left; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+.handson-open:hover { color: var(--cyan-dark); }
+.handson-card-summary { color: var(--ink-soft); }
+.handson-card-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 4px 0 0; color: var(--ink-soft); font-size: .82rem; }
+.handson-card-scenario { font-weight: 700; color: var(--cyan-dark); }
+.handson-card-steps { margin: 8px 0 0; font: 700 .8rem var(--mono); color: var(--ink-soft); }
+.handson-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-top: 10px; }
+.handson-minutes, .handson-stepcount { font: 700 .8rem var(--mono); color: var(--ink-soft); }
+.handson-badges { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px 24px; margin: 24px 0; padding: 20px; border: 1px solid var(--grid); background: var(--surface); }
+.handson-badges h3 { margin: 0 0 6px; font-size: .85rem; }
+.handson-badges p { margin: 0; color: var(--ink-soft); }
+.handson-view > section { margin-top: 22px; }
+.handson-view > section > h3 { font: 700 1.35rem var(--display); }
+.handson-view section ul, .handson-view section ol { padding-left: 1.25em; }
+.handson-view section li { margin: 3px 0; }
+.handson-steps { margin: 0; padding: 0; border: 0; }
+.handson-steps:disabled { opacity: .65; }
+.handson-step { padding: 14px 0; border-top: 1px solid var(--grid); }
+.handson-step:first-of-type { border-top: 0; }
+.handson-step-check { display: flex; align-items: flex-start; gap: 10px; min-height: 44px; margin: 0; }
+.handson-step-check input { width: 22px; height: 22px; margin-top: 2px; flex: 0 0 auto; accent-color: var(--cyan-dark); }
+.handson-step-check label { font-weight: 700; cursor: pointer; }
+.handson-steps:disabled .handson-step-check label { cursor: not-allowed; }
+.handson-step-num { display: inline-block; min-width: 1.6em; padding: 1px 5px; margin-right: 4px; background: var(--cyan-pale); color: var(--cyan-dark); font: 700 .72rem var(--mono); text-align: center; }
+.handson-step-instructions { margin: 8px 0 6px; color: var(--ink-soft); }
+.handson-step-expected { margin: 6px 0 2px; font-size: .85rem; }
+.handson-step-expected-list { margin: 0 0 4px; color: var(--green); }
+.handson-troubleshooting { margin: 0; }
+.handson-troubleshooting > div { padding: 10px 0; border-top: 1px solid var(--grid); }
+.handson-troubleshooting > div:first-child { border-top: 0; }
+.handson-troubleshooting dt { font-weight: 700; }
+.handson-troubleshooting dd { margin: 4px 0 0; color: var(--ink-soft); }
+.handson-actions { margin-top: 26px; display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+.handson-actions button { min-height: 44px; padding: 0 16px; border: 1px solid var(--cyan-dark); background: var(--cyan-dark); color: #fff; cursor: pointer; font-weight: 700; }
+.handson-actions button:disabled { opacity: .5; cursor: not-allowed; }
+.handson-complete-hint { color: var(--ink-soft); font-size: .85rem; }
 
 .filter-panel {
   margin-top: 24px;
@@ -812,6 +866,8 @@ main {
   .objective { padding: 20px 16px; }
   .guide-section-heading { grid-template-columns: 1fr; gap: 12px; }
   .guide-section summary { align-items: flex-start; flex-direction: column; padding: 14px 0; }
+  .handson-card-head { flex-direction: column; gap: 8px; }
+  .handson-badges { grid-template-columns: 1fr; padding: 16px; }
   .filter-panel { grid-template-columns: 1fr; }
   .search-label { grid-column: auto; }
   .practice-card > header { padding-inline: 14px; }

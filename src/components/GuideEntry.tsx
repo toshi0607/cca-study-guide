@@ -12,6 +12,7 @@ export function GuideEntry(props: {
   onProgressAction: (sectionId: string, revision: number, action: 'start' | 'complete' | 'reconfirm') => boolean;
   onOpenCard: (cardId: string) => void;
   onOpenQuestion: (questionId: string) => void;
+  onOpenHandsOn: () => void;
 }) {
   const [Guide, setGuide] = useState<GuideComponent | null>(null);
   const [error, setError] = useState(false);
