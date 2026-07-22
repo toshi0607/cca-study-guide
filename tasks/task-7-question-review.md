@@ -210,4 +210,9 @@ replaced a subtle `state.endsWith('-selected')` with explicit equality in
 
 ## PR URL
 
-(added after PR creation)
+https://github.com/toshi0607/cca-study-guide/pull/34 (open, not merged)
+
+- branch: `claude/task-7-metadata-rationale-ui-ad5260`
+- base SHA: `d1dc28078c3ed19a4cb504f3eb20718cab29a793`
+- HEAD SHA: `3217d2e72d8fcdc9a3722e6036d29900ffac8f48`
+- 14 files changed, 835 insertions(+), 38 deletions(-)
