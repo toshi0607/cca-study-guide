@@ -440,6 +440,52 @@ main {
 .source-links { margin: 8px 0; padding: 0; list-style: none; font-size: .78rem; }
 .source-links li + li { margin-top: 5px; }
 
+.guide-loading, .guide-load-error, .guide-context, .guide-diagnosis, .guide-path, .guide-calendar, .guide-sections {
+  margin-top: 24px;
+  padding: clamp(22px, 4vw, 38px);
+  border: 1px solid var(--grid-strong);
+  background: var(--surface);
+}
+.guide-loading, .guide-load-error { width: min(1180px, 100%); margin-inline: auto; }
+.guide-context { border-left: 6px solid var(--ink); }
+.guide-context h3, .guide-diagnosis h3, .guide-path h3, .guide-calendar h3, .guide-sections h3 { margin-top: 0; font: 700 1.55rem var(--display); }
+.guide-context p, .guide-calendar p { max-width: 800px; color: var(--ink-soft); }
+.guide-availability { color: var(--cyan-dark) !important; font-weight: 700; }
+.guide-diagnosis form { display: grid; gap: 16px; }
+.guide-diagnosis fieldset { display: grid; gap: 10px; padding: 14px; border: 1px solid var(--grid); }
+.guide-diagnosis legend { font-weight: 700; }
+.guide-diagnosis label { min-height: 44px; display: flex; align-items: center; gap: 10px; }
+.guide-diagnosis button, .guide-actions button { min-height: 44px; width: fit-content; padding: 0 15px; border: 1px solid var(--cyan-dark); background: var(--cyan-dark); color: #fff; cursor: pointer; font-weight: 700; }
+.guide-diagnosis button:disabled { opacity: .5; cursor: not-allowed; }
+.guide-recommendation { margin-bottom: 0; padding: 12px; border-left: 4px solid var(--green); background: #eef7f2; }
+.guide-path ol { display: grid; gap: 10px; margin: 0; padding-left: 1.4em; }
+.guide-path li { padding: 6px 0; }
+.guide-later { display: block; color: var(--ink-soft); font-size: .88rem; }
+.guide-now { display: block; color: var(--green); font-size: .88rem; }
+.guide-section-heading { display: grid; grid-template-columns: minmax(0, 1fr) minmax(150px, .8fr); gap: 24px; align-items: center; margin-bottom: 16px; }
+.guide-section-heading .eyebrow { margin-bottom: 4px; }
+.guide-section-heading progress { width: 100%; height: 12px; }
+.guide-section { border-top: 1px solid var(--grid-strong); }
+.guide-section:last-child { border-bottom: 1px solid var(--grid-strong); }
+.guide-section summary { min-height: 58px; padding: 10px 0; display: flex; align-items: center; justify-content: space-between; gap: 14px; cursor: pointer; font-weight: 700; }
+.guide-section summary code { margin-right: 7px; padding: 3px 6px; background: var(--cyan-pale); color: var(--cyan-dark); font: 700 .72rem var(--mono); }
+.guide-status { flex: 0 0 auto; padding: 3px 7px; border: 1px solid currentcolor; font: 700 .68rem var(--mono); }
+.status-not_started { color: var(--ink-soft); }.status-in_progress { color: var(--amber); }.status-completed { color: var(--green); }.status-stale { color: var(--amber); }.status-future { color: var(--danger); }
+.guide-section-body { padding: 8px 0 24px; }
+.guide-section-body > p { color: var(--ink-soft); }
+.guide-section-body h4 { margin: 20px 0 7px; font-size: .85rem; }
+.guide-section-body ul { margin: 0; padding-left: 1.25em; }
+.guide-domain-badges, .guide-statement-ids { display: flex; flex-wrap: wrap; gap: 7px; margin: 0; }
+.guide-statement-ids code { padding: 3px 6px; background: var(--cyan-pale); color: var(--cyan-dark); font: 700 .72rem var(--mono); }
+.guide-state-note { padding: 10px; border-left: 4px solid var(--amber); background: var(--amber-pale); }
+.guide-targets { display: flex; flex-wrap: wrap; gap: 8px; }
+.guide-targets button { min-height: 44px; padding: 0 10px; border: 1px solid var(--grid-strong); background: var(--surface); color: var(--cyan-dark); cursor: pointer; font: 700 .75rem var(--mono); }
+.guide-actions { margin-top: 22px; }
+.practice-target, .quiz-target { margin: 18px 0; padding: 12px; border-left: 4px solid var(--cyan); background: var(--cyan-pale); }
+.practice-target { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; justify-content: space-between; }
+.practice-target p, .quiz-target { margin: 0; }
+.practice-target button { min-height: 44px; padding: 0 12px; border: 1px solid var(--cyan-dark); background: var(--surface); color: var(--cyan-dark); cursor: pointer; font-weight: 700; }
+
 .filter-panel {
   margin-top: 24px;
   padding: 20px;
@@ -764,6 +810,8 @@ main {
   .domain-number { font-size: 1.35rem; }
   .objective-grid { grid-template-columns: 1fr; }
   .objective { padding: 20px 16px; }
+  .guide-section-heading { grid-template-columns: 1fr; gap: 12px; }
+  .guide-section summary { align-items: flex-start; flex-direction: column; padding: 14px 0; }
   .filter-panel { grid-template-columns: 1fr; }
   .search-label { grid-column: auto; }
   .practice-card > header { padding-inline: 14px; }

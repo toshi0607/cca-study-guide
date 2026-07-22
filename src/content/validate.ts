@@ -105,6 +105,19 @@ const handsOnGuideSchema = z.object({
 
 export const genericSourceIds = new Set(['exam-guide', 'cert', 'announcement', 'code-index', 'platform-index']);
 
+// The exam guide defines this fixed taxonomy. Counts alone are not enough:
+// replacing one ID with another could otherwise leave a seemingly complete
+// thirty-objective data set that no longer matches the published blueprint.
+const officialDomainBlueprint = [
+  { id: 'd1', number: 1, objectiveIds: ['1.1', '1.2', '1.3', '1.4', '1.5', '1.6', '1.7'] },
+  { id: 'd2', number: 2, objectiveIds: ['2.1', '2.2', '2.3', '2.4', '2.5'] },
+  { id: 'd3', number: 3, objectiveIds: ['3.1', '3.2', '3.3', '3.4', '3.5', '3.6'] },
+  { id: 'd4', number: 4, objectiveIds: ['4.1', '4.2', '4.3', '4.4', '4.5', '4.6'] },
+  { id: 'd5', number: 5, objectiveIds: ['5.1', '5.2', '5.3', '5.4', '5.5', '5.6'] },
+] as const;
+const officialDomainIds = new Set(officialDomainBlueprint.map((domain) => domain.id));
+const officialObjectiveIds = new Set(officialDomainBlueprint.flatMap((domain) => domain.objectiveIds));
+
 const unique = (values: string[], label: string, errors: string[]) => {
   const duplicates = values.filter((value, index) => values.indexOf(value) !== index);
   if (duplicates.length) errors.push(`${label} has duplicate IDs: ${[...new Set(duplicates)].join(', ')}`);
@@ -206,6 +219,30 @@ export function validateDomains(input: unknown, index: ContentIndex): string[] {
   if (parsed.reduce((sum, domain) => sum + domain.weight, 0) !== 100) errors.push('domain weights must total 100');
   if (parsed.length !== 5) errors.push('exactly five domains are required');
   if (objectives.length !== 30) errors.push('exactly 30 objectives are required');
+  const parsedDomainIds = new Set(parsed.map((domain) => domain.id));
+  if (
+    parsedDomainIds.size !== officialDomainIds.size
+    || [...officialDomainIds].some((id) => !parsedDomainIds.has(id))
+  ) {
+    errors.push('domain IDs must exactly match the official blueprint');
+  }
+  const parsedObjectiveIds = new Set(objectives.map((objective) => objective.id));
+  if (
+    parsedObjectiveIds.size !== officialObjectiveIds.size
+    || [...officialObjectiveIds].some((id) => !parsedObjectiveIds.has(id))
+  ) {
+    errors.push('objective IDs must exactly match the official blueprint');
+  }
+  for (const domain of parsed) {
+    if (domain.id !== `d${domain.number}`) {
+      errors.push(`domain ${domain.id}: ID must match domain number ${domain.number}`);
+    }
+    for (const objective of domain.objectives) {
+      if (!objective.id.startsWith(`${domain.number}.`)) {
+        errors.push(`objective ${objective.id}: prefix must match domain ${domain.id}`);
+      }
+    }
+  }
   for (const objective of objectives) checkSourceIds(objective, 'objective', index, errors);
   return errors;
 }
@@ -394,6 +431,14 @@ export function validateStudyGuideSections(input: unknown, index: ContentIndex):
   const parsed = parseEach(studyGuideSectionSchema, input, 'study guide section', errors);
   unique(rawIds(input), 'study guide sections', errors);
   unique(parsed.map((item) => String(item.recommendedOrder)), 'study guide recommendedOrder', errors);
+
+  const objectiveDomainById = new Map(
+    domains.flatMap((domain) => domain.objectives.map((objective) => [objective.id, domain.id] as const)),
+  );
+  const objectiveById = new Map(domains.flatMap((domain) => domain.objectives.map((objective) => [objective.id, objective] as const)));
+  const cardById = new Map(cards.map((card) => [card.id, card]));
+  const questionById = new Map(questions.map((question) => [question.id, question]));
+
   for (const section of parsed) {
     const label = `study guide section ${section.id}`;
     checkSourceIds(section, 'study guide section', index, errors);
@@ -410,6 +455,78 @@ export function validateStudyGuideSections(input: unknown, index: ContentIndex):
     ] as const) {
       unique(ids, `${label} ${field}`, errors);
     }
+
+    const taskStatementIds = new Set(section.taskStatementIds);
+    const expectedDomainIds = new Set(
+      section.taskStatementIds.flatMap((id) => {
+        const domainId = objectiveDomainById.get(id);
+        return domainId === undefined ? [] : [domainId];
+      }),
+    );
+    const declaredDomainIds = new Set(section.domainIds);
+    if (
+      expectedDomainIds.size !== declaredDomainIds.size
+      || [...expectedDomainIds].some((id) => !declaredDomainIds.has(id))
+    ) {
+      errors.push(`${label}: domainIds must exactly match the domains of its task statements`);
+    }
+
+    for (const [kind, ids, byId] of [
+      ['card', section.relatedCardIds, cardById],
+      ['question', section.relatedQuestionIds, questionById],
+    ] as const) {
+      for (const id of ids) {
+        const item = byId.get(id);
+        if (item && !item.objectiveIds.some((objectiveId) => taskStatementIds.has(objectiveId))) {
+          errors.push(`${label}: related ${kind} ${id} does not cover a section task statement`);
+        }
+        if (item && !declaredDomainIds.has(item.domainId)) {
+          errors.push(`${label}: related ${kind} ${id} is outside the section domains`);
+        }
+      }
+    }
+
+    for (const taskStatementId of section.taskStatementIds) {
+      const hasRelatedCard = section.relatedCardIds.some((cardId) =>
+        cardById.get(cardId)?.objectiveIds.includes(taskStatementId),
+      );
+      if (!hasRelatedCard) errors.push(`${label}: task statement ${taskStatementId} has no related card`);
+
+      const claimSpecificSourceIds = objectiveById.get(taskStatementId)?.sourceIds
+        .filter((sourceId) => !genericSourceIds.has(sourceId)) ?? [];
+      if (!section.sourceIds.some((sourceId) => claimSpecificSourceIds.includes(sourceId))) {
+        errors.push(`${label}: task statement ${taskStatementId} is missing its claim-specific source`);
+      }
+    }
+
+    if (section.learningObjectives.ja.length !== section.learningObjectives.en.length) {
+      errors.push(`${label}: learningObjectives must have matching Japanese and English item counts`);
+    }
+    if (section.keyPoints.ja.length !== section.keyPoints.en.length) {
+      errors.push(`${label}: keyPoints must have matching Japanese and English item counts`);
+    }
+  }
+
+  const allTaskStatementIds = parsed.flatMap((section) => section.taskStatementIds);
+  unique(allTaskStatementIds, 'study guide task statements', errors);
+  const expectedTaskStatementIds = new Set(domains.flatMap((domain) => domain.objectives.map((objective) => objective.id)));
+  const actualTaskStatementIds = new Set(allTaskStatementIds);
+  if (
+    allTaskStatementIds.length !== expectedTaskStatementIds.size
+    || actualTaskStatementIds.size !== expectedTaskStatementIds.size
+    || [...expectedTaskStatementIds].some((id) => !actualTaskStatementIds.has(id))
+  ) {
+    errors.push('study guide sections must exactly cover all 30 task statements');
+  }
+
+  const coveredDomainIds = new Set(parsed.flatMap((section) => section.domainIds));
+  if (coveredDomainIds.size !== index.domainIds.size || [...index.domainIds].some((id) => !coveredDomainIds.has(id))) {
+    errors.push('study guide sections must cover all five domains');
+  }
+
+  const orders = parsed.map((section) => section.recommendedOrder).sort((left, right) => left - right);
+  if (orders.some((order, index) => order !== index + 1)) {
+    errors.push(`study guide recommendedOrder must be contiguous from 1 through ${orders.length}`);
   }
   return errors;
 }

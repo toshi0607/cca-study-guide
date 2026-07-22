@@ -4,11 +4,12 @@ import type { Card } from '../content/types';
 import { localePaths, type Locale } from '../i18n/locales';
 import { ui } from '../i18n/ui';
 import { isDue, scheduleReview, type Rating } from '../lib/scheduler';
+import { completeStudyGuideSection, reconfirmStudyGuideSection, startStudyGuideSection } from '../lib/study-guide-progress';
 import { buildStudyDataExport, createEmptyStudyData, createStudyStorage, parseStudyDataImport, type ImportedStudyData, type StudyData } from '../lib/storage';
 import { AppBottomNav, AppHeader } from './app/AppNavigation';
 import { formatDate } from './app/format';
 import type { View } from './app/types';
-import { GuideView } from './views/GuideView';
+import { GuideEntry } from './GuideEntry';
 import { PracticeView, type StateFilter } from './views/PracticeView';
 import { ProgressView } from './views/ProgressView';
 import { QuizView } from './views/QuizView';
@@ -34,7 +35,10 @@ function App({ locale, analyticsEnabled = false }: { locale: Locale; analyticsEn
   const [revealed, setRevealed] = useState<Record<string, boolean>>({});
   const [sessionCards, setSessionCards] = useState<Card[] | null>(null);
   const [notice, setNotice] = useState('');
+  const [practiceTargetCardId, setPracticeTargetCardId] = useState<string | null>(null);
+  const [quizTargetQuestionId, setQuizTargetQuestionId] = useState<string | null>(null);
   const noticeRef = useRef<HTMLParagraphElement>(null);
+  const dataRef = useRef<StudyData>(createEmptyStudyData());
   // Serializes imports: a second file picked while one is still being read
   // would otherwise apply in resolution order, not selection order.
   const importBusyRef = useRef(false);
@@ -45,7 +49,9 @@ function App({ locale, analyticsEnabled = false }: { locale: Locale; analyticsEn
       if (!document.hidden) refreshNow();
     };
 
-    setData(studyStorage().load());
+    const loaded = studyStorage().load();
+    dataRef.current = loaded;
+    setData(loaded);
     refreshNow();
     setReady(true);
 
@@ -64,17 +70,25 @@ function App({ locale, analyticsEnabled = false }: { locale: Locale; analyticsEn
 
   const focusNotice = () => requestAnimationFrame(() => noticeRef.current?.focus());
 
-  const persistRating = (cardId: string, rating: Rating) => {
-    const currentCard = cards.find((card) => card.id === cardId)!;
-    const reviews = { ...data.reviews, [cardId]: scheduleReview(cardId, currentCard.revision, rating, data.reviews[cardId]) };
-    const next = { ...data, reviews };
+  // Re-read the canonical document immediately before every mutation. Another
+  // tab may have committed since this component last rendered; building from
+  // dataRef alone would silently replace that newer work.
+  const commitData = (change: (current: StudyData) => StudyData | null): boolean => {
+    const next = change(studyStorage().load());
+    if (!next) return false;
     if (!studyStorage().save(next)) {
       setNotice(copy.notices.saveFailed);
       focusNotice();
       return false;
     }
+    dataRef.current = next;
     setData(next);
     return true;
+  };
+
+  const persistRating = (cardId: string, rating: Rating) => {
+    const currentCard = cards.find((card) => card.id === cardId)!;
+    return commitData((current) => ({ ...current, reviews: { ...current.reviews, [cardId]: scheduleReview(cardId, currentCard.revision, rating, current.reviews[cardId]) } }));
   };
 
   const saveRating = (cardId: string, rating: Rating) => {
@@ -92,22 +106,12 @@ function App({ locale, analyticsEnabled = false }: { locale: Locale; analyticsEn
     }
   };
 
-  const recordQuizAnswer = (questionId: string, correct: boolean) => {
-    const previous = data.quizStats[questionId];
-    const stat = {
-      attempts: (previous?.attempts ?? 0) + 1,
-      correct: (previous?.correct ?? 0) + (correct ? 1 : 0),
-      lastAnsweredAt: new Date().toISOString(),
-      lastCorrect: correct,
-    };
-    const next = { ...data, quizStats: { ...data.quizStats, [questionId]: stat } };
-    if (!studyStorage().save(next)) {
-      setNotice(copy.notices.saveFailed);
-      focusNotice();
-      return;
-    }
-    setData(next);
-  };
+  const recordQuizAnswer = (questionId: string, correct: boolean): boolean =>
+    commitData((current) => {
+      const previous = current.quizStats[questionId];
+      const stat = { attempts: (previous?.attempts ?? 0) + 1, correct: (previous?.correct ?? 0) + (correct ? 1 : 0), lastAnsweredAt: new Date().toISOString(), lastCorrect: correct };
+      return { ...current, quizStats: { ...current.quizStats, [questionId]: stat } };
+    });
 
   const exportData = () => {
     const blob = new Blob([JSON.stringify(buildStudyDataExport(data, new Date()), null, 2)], { type: 'application/json' });
@@ -133,6 +137,7 @@ function App({ locale, analyticsEnabled = false }: { locale: Locale; analyticsEn
       focusNotice();
       return;
     }
+    dataRef.current = imported.data;
     setData(imported.data);
     setRevealed({});
     setNotice(copy.notices.importDone);
@@ -159,7 +164,9 @@ function App({ locale, analyticsEnabled = false }: { locale: Locale; analyticsEn
       focusNotice();
       return;
     }
-    setData(createEmptyStudyData());
+    const empty = createEmptyStudyData();
+    dataRef.current = empty;
+    setData(empty);
     setRevealed({});
     setNotice(copy.notices.resetDone);
   };
@@ -169,6 +176,28 @@ function App({ locale, analyticsEnabled = false }: { locale: Locale; analyticsEn
     if (next !== 'practice') setSessionCards(null);
     setView(next);
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const openGuideCard = (cardId: string) => {
+    setQuery(''); setDomainFilter('all'); setStateFilter('all'); setPracticeTargetCardId(cardId); navigate('practice');
+  };
+  const openGuideQuestion = (questionId: string) => { setQuizTargetQuestionId(questionId); navigate('quiz'); };
+  const saveGuideProgress = (sectionId: string, revision: number, action: 'start' | 'complete' | 'reconfirm') => {
+    const saved = commitData((current) => {
+      const record = current.studyGuideProgress[sectionId];
+      const next = action === 'start'
+        ? startStudyGuideSection(record, revision, new Date())
+        : action === 'complete'
+          ? completeStudyGuideSection(record, revision, new Date())
+          : reconfirmStudyGuideSection(record, revision, new Date());
+      if (!next || next === record) return null;
+      return { ...current, studyGuideProgress: { ...current.studyGuideProgress, [sectionId]: next } };
+    });
+    if (saved) {
+      setNotice(copy.guide.actionDone[action]);
+      focusNotice();
+    }
+    return saved;
   };
 
   const openWeakPractice = (domainId: string) => {
@@ -195,19 +224,20 @@ function App({ locale, analyticsEnabled = false }: { locale: Locale; analyticsEn
         <p ref={noticeRef} class="notice" tabIndex={-1} aria-live="polite">{notice}</p>
         {view === 'today' && <TodayView locale={locale} copy={copy} now={now} ready={ready} reviews={data.reviews} dueCards={dueCards} onStartDueReview={startDueReview} onOpenWeakDomain={openWeakPractice}/>}
 
-        {view === 'guide' && <GuideView locale={locale} copy={copy}/>}
+        {view === 'guide' && <GuideEntry locale={locale} copy={copy} records={data.studyGuideProgress} onProgressAction={saveGuideProgress} onOpenCard={openGuideCard} onOpenQuestion={openGuideQuestion}/>}
 
         {view === 'practice' && <PracticeView
           locale={locale} copy={copy} reviews={data.reviews} now={now} dueCount={dueCards.length}
           query={query} onQueryChange={setQuery}
           domainFilter={domainFilter} onDomainFilterChange={setDomainFilter}
           stateFilter={stateFilter} onStateFilterChange={setStateFilter}
+          targetCardId={practiceTargetCardId} onTargetOpened={() => setPracticeTargetCardId(null)}
           revealed={revealed} onToggleRevealed={(cardId) => setRevealed((value) => ({ ...value, [cardId]: !value[cardId] }))}
           sessionCards={sessionCards} onStartSession={setSessionCards} onExitSession={endSession}
           onRateInList={saveRating} onRateInSession={persistRating}
         />}
 
-        {view === 'quiz' && <QuizView locale={locale} copy={copy} quizStats={data.quizStats} onAnswer={recordQuizAnswer}/>}
+        {view === 'quiz' && <QuizView locale={locale} copy={copy} quizStats={data.quizStats} onAnswer={recordQuizAnswer} targetQuestionId={quizTargetQuestionId} onTargetOpened={() => setQuizTargetQuestionId(null)}/>}
 
         {view === 'progress' && <ProgressView locale={locale} copy={copy} reviews={data.reviews} analyticsEnabled={analyticsEnabled} onExport={exportData} onImportFile={importData} onReset={resetData}/>}
         <footer class="site-footer">

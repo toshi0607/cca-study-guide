@@ -1,4 +1,4 @@
-import { useRef, useState } from 'preact/hooks';
+import { useEffect, useRef, useState } from 'preact/hooks';
 import { domains } from '../../content/domains';
 import { questions, standaloneQuestions } from '../../content/questions';
 import { scenarios } from '../../content/scenarios';
@@ -20,7 +20,7 @@ const questionsByScenario = new Map(
 const domainBadges = (domainIds: string[]) =>
   domains.filter((domain) => domainIds.includes(domain.id)).map((domain) => <span key={domain.id} class="card-domain">D{domain.number}</span>);
 
-export function QuizView({ locale, copy, quizStats, onAnswer }: { locale: Locale; copy: UiCopy; quizStats?: Record<string, QuizStat>; onAnswer: (questionId: string, correct: boolean) => void }) {
+export function QuizView({ locale, copy, quizStats, onAnswer, targetQuestionId, onTargetOpened }: { locale: Locale; copy: UiCopy; quizStats?: Record<string, QuizStat>; onAnswer: (questionId: string, correct: boolean) => boolean; targetQuestionId: string | null; onTargetOpened: () => void }) {
   const [phase, setPhase] = useState<'setup' | 'background' | 'question' | 'summary'>('setup');
   const [mode, setMode] = useState<QuizMode>('random');
   const [scenario, setScenario] = useState<Scenario | null>(null);
@@ -30,7 +30,9 @@ export function QuizView({ locale, copy, quizStats, onAnswer }: { locale: Locale
   const [index, setIndex] = useState(0);
   const [selected, setSelected] = useState<string[]>([]);
   const [results, setResults] = useState<QuizResult[]>([]);
+  const [targetAnnouncement, setTargetAnnouncement] = useState('');
   const feedbackRef = useRef<HTMLDivElement>(null);
+  const targetAnnouncementRef = useRef<HTMLParagraphElement>(null);
   // Synchronous re-entrancy guard: `answered` only flips on the next render,
   // so a double-fired click could otherwise record the same question twice.
   const answeredIdRef = useRef<string | null>(null);
@@ -51,7 +53,23 @@ export function QuizView({ locale, copy, quizStats, onAnswer }: { locale: Locale
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  useEffect(() => {
+    if (!targetQuestionId) return;
+    const target = questions.find((question) => question.id === targetQuestionId);
+    if (target) {
+      setScenario(target.scenarioId ? scenarios.find((candidate) => candidate.id === target.scenarioId) ?? null : null);
+      launch([target]);
+      setTargetAnnouncement(localize(target.stem, locale));
+    }
+    onTargetOpened();
+  }, [targetQuestionId]);
+
+  useEffect(() => {
+    if (targetAnnouncement && phase === 'question') requestAnimationFrame(() => targetAnnouncementRef.current?.focus());
+  }, [targetAnnouncement, phase]);
+
   const start = () => {
+    setTargetAnnouncement('');
     launch(pickQuizQuestions(standaloneQuestions, domains, count, domainChoice));
   };
 
@@ -63,10 +81,10 @@ export function QuizView({ locale, copy, quizStats, onAnswer }: { locale: Locale
 
   const answer = (question: ChoiceQuestion, selectedIds: string[]) => {
     if (answeredIdRef.current === question.id) return;
-    answeredIdRef.current = question.id;
     const correct = isAnswerCorrect(question, selectedIds);
+    if (!onAnswer(question.id, correct)) return;
+    answeredIdRef.current = question.id;
     setResults((value) => [...value, { question, selectedIds, correct }]);
-    onAnswer(question.id, correct);
     requestAnimationFrame(() => feedbackRef.current?.focus());
   };
 
@@ -86,6 +104,7 @@ export function QuizView({ locale, copy, quizStats, onAnswer }: { locale: Locale
     setRound([]);
     setResults([]);
     setSelected([]);
+    setTargetAnnouncement('');
   };
 
   const correctCount = results.filter((result) => result.correct).length;
@@ -96,6 +115,7 @@ export function QuizView({ locale, copy, quizStats, onAnswer }: { locale: Locale
       <header class="page-header compact">
         <p class="eyebrow">{copy.quiz.eyebrow}</p><h2 id="quiz-title">{copy.quiz.title}</h2><p>{copy.quiz.introduction}</p>
       </header>
+      {targetAnnouncement && phase === 'question' && <p class="quiz-target" tabIndex={-1} role="status" aria-live="polite" ref={targetAnnouncementRef}>{targetAnnouncement}</p>}
 
       {phase === 'setup' && <QuizSetup
         copy={copy} locale={locale} mode={mode} count={count} domainChoice={domainChoice}

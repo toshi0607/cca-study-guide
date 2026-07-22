@@ -79,6 +79,35 @@ export type UiCopy = {
     mustKnow: string;
     officialSources: string;
     verified: (date: string) => string;
+    loading: string;
+    loadError: string;
+    retry: string;
+    progress: (completed: number, total: number) => string;
+    status: Record<'not_started' | 'in_progress' | 'completed' | 'stale' | 'future', string>;
+    actionDone: Record<'start' | 'complete' | 'reconfirm', string>;
+    start: string;
+    complete: string;
+    reconfirm: string;
+    staleNote: (status: string) => string;
+    futureNote: (status: string) => string;
+    domains: string;
+    statements: string;
+    keyPoints: string;
+    relatedCards: string;
+    relatedQuestions: string;
+    diagnosisLegend: string;
+    diagnosisQuestion: string;
+    diagnosisOptions: [string, string, string];
+    diagnosisSubmit: string;
+    diagnosisResult: (title: string) => string;
+    serviceTitle: string;
+    serviceBody: string;
+    pathTitle: string;
+    path: ReadonlyArray<{ label: string; available: boolean }>;
+    availabilityNow: string;
+    availabilityLater: string;
+    calendarTitle: string;
+    calendarBody: string;
   };
   practice: {
     eyebrow: string;
@@ -109,6 +138,8 @@ export type UiCopy = {
     ratingGoodExtended: string;
     emptyTitle: string;
     emptyDescription: string;
+    targetAnnouncement: (prompt: string) => string;
+    showAll: string;
   };
   session: {
     start: string;
@@ -282,6 +313,26 @@ export const ui = {
       mustKnow: '覚えること',
       officialSources: '公式資料',
       verified: (date) => `最終確認 ${date}`,
+      loading: '学習ガイドを読み込んでいます。',
+      loadError: '学習ガイドを読み込めませんでした。もう一度お試しください。',
+      retry: 'ページを再読み込み',
+      progress: (completed, total) => `${total}セクション中${completed}セクションを現行版で完了`,
+      status: { not_started: '未着手', in_progress: '進行中', completed: '完了', stale: '更新内容の再確認が必要', future: 'この端末では新しい版の記録' },
+      actionDone: { start: 'セクションを開始として記録しました。', complete: 'セクションを完了として記録しました。', reconfirm: '更新内容の再確認を記録しました。' },
+      start: 'このセクションを開始', complete: '完了として記録', reconfirm: '更新内容を再確認した',
+      futureNote: (status) => `以前の記録は「${status}」です。この版より新しいため、ここでは変更しません。新しい版で開いてください。`,
+      staleNote: (status) => `以前の記録は「${status}」として保持されています。内容を確認した後に再確認を記録できます。`,
+      domains: '対象ドメイン', statements: '対象タスクステートメント', keyPoints: '設計で確認すること',
+      relatedCards: '関連カードを開く', relatedQuestions: '関連設問を開く',
+      diagnosisLegend: '最初に取り組む場所を選ぶ', diagnosisQuestion: '今いちばん必要な学習を1つ選んでください。',
+      diagnosisOptions: ['エージェントループと委譲の基礎から始めたい', 'ツール契約とMCPの境界を整理したい', 'エスカレーション・人のレビュー・出典追跡を整理したい'],
+      diagnosisSubmit: '開始セクションを提案する', diagnosisResult: (title) => `まずは「${title}」から始めることを提案します。これはこの端末に保存されません。`,
+      serviceTitle: 'このサービスでできること／できないこと',
+      serviceBody: '公開資料に基づく独自のガイド、カード、選択式演習を提供します。非公式であり、実試験問題やexam dumpは使用せず、合格を保証しません。Claude Code、API、MCP、CIの実システム経験は、ご自身の環境で別途行ってください。',
+      pathTitle: '8段階の学習パス（独自の学習上の提案）',
+      path: [{ label: '初回診断', available: true }, { label: 'D1/D2/D5 基礎', available: true }, { label: 'D3/D4 実装・運用', available: true }, { label: 'Hands-on', available: false }, { label: 'シナリオ判断', available: true }, { label: '模試', available: false }, { label: '誤答修正', available: false }, { label: '本番直前チェック', available: false }],
+      availabilityNow: '現在利用可能: Guide、Practice、Quiz', availabilityLater: 'この段階の詳細機能は今後の学習計画です。実環境での作業はこのサービス外で行ってください。',
+      calendarTitle: '8月末までの進め方', calendarBody: '残り期間では、先にガイドで範囲を確認し、カードで想起し、選択式演習で判断を言語化する順に繰り返してください。遅れた場合は未完了セクションを優先し、固定の日数や合格可能性は前提にしません。',
     },
     practice: {
       eyebrow: 'INDEPENDENT RETRIEVAL PRACTICE',
@@ -312,6 +363,8 @@ export const ui = {
       ratingGoodExtended: '間隔を延長',
       emptyTitle: '該当するカードはありません。',
       emptyDescription: '検索語またはフィルターを変えてください。',
+      targetAnnouncement: (prompt) => `関連カードを開きました：${prompt}`,
+      showAll: 'カード一覧に戻る',
     },
     session: {
       start: 'セッションを開始',
@@ -478,6 +531,26 @@ export const ui = {
       mustKnow: 'What to remember',
       officialSources: 'Official sources',
       verified: (date) => `Last verified ${date}`,
+      loading: 'Loading the study guide.',
+      loadError: 'The study guide could not be loaded. Try again.',
+      retry: 'Reload page',
+      progress: (completed, total) => `${completed} of ${total} sections complete at the current revision`,
+      status: { not_started: 'Not started', in_progress: 'In progress', completed: 'Completed', stale: 'Review updates required', future: 'Recorded by a newer version' },
+      actionDone: { start: 'Section start recorded.', complete: 'Section completion recorded.', reconfirm: 'Updated content review recorded.' },
+      start: 'Start this section', complete: 'Mark complete', reconfirm: 'I reviewed the updates',
+      futureNote: (status) => `Your earlier record is “${status}.” It is newer than this guide, so it is not changed here. Open a newer app version.`,
+      staleNote: (status) => `Your earlier record is retained as “${status}.” You can record a review after checking the updated content.`,
+      domains: 'Domains covered', statements: 'Task statements covered', keyPoints: 'Design checks',
+      relatedCards: 'Open related cards', relatedQuestions: 'Open related questions',
+      diagnosisLegend: 'Choose where to begin', diagnosisQuestion: 'Choose the one learning need that matters most right now.',
+      diagnosisOptions: ['I want to start with agent loops and delegation', 'I need to organize tool contracts and MCP boundaries', 'I need to organize escalation, human review, and provenance'],
+      diagnosisSubmit: 'Recommend a starting section', diagnosisResult: (title) => `Start with “${title}.” This suggestion is not saved on this device.`,
+      serviceTitle: 'What this service provides — and does not',
+      serviceBody: 'It provides independently written guides, cards, and choice practice grounded in public sources. It is unofficial, uses no live exam questions or exam dumps, and offers no pass guarantee. Gain real Claude Code, API, MCP, and CI experience separately in your own environment.',
+      pathTitle: 'Eight-stage learning path (independent study guidance)',
+      path: [{ label: 'Initial orientation', available: true }, { label: 'D1/D2/D5 foundations', available: true }, { label: 'D3/D4 implementation and operations', available: true }, { label: 'Hands-on work', available: false }, { label: 'Scenario judgment', available: true }, { label: 'Mock exam', available: false }, { label: 'Incorrect-answer repair', available: false }, { label: 'Final check', available: false }],
+      availabilityNow: 'Available now: Guide, Practice, and Quiz', availabilityLater: 'Detailed tooling for this stage is a future study-plan step. Do real-environment work outside this service.',
+      calendarTitle: 'How to use the time through the end of August', calendarBody: 'Use the remaining time in cycles: map the scope in the guide, retrieve it with cards, then articulate decisions in choice practice. If time gets tight, prioritize unfinished sections; this plan does not assume fixed days or predict an outcome.',
     },
     practice: {
       eyebrow: 'INDEPENDENT RETRIEVAL PRACTICE',
@@ -508,6 +581,8 @@ export const ui = {
       ratingGoodExtended: 'Extend interval',
       emptyTitle: 'No cards match.',
       emptyDescription: 'Try a different search term or filter.',
+      targetAnnouncement: (prompt) => `Opened related card: ${prompt}`,
+      showAll: 'Back to all cards',
     },
     session: {
       start: 'Start a session',

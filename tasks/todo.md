@@ -1,96 +1,85 @@
-# PR 3: localStorage v2 と安全な migration 基盤
+# Task 4: Study Guide Experience
 
-Branch: claude/localstorage-v2-migration-628fde（origin/main = 3f7d298 から作成）
+## Preconditions
 
-前回の tasks/todo.md (PR #28) は完了・無関係のため本内容に置き換え。
+- [x] Fetch/prune origin
+- [x] Confirm clean worktree
+- [x] Confirm PR #29 merged as `1cadb1f645c513f0b264e1904b4a8079a01eeadf`
+- [x] Confirm HEAD equals latest `origin/main`
+- [x] Create `codex/task-4-study-guide` from `origin/main`
+- [x] Read closest instructions and `tasks/lessons.md`
+- [x] Create Task 4 planning files before implementation
 
-## Constraints
+## Reconnaissance and Baseline
 
-| Constraint | Source | Verify by |
-|------------|--------|-----------|
-| v1 の reviews / quizStats を 1 件も失わない | user msg | migration unit test + E2E |
-| migration は純粋・決定的・冪等 | user msg | `migrateStudyDataV1ToV2` の unit test |
-| migration 成功前に v1 を削除しない | user msg | load 系 unit test / E2E |
-| 保存失敗を成功扱いしない | user msg | `save()` の戻り値テスト・既存 E2E |
-| 未知 version を v1 として扱わない | user msg | `parseStudyData` の unit test |
-| UI・文言・CSS・コンテンツを変更しない | user msg | diff（変更は storage / App の 4 行 / テスト） |
-| 新規依存を追加しない | user msg | package.json 差分なし |
-| content validator・rationales を client bundle へ入れない | user msg | dist 内 grep + bundle size |
+- [x] Read required docs, content, storage, UI, i18n, styles, workflow, and E2E files
+- [x] Map exact-target navigation and lazy-loading options
+- [x] Reproduce unit/build/Astro/no-analytics/E2E baseline
+- [x] Record baseline chunk raw/gzip and client import audit
+- [x] Record preliminary baseline 3-run mobile Lighthouse evidence (formal matched A/B remains in verification)
+- [x] Consolidate subagent findings and refine implementation specification
 
-## 現状整理（実装前）
+## Content and Validation
 
-1. v1 schema: `{ version: 1; reviews: Record<string, ReviewState>; quizStats?: Record<string, QuizStat> }`（`src/lib/storage.ts`）
-2. 生成・保存・読み込み経路: `App.tsx` の `studyStorage()` → `createStudyStorage(window.localStorage)`。load は初回 effect、save は rating / quiz / import
-3. import/export: `buildStudyDataExport` が `{ exportedAt, app, ...data }`、`parseStudyDataImport` が wrapper と bare の両方を受理
-4. read failure: `window.localStorage` の getter throw は `studyStorage()` の try/catch、JSON parse error は `load()` の try/catch。いずれも空データを返す
-5. write failure: `save()` が false を返し、App が `notices.saveFailed` を表示。session カードは進まない
-6. reset: `cca-field-notes:v1` を `removeItem`
-7. E2E: `tests/app.spec.ts` が key 文字列を直書き（seed・検証・quota 失敗の再現）
-8. 更新が必要なファイル: `src/lib/storage.ts`、`src/components/App.tsx`、両テスト
-9. migration 失敗時のデータ保護: v1 key を別 key として残し、v2 write 成功まで正本を移さない
-10. storage key: dual key（`:v1` を legacy、`:v2` を現行）を採用。理由は PR 本文の Storage key strategy 参照
+- [x] Expand Study Guide to cover 5 domains / 30 task statements
+- [x] Supply bilingual original summaries, revision, recommended order, sources, cards, and questions
+- [x] Keep official claims distinct from original recommendations and avoid exam-dump-like content
+- [x] Validate 30/30 and 5/5 coverage at build time
+- [x] Validate unique contiguous order and existing references
+- [x] Add negative tests for missing/duplicate/orphan/bilingual/source/order failures
 
-## Assumptions
+## Progress and Persistence
 
-| Assumption | Status | Evidence |
-|------------|--------|----------|
-| `Object.fromEntries` / 明示 skip で prototype pollution を防げる | VERIFIED | `storage-schema.test.ts` の pollution テスト |
-| `Date.parse` は不可能な日付を弾く | FALSIFIED | `2026-02-30T00:00:00.000Z` は 3/2 に繰り上がる → UTC round trip 検証を追加 |
-| QuizView / QuizSetup は `quizStats` を optional prop で受ける | VERIFIED | `src/components/views/QuizView.tsx:23` |
+- [x] Add pure helpers for absent/in-progress/completed and current/stale/future revisions
+- [x] Derive rates from content and records; do not persist computed progress
+- [x] Use existing `StudyGuideProgress` without schema/version/key changes
+- [x] Persist only explicit start/complete/reconfirm actions
+- [x] Implement save-first updates and focus accessible failure notices
+- [x] Preserve stale records until explicit reconfirm
+- [x] Protect future revisions from overwrite/destruction
+- [x] Prove reviews/quizStats/handsOnProgress remain unchanged
 
-## 作業
+## Study Guide UX
 
-- [x] 最新 main から作業（`3f7d298` 基点）
-- [x] baseline: `pnpm test` 120 passed / `pnpm build` 成功 / App bundle 220,965B (gzip 77,475B)
-- [x] `src/lib/storage-schema.ts`: v1/v2 型、空データ生成、runtime validation、純粋 migration
-- [x] `src/lib/storage.ts`: dual key、load/save/reset、import/export
-- [x] `src/components/App.tsx`: 初期値と reset を `createEmptyStudyData()` に統一
-- [x] unit test 追加（`storage-schema.test.ts` 36 件 / `storage.test.ts` 30 件）
-- [x] E2E: migration 1 件・reset 後の再 migration 防止 1 件を追加、key をプロダクション定数から取得
-- [x] `pnpm test` 173 passed
-- [x] `pnpm build`（astro check 込み）成功
-- [x] `npx playwright test` 52 passed
-- [x] `pnpm test:no-analytics` 成功
-- [x] bundle 比較: 222,897B (gzip 78,313B) / +1,932B (+838B gzip)
+- [x] Explain service capabilities, limits, unofficial status, no dumps, and no guarantee
+- [x] Present the eight-stage learning path and remaining-time plan through end of August
+- [x] Add accessible first-use diagnosis with an in-memory recommendation only
+- [x] Add truthful availability labels and no dead future controls
+- [x] Deep-link each section to exact related cards/questions/sources
+- [x] Keep Guide code/content off the initial App chunk where practical
+- [x] Add accessible loading/error states, responsive styling, reduced-motion handling, and ja/en parity
 
-## Notes
+## Verification
 
-- key 変更を選んだ理由: 同一 key で version を上げると、deploy rollback 時に旧コードが `version: 2` を
-  拒否して空データを表示し、その後の評価で v1 形式を **上書き保存** して既存データを破壊する。
-  dual key なら rollback しても legacy key の中身が無傷で残る。
-- `load()` の署名は `StudyData` のまま維持した。`LoadResult` 型へ変えると App と既存テストの
-  呼び出し側が広く変わり、このPRのリスクを不必要に増やすため。migration の永続化は load 内で
-  best effort で行い、失敗しても in-memory の v2 を返す（legacy key は残るので次回再試行される）。
-- ISO datetime の検証は正規表現 + UTC round trip。`Date.parse` だけでは 2026-02-30 が通ってしまう
-  ことをテストで確認した（上記 Assumption 参照）。
-- v2 validation は厳格（4 record すべて必須、1 件でも不正 entry があれば文書全体を reject）。
-  v1 だけは entry 単位の salvage を残す（v1 key は書き換えないので、落とした分は復元可能）。
-- `save()` は validation を通った文書だけを書き込む。sanitize して部分保存することはない。
-- **レビュー指摘（fresh-context reviewer、Request Changes）への対応**:
-  - High1 読めない v2 文書の破壊: 未知 version や壊れた JSON が v2 key にある場合、load は空を返すが
-    その直後の save が上書きしてしまっていた。`isCurrentKeyWritable()` を追加し、
-    「このビルドが読めない値が入っている間は書き込まない」ようにした（保存失敗として通知される）。
-    回帰テストを 2 件追加。
-  - High2 rollback 中の書き込みが roll-forward で無視される件: v2 key があれば常に v2 を優先するため、
-    rollback 期間に旧コードが v1 key へ書いた分は roll-forward 後に読まれない（削除はされず v1 key に残る）。
-    完全な解決には migration 元を記録する marker が必要で、本 PR で決めた v2 schema（5 フィールド）を
-    超える。既知のトレードオフとして PR 本文へ明記し、コメントの表現も実態に合わせた。
-  - Medium4 v2 key の JSON parse 失敗が legacy 分岐を飛ばす件: `parseJson()` で分離した。
-    ただし読めない v2 値がある場合に legacy を migration すると上書きになるため、意図的に空を返す。
-  - Low6 危険な record key: 一度 `__proto__` のみに絞ったが、2 回目のレビュー指摘 P2 を受けて
-    `__proto__` / `constructor` / `prototype` の 3 種すべてを保存境界で拒否する形へ戻した。
-    実コンテンツの id はいずれも kebab-case でこれらと衝突しないため、後続の merge 実装で
-    穴になるリスクのほうが大きいと判断した。
-- **2 回目のレビュー指摘（Request changes）への対応**:
-  - P1 `parseStudyDataV2()` が validation ではなく sanitize になっていた: 不正 entry を黙って落とすため、
-    「読めない v2 は上書きしない」という方針に反して次回 save で一部データが消える経路があった。
-    v2 を厳格 validation へ変更した（4 record 必須、1 件でも不正なら文書全体を reject、危険な key も
-    文書ごと reject）。`save()` / `isCurrentKeyWritable()` / import も同じ厳格 parser を使う。
-    v1 は shipped 済みデータの救済が目的なので entry 単位の salvage を維持し、関数名を
-    `salvageValid` / `strictRecord` に分けて意図を明示した。テストを 6 件追加（173 tests）。
-  - P2 危険な record key 3 種の拒否（上記）。reviews / quizStats / Study Guide / Hands-on の
-    4 record すべてについてテストした。
-  - `quizStats` が v1 に存在するが record でない場合を「不正文書」とはしない判断は維持した。
-    reject すると同じ文書内の reviews まで失うため、無視するほうが損失が小さい（既存挙動でもある）。
-  - Medium5 `ImportedStudyData.migrated` は UI では使わないが、v1/v2 のどちらを取り込んだかを
-    呼び出し側が判別できる情報として残す（新しい UI 文言は本 PR のスコープ外）。
+- [x] `pnpm test`
+- [x] `pnpm build` / Astro check
+- [x] `pnpm test:no-analytics`
+- [x] `pnpm test:e2e`
+- [x] Keyboard/reload/stale/future/save-error/seeded-record flows
+- [x] Exact card/question/source deep-link flows and quiz double-answer guard
+- [x] ja/en axe serious/critical and 360px overflow checks
+- [x] Bundle raw/gzip comparison and forbidden-import audit
+- [x] Matched main/branch 3-run Lighthouse comparison and budget script
+
+## Independent Review
+
+- [x] Content review: mapping, terminology, bilingual meaning, sources, design judgment, dump guardrail
+- [x] Adversarial review: data loss, stale/future state, double action, reload/import/export/reset, storage errors, prototype pollution, mobile/a11y/bundle/misleading readiness
+- [x] Resolve blockers and rerun affected validation
+
+## Delivery
+
+- [x] Audit diff for Task 4 scope only
+- [ ] Commit and push
+- [ ] Create PR with all required sections
+- [ ] Monitor all PR CI, including performance
+- [ ] Rebase/update from latest main if needed and revalidate
+- [ ] Merge only if every acceptance gate is satisfied; otherwise report merge-ready or blocked
+
+## Review
+
+Implementation and isolated local verification are complete. Unit tests pass 185/185; Astro build/check passes with the existing Zod URL deprecation hint; no-analytics passes; Playwright passes 64/64. Final content and adversarial reviewers report no blockers after corrections.
+
+Actual browser resource timing shows that the App filename alone is not a valid initial-bundle measure. Main initially requests 241,751 raw / 85,893 gzip bytes of first-party JS. The branch initially requests 249,979 / 87,439 bytes (+8,228 / +1,546) because question content becomes a shared chunk; opening Guide then requests only `GuideView` at 18,263 / 7,506 bytes. The Guide prose is therefore deferred, but initial aggregate JS is honestly recorded as a small increase.
+
+Final matched mobile Lighthouse (three interleaved runs, identical analytics-enabled builds) gives main median Performance 94, FCP 1,219ms, LCP 3,053ms, CLS 0 (existing local LCP budget miss), and branch median Performance 95, FCP 1,290ms, LCP 2,893ms, CLS 0 (budget pass). GitHub performance CI remains mandatory before merge.

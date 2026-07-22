@@ -1,4 +1,4 @@
-import { useMemo } from 'preact/hooks';
+import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import { dateLocale } from '../app/format';
 import { CardAnswer } from '../practice/CardAnswer';
 import { PracticeSession } from '../practice/PracticeSession';
@@ -18,6 +18,7 @@ export function PracticeView({
   query, onQueryChange, domainFilter, onDomainFilterChange, stateFilter, onStateFilterChange,
   revealed, onToggleRevealed,
   sessionCards, onStartSession, onExitSession, onRateInList, onRateInSession,
+  targetCardId, onTargetOpened,
 }: {
   locale: Locale;
   copy: UiCopy;
@@ -37,7 +38,20 @@ export function PracticeView({
   onExitSession: (aborted: boolean) => void;
   onRateInList: (cardId: string, rating: Rating) => void;
   onRateInSession: (cardId: string, rating: Rating) => boolean;
+  targetCardId: string | null;
+  onTargetOpened: () => void;
 }) {
+  const [activeTargetCardId, setActiveTargetCardId] = useState<string | null>(null);
+  const targetNoticeRef = useRef<HTMLParagraphElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    if (!targetCardId) return;
+    setActiveTargetCardId(targetCardId);
+    onTargetOpened();
+  }, [targetCardId, onTargetOpened]);
+  useEffect(() => {
+    if (activeTargetCardId) requestAnimationFrame(() => targetNoticeRef.current?.focus());
+  }, [activeTargetCardId]);
   const filteredCards = useMemo(() => cards.filter((card) => {
     const text = [card.prompt, card.answer, card.explanation, card.pitfall]
       .map((field) => localize(field, locale))
@@ -47,15 +61,19 @@ export function PracticeView({
     const matchesDomain = domainFilter === 'all' || card.domainId === domainFilter;
     const review = reviews[card.id];
     const matchesState = stateFilter === 'all' || (stateFilter === 'unseen' ? !review : stateFilter === 'reviewed' ? Boolean(review) : stateFilter === 'weak' ? isWeak(review) : Boolean(now && isDue(review, card.revision, now)));
-    return matchesQuery && matchesDomain && matchesState;
-  }), [query, domainFilter, stateFilter, reviews, locale, now]);
+    return matchesQuery && matchesDomain && matchesState && (!activeTargetCardId || card.id === activeTargetCardId);
+  }), [query, domainFilter, stateFilter, reviews, locale, now, activeTargetCardId]);
 
   return (
     <section class="practice-view" aria-labelledby="practice-title">
       <header class="page-header compact"><p class="eyebrow">{copy.practice.eyebrow}</p><h2 id="practice-title">{copy.practice.title}</h2><p>{copy.practice.introduction}</p></header>
+      {activeTargetCardId && (() => {
+        const target = cards.find((card) => card.id === activeTargetCardId);
+        return target ? <div class="practice-target"><p tabIndex={-1} role="status" aria-live="polite" ref={targetNoticeRef}>{copy.practice.targetAnnouncement(localize(target.prompt, locale))}</p><button type="button" onClick={() => { setActiveTargetCardId(null); requestAnimationFrame(() => searchInputRef.current?.focus()); }}>{copy.practice.showAll}</button></div> : null;
+      })()}
       {sessionCards && <PracticeSession locale={locale} copy={copy} initialCards={sessionCards} reviews={reviews} dueCount={dueCount} onRate={onRateInSession} onExit={onExitSession}/>}
       {!sessionCards && <><div class="filter-panel">
-        <label class="search-label" for="card-search">{copy.practice.searchLabel}<input id="card-search" type="search" value={query} onInput={(event) => onQueryChange(event.currentTarget.value)} placeholder={copy.practice.searchPlaceholder}/></label>
+        <label class="search-label" for="card-search">{copy.practice.searchLabel}<input ref={searchInputRef} id="card-search" type="search" value={query} onInput={(event) => onQueryChange(event.currentTarget.value)} placeholder={copy.practice.searchPlaceholder}/></label>
         <fieldset><legend>{copy.practice.stateLegend}</legend><div class="chips">{stateFilters.map((key) => <button key={key} type="button" class={stateFilter === key ? 'selected' : ''} aria-pressed={stateFilter === key} onClick={() => onStateFilterChange(key)}>{copy.practice.filters[key]}</button>)}</div></fieldset>
         <fieldset><legend>{copy.practice.domainLegend}</legend><div class="chips"><button type="button" class={domainFilter === 'all' ? 'selected' : ''} aria-pressed={domainFilter === 'all'} onClick={() => onDomainFilterChange('all')}>{copy.practice.allDomains}</button>{domains.map((domain) => <button key={domain.id} type="button" class={domainFilter === domain.id ? 'selected' : ''} aria-pressed={domainFilter === domain.id} onClick={() => onDomainFilterChange(domain.id)}>D{domain.number}</button>)}</div></fieldset>
       </div>

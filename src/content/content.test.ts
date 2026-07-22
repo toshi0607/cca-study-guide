@@ -14,6 +14,7 @@ import {
   genericSourceIds,
   validateContent,
   validateChoiceRationales,
+  validateDomains,
   validateHandsOnGuides,
   validateOfficialScenarios,
   validateQuestions,
@@ -34,7 +35,7 @@ describe('study content', () => {
       scenarioCount: scenarios.length,
       officialScenarioCount: 6,
       skillCount: 14,
-      studyGuideSectionCount: 3,
+      studyGuideSectionCount: 8,
       handsOnGuideCount: 1,
     });
     expect(domains.map((domain) => domain.weight)).toEqual([27, 18, 20, 20, 15]);
@@ -262,6 +263,44 @@ describe('taxonomy validation', () => {
 
     // #then
     expect(errors).toContain('skill rag-design: no question uses this skill');
+  });
+});
+
+describe('official domain blueprint validation', () => {
+  const index = buildContentIndex();
+
+  it('accepts the exact published domain and task-statement IDs', () => {
+    expect(validateDomains(domains, index)).toEqual([]);
+  });
+
+  it('rejects a replacement domain ID even when the domain count is unchanged', () => {
+    const input = structuredClone(domains);
+    input[0].id = 'd9';
+
+    const errors = validateDomains(input, index).join('\n');
+
+    expect(errors).toContain('domain IDs must exactly match the official blueprint');
+  });
+
+  it('rejects a replacement task-statement ID even when the statement count is unchanged', () => {
+    const input = structuredClone(domains);
+    input[0].objectives[0].id = '1.9';
+
+    const errors = validateDomains(input, index).join('\n');
+
+    expect(errors).toContain('objective IDs must exactly match the official blueprint');
+  });
+
+  it('rejects a valid statement ID placed under the wrong domain', () => {
+    const input = structuredClone(domains);
+    const first = input[0].objectives[0].id;
+    input[0].objectives[0].id = input[1].objectives[0].id;
+    input[1].objectives[0].id = first;
+
+    const errors = validateDomains(input, index).join('\n');
+
+    expect(errors).toContain('objective 2.1: prefix must match domain d1');
+    expect(errors).toContain('objective 1.1: prefix must match domain d2');
   });
 });
 
@@ -549,131 +588,121 @@ describe('choice rationale validation', () => {
 
 describe('study guide validation', () => {
   const index = buildContentIndex();
-  const localized = (ja: string, en: string) => ({ ja, en });
-  const localizedList = (ja: string[], en: string[]) => ({ ja, en });
-  const validSection = () => ({
-    id: 'sg-fixture',
-    revision: 1,
-    recommendedOrder: 1,
-    title: localized('固定のセクション', 'A fixed section'),
-    summary: localized('セクションの概要', 'The section summary'),
-    domainIds: ['d1'],
-    taskStatementIds: ['1.1'],
-    learningObjectives: localizedList(['ループを説明できる'], ['Explain the loop']),
-    keyPoints: localizedList(['停止理由で分岐する'], ['Branch on the stop reason']),
-    estimatedMinutes: 30,
-    relatedCardIds: ['d1-loop-stop'],
-    relatedQuestionIds: ['q-d1-loop-continue'],
-    sourceIds: ['exam-guide', 'stop-reasons'],
-    verifiedAt: '2026-07-21',
-  });
-  const withSection = (change: (section: ReturnType<typeof validSection>) => void) => {
-    const section = validSection();
-    change(section);
-    return validateStudyGuideSections([section], index).join('\n');
+  const validSections = () => structuredClone(studyGuideSections);
+  const withSections = (change: (sections: ReturnType<typeof validSections>) => void) => {
+    const sections = validSections();
+    change(sections);
+    return validateStudyGuideSections(sections, index).join('\n');
   };
 
-  it('accepts the real study guide sections', () => {
-    // #then
+  it('accepts the complete study guide blueprint', () => {
     expect(validateStudyGuideSections(studyGuideSections, index)).toEqual([]);
   });
 
-  it('accepts a well-formed fixture', () => {
-    // #then
-    expect(validateStudyGuideSections([validSection()], index)).toEqual([]);
+  it('rejects orphan references', () => {
+    const errors = withSections((sections) => {
+      sections[0].domainIds = ['d9'];
+      sections[0].taskStatementIds[0] = '9.9';
+      sections[0].sourceIds = ['exam-guide', 'made-up-doc'];
+      sections[0].relatedCardIds = ['d1-missing-card'];
+      sections[0].relatedQuestionIds = ['q-missing'];
+    });
+
+    expect(errors).toContain('study guide section sg-agentic-loop: orphan domain d9');
+    expect(errors).toContain('study guide section sg-agentic-loop: orphan task statement 9.9');
+    expect(errors).toContain('study guide section sg-agentic-loop: orphan source made-up-doc');
+    expect(errors).toContain('study guide section sg-agentic-loop: orphan card d1-missing-card');
+    expect(errors).toContain('study guide section sg-agentic-loop: orphan question q-missing');
   });
 
-  it('rejects a domain that does not exist', () => {
-    // #when
-    const errors = withSection((section) => { section.domainIds = ['d9']; });
+  it('requires exact-once coverage of all 30 task statements', () => {
+    const errors = withSections((sections) => { sections[0].taskStatementIds[0] = '1.2'; });
 
-    // #then
-    expect(errors).toContain('study guide section sg-fixture: orphan domain d9');
+    expect(errors).toContain('study guide sections must exactly cover all 30 task statements');
+    expect(errors).toContain('study guide task statements has duplicate IDs: 1.2');
   });
 
-  it('rejects a source that does not exist', () => {
-    // #when
-    const errors = withSection((section) => { section.sourceIds = ['exam-guide', 'made-up-doc']; });
+  it('requires every domain to be represented and aligned to its statements', () => {
+    const errors = withSections((sections) => {
+      sections[0].domainIds = ['d2'];
+      sections[4].domainIds = ['d3'];
+      sections[6].domainIds = ['d4'];
+      sections[7].domainIds = ['d1'];
+    });
 
-    // #then
-    expect(errors).toContain('study guide section sg-fixture: orphan source made-up-doc');
+    expect(errors).toContain('study guide sections must cover all five domains');
+    expect(errors).toContain('study guide section sg-agentic-loop: domainIds must exactly match the domains of its task statements');
   });
 
-  it('rejects a task statement that does not exist', () => {
-    // #when
-    const errors = withSection((section) => { section.taskStatementIds = ['9.9']; });
+  it('requires unique, contiguous recommended order beginning at one', () => {
+    const duplicateErrors = withSections((sections) => { sections[1].recommendedOrder = 1; });
+    const skippedErrors = withSections((sections) => {
+      for (const section of sections) section.recommendedOrder += 1;
+    });
 
-    // #then
-    expect(errors).toContain('study guide section sg-fixture: orphan task statement 9.9');
+    expect(duplicateErrors).toContain('study guide recommendedOrder has duplicate IDs: 1');
+    expect(skippedErrors).toContain('study guide recommendedOrder must be contiguous from 1 through 8');
   });
 
-  it('rejects a related card that does not exist', () => {
-    // #when
-    const errors = withSection((section) => { section.relatedCardIds = ['d1-missing-card']; });
+  it('requires related cards and questions to intersect section task statements', () => {
+    const errors = withSections((sections) => {
+      sections[0].relatedCardIds = ['d2-interface'];
+      sections[0].relatedQuestionIds = ['q-d2-tool-contract'];
+    });
 
-    // #then
-    expect(errors).toContain('study guide section sg-fixture: orphan card d1-missing-card');
+    expect(errors).toContain('study guide section sg-agentic-loop: related card d2-interface does not cover a section task statement');
+    expect(errors).toContain('study guide section sg-agentic-loop: related question q-d2-tool-contract does not cover a section task statement');
   });
 
-  it('rejects a related question that does not exist', () => {
-    // #when
-    const errors = withSection((section) => { section.relatedQuestionIds = ['q-missing']; });
+  it('requires related cards and questions to stay within section domains', () => {
+    const card = cards.find((item) => item.id === 'd1-loop-stop');
+    const question = questions.find((item) => item.id === 'q-d1-loop-continue');
+    expect(card).toBeDefined();
+    expect(question).toBeDefined();
+    const originalCardDomainId = card!.domainId;
+    const originalQuestionDomainId = question!.domainId;
+    card!.domainId = 'd2';
+    question!.domainId = 'd2';
 
-    // #then
-    expect(errors).toContain('study guide section sg-fixture: orphan question q-missing');
+    try {
+      const errors = validateStudyGuideSections(validSections(), index).join('\n');
+
+      expect(errors).toContain('study guide section sg-agentic-loop: related card d1-loop-stop is outside the section domains');
+      expect(errors).toContain('study guide section sg-agentic-loop: related question q-d1-loop-continue is outside the section domains');
+    } finally {
+      card!.domainId = originalCardDomainId;
+      question!.domainId = originalQuestionDomainId;
+    }
   });
 
-  it('rejects empty learning objectives', () => {
-    // #when
-    const errors = withSection((section) => { section.learningObjectives = localizedList([], []); });
+  it('requires a related card for every task statement', () => {
+    const errors = withSections((sections) => { sections[0].relatedCardIds = ['d1-orchestration', 'd1-task-agent']; });
 
-    // #then
-    expect(errors).toContain('study guide section sg-fixture: learningObjectives');
+    expect(errors).toContain('study guide section sg-agentic-loop: task statement 1.1 has no related card');
   });
 
-  it('rejects empty key points', () => {
-    // #when
-    const errors = withSection((section) => { section.keyPoints = localizedList(['停止理由で分岐する'], []); });
+  it('requires claim-specific official sources', () => {
+    const errors = withSections((sections) => { sections[0].sourceIds = ['exam-guide']; });
 
-    // #then
-    expect(errors).toContain('study guide section sg-fixture: keyPoints.en');
+    expect(errors).toContain('study guide section sg-agentic-loop: missing claim-specific source');
   });
 
-  it('rejects a verifiedAt that is not a real calendar date', () => {
-    // #when
-    const errors = withSection((section) => { section.verifiedAt = '2026-02-31'; });
+  it('requires a claim-specific source for every task statement', () => {
+    const errors = withSections((sections) => {
+      sections[0].sourceIds = ['exam-guide', 'stop-reasons', 'tool-use'];
+    });
 
-    // #then
-    expect(errors).toContain('study guide section sg-fixture: verifiedAt');
-    expect(errors).toContain('existing calendar date');
+    expect(errors).toContain('study guide section sg-agentic-loop: task statement 1.2 is missing its claim-specific source');
   });
 
-  it('rejects a duplicated related card reference', () => {
-    // #when
-    const errors = withSection((section) => { section.relatedCardIds = ['d1-loop-stop', 'd1-loop-stop']; });
+  it('requires Japanese and English learning-objective and key-point list parity', () => {
+    const errors = withSections((sections) => {
+      sections[0].learningObjectives.en.pop();
+      sections[0].keyPoints.en.pop();
+    });
 
-    // #then
-    expect(errors).toContain('study guide section sg-fixture relatedCardIds has duplicate IDs: d1-loop-stop');
-  });
-
-  it('rejects a duplicated recommended order', () => {
-    // #given
-    const second = validSection();
-    second.id = 'sg-fixture-2';
-
-    // #when
-    const errors = validateStudyGuideSections([validSection(), second], index).join('\n');
-
-    // #then
-    expect(errors).toContain('study guide recommendedOrder has duplicate IDs: 1');
-  });
-
-  it('rejects a non-positive estimated duration', () => {
-    // #when
-    const errors = withSection((section) => { section.estimatedMinutes = 0; });
-
-    // #then
-    expect(errors).toContain('study guide section sg-fixture: estimatedMinutes');
+    expect(errors).toContain('study guide section sg-agentic-loop: learningObjectives must have matching Japanese and English item counts');
+    expect(errors).toContain('study guide section sg-agentic-loop: keyPoints must have matching Japanese and English item counts');
   });
 });
 
