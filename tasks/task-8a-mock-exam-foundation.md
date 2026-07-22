@@ -315,6 +315,24 @@ fast/full・default workers:1）を維持。巨大 `tests/app.spec.ts` は復活
 scaled score非算出・migration・compatibility・bundle非混入・API・storage validator edgeは
 いずれもクリーンと確認。
 
+### 外部レビュー（Request changes）対応
+
+PR #36の外部レビューで、strict parserの整合性の抜け2件（Medium）を指摘され修正した。
+
+1. **完了attemptのexact coverage / revision一致**: `parseMockExamAttempt` に
+   「answers.length === questionRefs.length」「各refにexactly one answer」
+   「answer.questionRevision === ref.revision」を強制。missing/extra/duplicate answer・
+   revision mismatchのnegative testを追加。
+2. **時系列上限 / selection–answeredAt対応**: session／attemptのanswer・submission・expiryに
+   上限invariantを追加（live: `startedAt <= answeredAt <= updatedAt < expiresAt`、
+   submitted session: `submittedAt === updatedAt < expiresAt`、submitted attempt:
+   `completedAt < expiresAt`、expired attempt: `completedAt === expiresAt`、
+   completed answer: selectionあり⟺answeredAtあり）。対応するnegative testと、
+   「engine出力がstrict parserを必ず通過する」contract testを追加。
+
+これらはpure engineが生成する canonical shape と一致するため、engine出力の
+round-tripを壊さない（contract testで担保）。unit test件数は 347 → **357**。
+
 ## 既知の制約
 
 - 実問題バンクが22問不足のため、Mock Exam v1は現時点で開始不可（engineは

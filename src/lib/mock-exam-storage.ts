@@ -38,7 +38,19 @@ function parseQuestionRefs(value: unknown): MockExamQuestionRef[] | null {
   return refs;
 }
 
-function parseAnswers(value: unknown, questionIds: ReadonlySet<string>, startedAtMs: number): Record<string, MockExamAnswer> | null {
+// Live answers are only written while the session is in progress and before its
+// expiry, and every write also bumps `updatedAt`. That makes the timing window a
+// hard invariant the engine always satisfies: startedAt <= answeredAt <= updatedAt
+// and answeredAt < expiresAt. The strict parser enforces it so an imported
+// document can never claim an answer recorded before the exam began, after it was
+// last touched, or once time was already up.
+function parseAnswers(
+  value: unknown,
+  questionIds: ReadonlySet<string>,
+  startedAtMs: number,
+  updatedAtMs: number,
+  expiresAtMs: number,
+): Record<string, MockExamAnswer> | null {
   if (!isRecord(value)) return null;
   const answers: Record<string, MockExamAnswer> = {};
   for (const [key, entry] of Object.entries(value)) {
@@ -49,7 +61,9 @@ function parseAnswers(value: unknown, questionIds: ReadonlySet<string>, startedA
     if (!isRecord(entry)) return null;
     const selected = entry.selectedChoiceIds;
     if (!isUniqueNonEmptyStringArray(selected) || selected.length === 0) return null;
-    if (!isIsoDateTime(entry.answeredAt) || Date.parse(entry.answeredAt) < startedAtMs) return null;
+    if (!isIsoDateTime(entry.answeredAt)) return null;
+    const answeredAtMs = Date.parse(entry.answeredAt);
+    if (answeredAtMs < startedAtMs || answeredAtMs > updatedAtMs || answeredAtMs >= expiresAtMs) return null;
     answers[key] = { selectedChoiceIds: [...selected], answeredAt: entry.answeredAt };
   }
   return answers;
@@ -75,20 +89,26 @@ export function parseMockExamSession(value: unknown): MockExamSession | null {
 
   if (!isIsoDateTime(value.startedAt) || !isIsoDateTime(value.expiresAt) || !isIsoDateTime(value.updatedAt)) return null;
   const startedAtMs = Date.parse(value.startedAt);
-  if (Date.parse(value.expiresAt) <= startedAtMs) return null;
-  if (Date.parse(value.updatedAt) < startedAtMs) return null;
+  const expiresAtMs = Date.parse(value.expiresAt);
+  const updatedAtMs = Date.parse(value.updatedAt);
+  if (expiresAtMs <= startedAtMs) return null;
+  if (updatedAtMs < startedAtMs) return null;
 
-  const answers = parseAnswers(value.answers, questionIds, startedAtMs);
+  const answers = parseAnswers(value.answers, questionIds, startedAtMs, updatedAtMs, expiresAtMs);
   if (!answers) return null;
   const flaggedQuestionIds = parseFlagged(value.flaggedQuestionIds, questionIds);
   if (!flaggedQuestionIds) return null;
 
-  // `submittedAt` exists exactly when the session was explicitly submitted; an
-  // expired or in-progress session must not carry one, and it can never predate
-  // the start.
+  // `submittedAt` exists exactly when the session was explicitly submitted. The
+  // engine sets it and `updatedAt` to the same instant, before expiry, so the
+  // parser enforces that canonical shape: present only on a submitted session,
+  // equal to `updatedAt`, on or after the start, and strictly before expiry. An
+  // expired or in-progress session must carry none.
   let submittedAt: string | undefined;
   if (value.submittedAt !== undefined) {
-    if (status !== 'submitted' || !isIsoDateTime(value.submittedAt) || Date.parse(value.submittedAt) < startedAtMs) return null;
+    if (status !== 'submitted' || !isIsoDateTime(value.submittedAt)) return null;
+    const submittedAtMs = Date.parse(value.submittedAt);
+    if (submittedAtMs < startedAtMs || submittedAtMs >= expiresAtMs || submittedAtMs !== updatedAtMs) return null;
     submittedAt = value.submittedAt;
   } else if (status === 'submitted') {
     return null;
@@ -110,34 +130,57 @@ export function parseMockExamSession(value: unknown): MockExamSession | null {
   return session;
 }
 
-function parseAttemptAnswers(value: unknown, questionIds: ReadonlySet<string>, startedAtMs: number): MockExamAttemptAnswer[] | null {
+// The engine grades exactly one entry per question ref — unanswered questions
+// included — carrying the ref's revision. The strict parser enforces that whole
+// contract: a bijection with the refs (one answer each, same revision), the
+// selection/answeredAt correspondence (an answered question has a timestamp, an
+// unanswered one does not), and the timing window (startedAt <= answeredAt, on or
+// before completion, and strictly before expiry). Anything else — a missing or
+// extra answer, a drifted revision, a timestamp past completion — is a document
+// this build cannot have produced and must not import.
+function parseAttemptAnswers(
+  value: unknown,
+  refRevisionById: ReadonlyMap<string, number>,
+  startedAtMs: number,
+  completedAtMs: number,
+  expiresAtMs: number,
+): MockExamAttemptAnswer[] | null {
   if (!Array.isArray(value)) return null;
   const answers: MockExamAttemptAnswer[] = [];
   const seen = new Set<string>();
   for (const entry of value) {
     if (!isRecord(entry)) return null;
-    if (!isNonEmptyString(entry.questionId) || !questionIds.has(entry.questionId) || seen.has(entry.questionId)) return null;
-    if (!isPositiveInteger(entry.questionRevision)) return null;
-    // Unanswered questions are graded too, so an empty selection is valid here
-    // (unlike a live answer record); it must still be a clean string array.
+    if (!isNonEmptyString(entry.questionId) || !refRevisionById.has(entry.questionId) || seen.has(entry.questionId)) return null;
+    // The graded revision must be the one captured in the ref, so a later content
+    // change can never be mistaken for what the learner actually faced.
+    if (entry.questionRevision !== refRevisionById.get(entry.questionId)) return null;
+    // An answered question has a non-empty selection and a timestamp; an
+    // unanswered one has neither. The two must agree in both directions.
     if (!isUniqueNonEmptyStringArray(entry.selectedChoiceIds)) return null;
     if (typeof entry.correct !== 'boolean') return null;
+    const answered = entry.selectedChoiceIds.length > 0;
     let answeredAt: string | undefined;
     if (entry.answeredAt !== undefined) {
-      if (!isIsoDateTime(entry.answeredAt) || Date.parse(entry.answeredAt) < startedAtMs) return null;
+      if (!answered || !isIsoDateTime(entry.answeredAt)) return null;
+      const answeredAtMs = Date.parse(entry.answeredAt);
+      if (answeredAtMs < startedAtMs || answeredAtMs > completedAtMs || answeredAtMs >= expiresAtMs) return null;
       answeredAt = entry.answeredAt;
+    } else if (answered) {
+      return null;
     }
     seen.add(entry.questionId);
     const graded: MockExamAttemptAnswer = {
       questionId: entry.questionId,
-      questionRevision: entry.questionRevision,
+      questionRevision: entry.questionRevision as number,
       selectedChoiceIds: [...entry.selectedChoiceIds],
       correct: entry.correct,
     };
     if (answeredAt !== undefined) graded.answeredAt = answeredAt;
     answers.push(graded);
   }
-  return answers;
+  // Exactly one answer per ref: same count, and every id already proven to be a
+  // distinct ref id, so this is a full bijection.
+  return answers.length === refRevisionById.size ? answers : null;
 }
 
 export function parseMockExamAttempt(value: unknown): MockExamAttempt | null {
@@ -147,15 +190,22 @@ export function parseMockExamAttempt(value: unknown): MockExamAttempt | null {
 
   const questionRefs = parseQuestionRefs(value.questionRefs);
   if (!questionRefs) return null;
-  const questionIds = new Set(questionRefs.map((ref) => ref.questionId));
+  const refRevisionById = new Map(questionRefs.map((ref) => [ref.questionId, ref.revision]));
 
   if (!isIsoDateTime(value.startedAt) || !isIsoDateTime(value.expiresAt) || !isIsoDateTime(value.completedAt)) return null;
   const startedAtMs = Date.parse(value.startedAt);
-  if (Date.parse(value.expiresAt) <= startedAtMs) return null;
-  if (Date.parse(value.completedAt) < startedAtMs) return null;
+  const expiresAtMs = Date.parse(value.expiresAt);
+  const completedAtMs = Date.parse(value.completedAt);
+  if (expiresAtMs <= startedAtMs) return null;
+  if (completedAtMs < startedAtMs) return null;
+  // A submitted attempt finished before time ran out; an expired one finished
+  // exactly at expiry — the engine sets completedAt from submittedAt or expiresAt.
+  if (value.outcome === 'submitted' && completedAtMs >= expiresAtMs) return null;
+  if (value.outcome === 'expired' && completedAtMs !== expiresAtMs) return null;
 
-  const answers = parseAttemptAnswers(value.answers, questionIds, startedAtMs);
+  const answers = parseAttemptAnswers(value.answers, refRevisionById, startedAtMs, completedAtMs, expiresAtMs);
   if (!answers) return null;
+  const questionIds = new Set(questionRefs.map((ref) => ref.questionId));
   const flaggedQuestionIds = parseFlagged(value.flaggedQuestionIds, questionIds);
   if (!flaggedQuestionIds) return null;
 

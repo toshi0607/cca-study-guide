@@ -71,6 +71,8 @@ export function makeBankWith(counts: Record<string, number>): ChoiceQuestion[] {
 }
 
 // Builds a minimal valid in-progress session over the given question refs.
+// `updatedAt` sits 10 minutes after the start (well before the 2h expiry), so a
+// fixture answer timestamped a few minutes in still satisfies answeredAt <= updatedAt.
 export function makeSession(overrides: Partial<MockExamSession> = {}): MockExamSession {
   const startedAt = '2026-07-20T00:00:00.000Z';
   return {
@@ -87,7 +89,7 @@ export function makeSession(overrides: Partial<MockExamSession> = {}): MockExamS
     flaggedQuestionIds: [],
     startedAt,
     expiresAt: '2026-07-20T02:00:00.000Z',
-    updatedAt: startedAt,
+    updatedAt: '2026-07-20T00:10:00.000Z',
     ...overrides,
   };
 }
