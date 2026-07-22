@@ -9,6 +9,7 @@ import {
   STORAGE_KEY,
   type StudyData,
 } from './storage';
+import { makeAttempt, makeSession } from './mock-exam.fixture';
 
 function memoryStorage() {
   const values = new Map<string, string>();
@@ -134,7 +135,7 @@ describe('study storage', () => {
     expect(createStudyStorage(memory).load()).toEqual(createEmptyStudyData());
     expect(memory.values.get(STORAGE_KEY)).toBe('{bad json');
 
-    const future = JSON.stringify({ version: 3, reviews: {} });
+    const future = JSON.stringify({ version: 4, reviews: {} });
     memory.setItem(STORAGE_KEY, future);
     expect(createStudyStorage(memory).load()).toEqual(createEmptyStudyData());
     expect(memory.values.get(STORAGE_KEY)).toBe(future);
@@ -143,7 +144,7 @@ describe('study storage', () => {
   it('refuses to save over a document it could not read', () => {
     // #given — a document written by a newer release, as a deploy rollback would leave
     const memory = memoryStorage();
-    const future = JSON.stringify({ version: 3, reviews: { card: review() } });
+    const future = JSON.stringify({ version: 4, reviews: { card: review() } });
     memory.setItem(STORAGE_KEY, future);
     const storage = createStudyStorage(memory);
 
@@ -246,7 +247,7 @@ describe('study storage', () => {
   it('refuses to store a document of an unknown version', () => {
     // #given — a document whose version was tampered with at runtime
     const memory = memoryStorage();
-    const broken = { ...createEmptyStudyData(), version: 3 } as unknown as StudyData;
+    const broken = { ...createEmptyStudyData(), version: 4 } as unknown as StudyData;
 
     // #when / #then
     expect(createStudyStorage(memory).save(broken)).toBe(false);
@@ -413,5 +414,117 @@ describe('study data import and export', () => {
     expect(imported).toBeNull();
     expect(({} as Record<string, unknown>).polluted).toBeUndefined();
     expect(Object.prototype).not.toHaveProperty('polluted');
+  });
+});
+
+describe('Mock Exam v3 storage', () => {
+  const withMockExam = (data: StudyData): StudyData => ({
+    ...data,
+    activeMockExam: makeSession({ answers: { 'd1-q0': { selectedChoiceIds: ['a'], answeredAt: '2026-07-20T00:05:00.000Z' } } }),
+    mockExamAttempts: [makeAttempt()],
+  });
+
+  it('round-trips an active session and completed attempts', () => {
+    // #given
+    const memory = memoryStorage();
+    const storage = createStudyStorage(memory);
+    const data = withMockExam(withProgress({ ...createEmptyStudyData(), reviews: { card: review() }, quizStats: { question: stat } }));
+
+    // #when / #then
+    expect(storage.save(data)).toBe(true);
+    expect(storage.load()).toEqual(data);
+  });
+
+  it('migrates a v2 document under the current key up to v3 in memory, preserving all four record sets', () => {
+    // #given — a valid v2 document, as an earlier release wrote
+    const memory = memoryStorage();
+    const v2 = {
+      version: 2,
+      reviews: { card: review() },
+      quizStats: { question: stat },
+      studyGuideProgress: { 'sg-exam-overview': { revision: 1, status: 'in_progress', updatedAt: '2026-07-20T09:00:00.000Z' } },
+      handsOnProgress: { 'ho-first-agent': { revision: 1, status: 'completed', completedStepIds: ['step-1'], updatedAt: '2026-07-20T09:00:00.000Z', completedAt: '2026-07-20T09:00:00.000Z' } },
+    };
+    memory.setItem(STORAGE_KEY, JSON.stringify(v2));
+    const storage = createStudyStorage(memory);
+
+    // #when
+    const loaded = storage.load();
+
+    // #then — every v2 record survives and the Mock Exam state starts empty
+    expect(loaded.version).toBe(3);
+    expect(loaded.reviews).toEqual(v2.reviews);
+    expect(loaded.quizStats).toEqual(v2.quizStats);
+    expect(loaded.studyGuideProgress).toEqual(v2.studyGuideProgress);
+    expect(loaded.handsOnProgress).toEqual(v2.handsOnProgress);
+    expect(loaded.activeMockExam).toBeNull();
+    expect(loaded.mockExamAttempts).toEqual([]);
+    // Reading does not rewrite storage: the on-disk document stays v2 until a save.
+    expect(JSON.parse(memory.values.get(STORAGE_KEY)!).version).toBe(2);
+    // The first genuine save upgrades it to v3 in place.
+    expect(storage.save(loaded)).toBe(true);
+    expect(JSON.parse(memory.values.get(STORAGE_KEY)!).version).toBe(3);
+  });
+
+  it('is idempotent and leaves the stored v2 document untouched across loads', () => {
+    // #given
+    const memory = memoryStorage();
+    const stored = JSON.stringify({ version: 2, reviews: {}, quizStats: {}, studyGuideProgress: {}, handsOnProgress: {} });
+    memory.setItem(STORAGE_KEY, stored);
+    const storage = createStudyStorage(memory);
+
+    // #when
+    const first = storage.load();
+    const second = storage.load();
+
+    // #then — both loads yield the same v3 view, and neither rewrote storage
+    expect(first).toEqual(second);
+    expect(memory.values.get(STORAGE_KEY)).toBe(stored);
+  });
+
+  it('rejects a document whose Mock Exam state is malformed without overwriting it', () => {
+    // #given — a v3 document with a broken active session
+    const memory = memoryStorage();
+    const broken = JSON.stringify({ ...createEmptyStudyData(), activeMockExam: { id: 'x' } });
+    memory.setItem(STORAGE_KEY, broken);
+    const storage = createStudyStorage(memory);
+
+    // #when / #then — read reports empty and write is refused, so nothing is lost
+    expect(storage.load()).toEqual(createEmptyStudyData());
+    expect(storage.save(createEmptyStudyData())).toBe(false);
+    expect(memory.values.get(STORAGE_KEY)).toBe(broken);
+  });
+
+  it('clears Mock Exam state on reset', () => {
+    // #given
+    const memory = memoryStorage();
+    const storage = createStudyStorage(memory);
+    storage.save(withMockExam(createEmptyStudyData()));
+
+    // #when
+    expect(storage.reset()).toBe(true);
+
+    // #then
+    expect(storage.load()).toEqual(createEmptyStudyData());
+  });
+
+  it('exports and re-imports Mock Exam state intact', () => {
+    // #given
+    const data = withMockExam(withProgress({ ...createEmptyStudyData(), reviews: { card: review() } }));
+
+    // #when
+    const imported = parseStudyDataImport(JSON.stringify(buildStudyDataExport(data, new Date('2026-07-21T00:00:00Z'))));
+
+    // #then
+    expect(imported?.data.activeMockExam).toEqual(data.activeMockExam);
+    expect(imported?.data.mockExamAttempts).toEqual(data.mockExamAttempts);
+  });
+
+  it('rejects an import whose active session is malformed rather than dropping it', () => {
+    // #given
+    const document = { ...createEmptyStudyData(), activeMockExam: { id: 'broken', status: 'in_progress' } };
+
+    // #when / #then
+    expect(parseStudyDataImport(JSON.stringify(document))).toBeNull();
   });
 });

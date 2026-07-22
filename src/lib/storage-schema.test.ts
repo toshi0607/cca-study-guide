@@ -3,9 +3,11 @@ import { scheduleReview } from './scheduler';
 import {
   createEmptyStudyData,
   migrateStudyDataV1ToV2,
+  migrateStudyDataV2ToV3,
   parseStudyData,
   parseStudyDataV1,
   parseStudyDataV2,
+  parseStudyDataV3,
   type HandsOnProgress,
   type QuizStat,
   type StudyDataV1,
@@ -23,16 +25,20 @@ const guideProgress = (overrides: Partial<StudyGuideProgress> = {}): StudyGuideP
 const handsOnProgress = (overrides: Partial<HandsOnProgress> = {}): HandsOnProgress =>
   ({ revision: 1, status: 'in_progress', completedStepIds: ['step-1'], updatedAt: '2026-07-20T09:00:00.000Z', ...overrides } as HandsOnProgress);
 
+// An explicit empty v2 document. The current-version helper (createEmptyStudyData)
+// now returns v3, so the v2-specific tests build their fixtures from this instead.
+const emptyV2 = (): StudyDataV2 => ({ version: 2, reviews: {}, quizStats: {}, studyGuideProgress: {}, handsOnProgress: {} });
+
 const validV1 = (overrides: Partial<StudyDataV1> = {}): StudyDataV1 =>
   ({ version: 1, reviews: { card: review('card') }, quizStats: { question: stat() }, ...overrides });
 
 const validV2 = (overrides: Partial<StudyDataV2> = {}): StudyDataV2 =>
-  ({ ...createEmptyStudyData(), reviews: { card: review('card') }, quizStats: { question: stat() }, ...overrides });
+  ({ ...emptyV2(), reviews: { card: review('card') }, quizStats: { question: stat() }, ...overrides });
 
 describe('createEmptyStudyData', () => {
   it('returns a complete current-version document', () => {
     // #given / #when / #then
-    expect(createEmptyStudyData()).toEqual({ version: 2, reviews: {}, quizStats: {}, studyGuideProgress: {}, handsOnProgress: {} });
+    expect(createEmptyStudyData()).toEqual({ version: 3, reviews: {}, quizStats: {}, studyGuideProgress: {}, handsOnProgress: {}, activeMockExam: null, mockExamAttempts: [] });
   });
 
   it('returns independent records on every call', () => {
@@ -47,7 +53,7 @@ describe('createEmptyStudyData', () => {
     first.quizStats.question = stat();
 
     // #then
-    expect(second).toEqual({ version: 2, reviews: {}, quizStats: {}, studyGuideProgress: {}, handsOnProgress: {} });
+    expect(second).toEqual({ version: 3, reviews: {}, quizStats: {}, studyGuideProgress: {}, handsOnProgress: {}, activeMockExam: null, mockExamAttempts: [] });
   });
 });
 
@@ -143,9 +149,9 @@ describe('migrateStudyDataV1ToV2', () => {
 });
 
 describe('parseStudyDataV2', () => {
-  it('accepts an empty current-version document', () => {
+  it('accepts an empty v2 document', () => {
     // #given / #when / #then
-    expect(parseStudyDataV2(createEmptyStudyData())).toEqual(createEmptyStudyData());
+    expect(parseStudyDataV2(emptyV2())).toEqual(emptyV2());
   });
 
   it('accepts a document carrying study guide and hands-on progress', () => {
@@ -190,7 +196,7 @@ describe('parseStudyDataV2', () => {
 
   it('rejects an unknown future version', () => {
     // #given / #when / #then
-    expect(parseStudyDataV2({ ...createEmptyStudyData(), version: 3 })).toBeNull();
+    expect(parseStudyDataV2({ ...emptyV2(), version: 4 })).toBeNull();
   });
 
   it('rejects a document that declares the version but carries no records', () => {
@@ -201,7 +207,7 @@ describe('parseStudyDataV2', () => {
   it('rejects a document missing any one of the four records', () => {
     // #given / #when / #then
     for (const field of ['reviews', 'quizStats', 'studyGuideProgress', 'handsOnProgress'] as const) {
-      const document: Record<string, unknown> = { ...createEmptyStudyData() };
+      const document: Record<string, unknown> = { ...emptyV2() };
       delete document[field];
       expect(parseStudyDataV2(document)).toBeNull();
     }
@@ -233,13 +239,13 @@ describe('parseStudyDataV2', () => {
 
   it('rejects a progress record whose container is an array', () => {
     // #given / #when / #then
-    expect(parseStudyDataV2({ ...createEmptyStudyData(), studyGuideProgress: [] })).toBeNull();
-    expect(parseStudyDataV2({ ...createEmptyStudyData(), handsOnProgress: [] })).toBeNull();
+    expect(parseStudyDataV2({ ...emptyV2(), studyGuideProgress: [] })).toBeNull();
+    expect(parseStudyDataV2({ ...emptyV2(), handsOnProgress: [] })).toBeNull();
   });
 
   it('rejects a document containing a progress entry with an unknown status', () => {
     // #given
-    const document = { ...createEmptyStudyData(), studyGuideProgress: { section: { ...guideProgress(), status: 'paused' } } };
+    const document = { ...emptyV2(), studyGuideProgress: { section: { ...guideProgress(), status: 'paused' } } };
 
     // #when / #then
     expect(parseStudyDataV2(document)).toBeNull();
@@ -248,7 +254,7 @@ describe('parseStudyDataV2', () => {
   it('rejects a document whose progress revision is not a positive integer', () => {
     // #given
     const document = {
-      ...createEmptyStudyData(),
+      ...emptyV2(),
       studyGuideProgress: { zero: guideProgress({ revision: 0 }), negative: guideProgress({ revision: -1 }), fractional: guideProgress({ revision: 1.5 }) },
     };
 
@@ -259,7 +265,7 @@ describe('parseStudyDataV2', () => {
   it('rejects a document whose progress timestamp is not an ISO datetime', () => {
     // #given
     const document = {
-      ...createEmptyStudyData(),
+      ...emptyV2(),
       studyGuideProgress: {
         dateOnly: guideProgress({ updatedAt: '2026-07-20' }),
         garbage: guideProgress({ updatedAt: 'not-a-date' }),
@@ -274,7 +280,7 @@ describe('parseStudyDataV2', () => {
   it('rejects an in_progress entry that still carries a completion timestamp', () => {
     // #given
     const document = {
-      ...createEmptyStudyData(),
+      ...emptyV2(),
       studyGuideProgress: { section: { ...guideProgress(), completedAt: '2026-07-20T08:00:00.000Z' } },
     };
 
@@ -284,7 +290,7 @@ describe('parseStudyDataV2', () => {
 
   it('rejects a completed entry that has no completion timestamp', () => {
     // #given
-    const document = { ...createEmptyStudyData(), studyGuideProgress: { section: { revision: 1, status: 'completed', updatedAt: '2026-07-20T09:00:00.000Z' } } };
+    const document = { ...emptyV2(), studyGuideProgress: { section: { revision: 1, status: 'completed', updatedAt: '2026-07-20T09:00:00.000Z' } } };
 
     // #when / #then
     expect(parseStudyDataV2(document)).toBeNull();
@@ -293,7 +299,7 @@ describe('parseStudyDataV2', () => {
   it('rejects a completed entry finished after its last update', () => {
     // #given
     const document = {
-      ...createEmptyStudyData(),
+      ...emptyV2(),
       studyGuideProgress: { section: guideProgress({ status: 'completed', completedAt: '2026-07-20T09:00:01.000Z' }) },
     };
 
@@ -304,7 +310,7 @@ describe('parseStudyDataV2', () => {
   it('rejects a hands-on entry with duplicate completed step ids', () => {
     // #given
     const document = {
-      ...createEmptyStudyData(),
+      ...emptyV2(),
       handsOnProgress: { guide: handsOnProgress({ completedStepIds: ['step-1', 'step-1'] }) },
     };
 
@@ -315,7 +321,7 @@ describe('parseStudyDataV2', () => {
   it('rejects a hands-on entry whose completed step ids are not strings', () => {
     // #given
     const document = {
-      ...createEmptyStudyData(),
+      ...emptyV2(),
       handsOnProgress: { notArray: { ...handsOnProgress(), completedStepIds: 'step-1' }, notStrings: { ...handsOnProgress(), completedStepIds: [1] } },
     };
 
@@ -325,30 +331,112 @@ describe('parseStudyDataV2', () => {
 
   it('accepts a hands-on entry with no completed steps yet', () => {
     // #given
-    const document = { ...createEmptyStudyData(), handsOnProgress: { guide: handsOnProgress({ completedStepIds: [] }) } };
+    const document = { ...emptyV2(), handsOnProgress: { guide: handsOnProgress({ completedStepIds: [] }) } };
 
     // #when / #then
     expect(parseStudyDataV2(document)?.handsOnProgress).toEqual({ guide: handsOnProgress({ completedStepIds: [] }) });
   });
 });
 
-describe('parseStudyData', () => {
-  it('reports a v2 document as already current', () => {
-    // #given / #when / #then
-    expect(parseStudyData(validV2())).toEqual({ data: validV2(), migrated: false });
+describe('migrateStudyDataV2ToV3', () => {
+  it('carries every existing record across unchanged and starts Mock Exam state empty', () => {
+    // #given
+    const input = validV2({
+      studyGuideProgress: { section: guideProgress() },
+      handsOnProgress: { guide: handsOnProgress() },
+    });
+
+    // #when
+    const migrated = migrateStudyDataV2ToV3(input);
+
+    // #then
+    expect(migrated).toEqual({
+      version: 3,
+      reviews: input.reviews,
+      quizStats: input.quizStats,
+      studyGuideProgress: input.studyGuideProgress,
+      handsOnProgress: input.handsOnProgress,
+      activeMockExam: null,
+      mockExamAttempts: [],
+    });
   });
 
-  it('migrates a v1 document and reports it as migrated', () => {
+  it('does not mutate its input', () => {
+    // #given
+    const input = validV2();
+    const snapshot = structuredClone(input);
+
+    // #when
+    migrateStudyDataV2ToV3(input).reviews.injected = review('injected');
+
+    // #then
+    expect(input).toEqual(snapshot);
+  });
+
+  it('produces a document that passes v3 validation', () => {
+    // #given / #when / #then
+    expect(parseStudyDataV3(migrateStudyDataV2ToV3(validV2()))).toEqual(migrateStudyDataV2ToV3(validV2()));
+  });
+});
+
+describe('parseStudyDataV3', () => {
+  it('accepts an empty current-version document', () => {
+    // #given / #when / #then
+    expect(parseStudyDataV3(createEmptyStudyData())).toEqual(createEmptyStudyData());
+  });
+
+  it('does not accept a v2 document as v3', () => {
+    // #given / #when / #then
+    expect(parseStudyDataV3(validV2())).toBeNull();
+  });
+
+  it('rejects a document missing either Mock Exam field', () => {
+    // #given / #when / #then
+    for (const field of ['activeMockExam', 'mockExamAttempts'] as const) {
+      const document: Record<string, unknown> = { ...createEmptyStudyData() };
+      delete document[field];
+      expect(parseStudyDataV3(document)).toBeNull();
+    }
+  });
+
+  it('rejects a document whose activeMockExam is neither null nor a valid session', () => {
+    // #given / #when / #then
+    expect(parseStudyDataV3({ ...createEmptyStudyData(), activeMockExam: { id: 'x' } })).toBeNull();
+    expect(parseStudyDataV3({ ...createEmptyStudyData(), activeMockExam: 42 })).toBeNull();
+  });
+
+  it('rejects a document whose mockExamAttempts is not an array of valid attempts', () => {
+    // #given / #when / #then
+    expect(parseStudyDataV3({ ...createEmptyStudyData(), mockExamAttempts: {} })).toBeNull();
+    expect(parseStudyDataV3({ ...createEmptyStudyData(), mockExamAttempts: [{ id: 'broken' }] })).toBeNull();
+  });
+});
+
+describe('parseStudyData', () => {
+  it('reports a v3 document as already current', () => {
+    // #given / #when / #then
+    expect(parseStudyData(createEmptyStudyData())).toEqual({ data: createEmptyStudyData(), migrated: false });
+  });
+
+  it('migrates a v2 document up to v3 and reports it as migrated', () => {
+    // #given / #when
+    const parsed = parseStudyData(validV2());
+
+    // #then
+    expect(parsed).toEqual({ data: migrateStudyDataV2ToV3(validV2()), migrated: true });
+  });
+
+  it('migrates a v1 document all the way to v3 and reports it as migrated', () => {
     // #given / #when
     const parsed = parseStudyData(validV1());
 
     // #then
-    expect(parsed).toEqual({ data: migrateStudyDataV1ToV2(validV1()), migrated: true });
+    expect(parsed).toEqual({ data: migrateStudyDataV2ToV3(migrateStudyDataV1ToV2(validV1())), migrated: true });
   });
 
-  it('rejects an unknown version instead of treating it as v1', () => {
+  it('rejects an unknown future version instead of treating it as legacy', () => {
     // #given / #when / #then
-    expect(parseStudyData({ version: 3, reviews: {} })).toBeNull();
+    expect(parseStudyData({ version: 4, reviews: {} })).toBeNull();
   });
 
   it('never copies prototype-polluting keys out of stored records', () => {
