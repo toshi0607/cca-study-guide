@@ -44,3 +44,24 @@ export function isAnswerCorrect(question: ChoiceQuestion, selectedChoiceIds: rea
   return selectedChoiceIds.length === question.correctChoiceIds.length
     && question.correctChoiceIds.every((id) => selectedChoiceIds.includes(id));
 }
+
+// The four states a single choice can be in once a question is answered. Kept as
+// a pure function so the post-answer review and the summary review classify a
+// choice identically, and so a partially-correct multiple-select answer is
+// distinguished choice by choice (a selected correct answer differs from an
+// unselected correct one, and a selected wrong answer from an unselected one).
+export type ChoiceReviewState =
+  | 'correct-selected'
+  | 'correct-unselected'
+  | 'incorrect-selected'
+  | 'incorrect-unselected';
+
+export function classifyChoice(
+  correctChoiceIds: readonly string[],
+  selectedChoiceIds: readonly string[],
+  choiceId: string,
+): ChoiceReviewState {
+  const correctness = correctChoiceIds.includes(choiceId) ? 'correct' : 'incorrect';
+  const selection = selectedChoiceIds.includes(choiceId) ? 'selected' : 'unselected';
+  return `${correctness}-${selection}`;
+}

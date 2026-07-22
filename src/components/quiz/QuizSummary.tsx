@@ -3,12 +3,16 @@ import { domains } from '../../content/domains';
 import type { ChoiceQuestion } from '../../content/types';
 import type { Locale } from '../../i18n/locales';
 import { localize, type UiCopy } from '../../i18n/ui';
+import type { RationalesState } from '../../lib/rationales-loader';
+import { AnswerReview } from './AnswerReview';
+import { QuestionMetadata } from './QuestionMetadata';
 import type { QuizResult } from './types';
 
-export function QuizSummary({ results, correctCount, wrongResults, locale, copy, onRetry }: {
+export function QuizSummary({ results, correctCount, wrongResults, rationalesState, locale, copy, onRetry }: {
   results: QuizResult[];
   correctCount: number;
   wrongResults: QuizResult[];
+  rationalesState: RationalesState;
   locale: Locale;
   copy: UiCopy;
   onRetry: () => void;
@@ -43,7 +47,16 @@ export function QuizSummary({ results, correctCount, wrongResults, locale, copy,
       <section class="quiz-missed" aria-labelledby="quiz-missed-title">
         <h3 id="quiz-missed-title">{copy.quiz.wrongTitle}</h3>
         {wrongResults.length
-          ? <ul>{wrongResults.map((result) => <li key={result.question.id}><p>{localize(result.question.stem, locale)}</p><p><strong>{copy.quiz.correctAnswerLabel}</strong> {answerText(result.question)}</p><p>{localize(result.question.explanation, locale)}</p></li>)}</ul>
+          ? <ul>{wrongResults.map((result) => <li key={result.question.id}>
+              <details class="quiz-review-item">
+                <summary>{localize(result.question.stem, locale)}</summary>
+                <div class="quiz-review-body">
+                  <QuestionMetadata question={result.question} locale={locale} copy={copy}/>
+                  <p class="quiz-correct-answer"><strong>{copy.quiz.correctAnswerLabel}</strong> {answerText(result.question)}</p>
+                  <AnswerReview question={result.question} selectedIds={result.selectedIds} rationalesState={rationalesState} locale={locale} copy={copy}/>
+                </div>
+              </details>
+            </li>)}</ul>
           : <p>{copy.quiz.noWrong}</p>}
       </section>
       <button class="quiz-start" onClick={onRetry}>{copy.quiz.retry}</button>
