@@ -174,24 +174,54 @@ export type HandsOnStep = {
   id: string;
   title: LocalizedText;
   instructions: LocalizedText<string[]>;
+  // What the learner should be able to observe once the step is done. Kept per
+  // step (not only as a final verification block) so each checklist item has its
+  // own observable success signal.
+  expectedResult: LocalizedText<string[]>;
+};
+
+// A typical failure and how to isolate it. Structured rather than a flat string
+// list so the UI can render symptom and diagnosis distinctly and a later
+// analysis view can key on the id.
+export type HandsOnPitfall = {
+  id: string;
+  symptom: LocalizedText;
+  isolation: LocalizedText;
 };
 
 // A guided exercise the learner runs in their own environment. The type carries
-// no environment-specific settings and never holds credentials.
+// no environment-specific settings and never holds credentials: it says where a
+// secret belongs, never what it is.
 export type HandsOnGuide = {
   id: string;
   revision: number;
   title: LocalizedText;
   summary: LocalizedText;
   domainIds: string[];
+  // Task statement (objective) IDs such as '1.1'. domainIds must be exactly the
+  // set of domains these task statements belong to.
+  taskStatementIds: string[];
+  // The capabilities this guide exercises, drawn from the skill taxonomy.
+  skillIds: SkillId[];
   officialScenarioIds: OfficialScenarioId[];
   learningObjectives: LocalizedText<string[]>;
   prerequisites: LocalizedText<string[]>;
+  // Tools, accounts, and runtimes the learner must have ready before starting.
+  environment: LocalizedText<string[]>;
   estimatedMinutes: number;
+  // One-time preparation before the numbered steps begin.
+  setup: LocalizedText<string[]>;
   steps: HandsOnStep[];
   deliverables: LocalizedText<string[]>;
   verification: LocalizedText<string[]>;
+  troubleshooting: HandsOnPitfall[];
+  // Security and privacy cautions specific to running this exercise.
+  securityNotes: LocalizedText<string[]>;
+  // What can cost money and how to keep it bounded.
+  costNotes: LocalizedText<string[]>;
   cleanup?: LocalizedText<string[]>;
+  // Questions to review after finishing, to connect the exercise to the exam.
+  reflection: LocalizedText<string[]>;
   relatedCardIds: string[];
   relatedQuestionIds: string[];
   sourceIds: string[];

@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import type { LocalizedText } from './types';
+import type { LocalizedText, OfficialScenarioId } from './types';
 import { questionDifficulties } from './types';
 import { cards } from './cards';
 import { domains } from './domains';
@@ -82,23 +82,37 @@ const handsOnStepSchema = z.object({
   id: z.string().min(1),
   title: localizedStringSchema,
   instructions: localizedStringArraySchema,
+  expectedResult: localizedStringArraySchema,
 });
+const handsOnPitfallSchema = z.object({
+  id: z.string().min(1),
+  symptom: localizedStringSchema,
+  isolation: localizedStringSchema,
+}).strict();
 const handsOnGuideSchema = z.object({
   id: z.string().min(1),
   revision: z.number().int().positive(),
   title: localizedStringSchema,
   summary: localizedStringSchema,
   domainIds: requiredIdListSchema,
+  taskStatementIds: requiredIdListSchema,
+  skillIds: requiredIdListSchema,
   officialScenarioIds: requiredIdListSchema,
   learningObjectives: localizedStringArraySchema,
   prerequisites: localizedStringArraySchema,
+  environment: localizedStringArraySchema,
   estimatedMinutes: z.number().int().positive(),
+  setup: localizedStringArraySchema,
   steps: z.array(handsOnStepSchema).min(1),
   deliverables: localizedStringArraySchema,
   verification: localizedStringArraySchema,
+  troubleshooting: z.array(handsOnPitfallSchema).min(1),
+  securityNotes: localizedStringArraySchema,
+  costNotes: localizedStringArraySchema,
   cleanup: localizedStringArraySchema.optional(),
-  relatedCardIds: idListSchema,
-  relatedQuestionIds: idListSchema,
+  reflection: localizedStringArraySchema,
+  relatedCardIds: requiredIdListSchema,
+  relatedQuestionIds: requiredIdListSchema,
   sourceIds: requiredIdListSchema,
   verifiedAt: date,
 });
@@ -531,19 +545,40 @@ export function validateStudyGuideSections(input: unknown, index: ContentIndex):
   return errors;
 }
 
+// The four themes Task 5 must cover, expressed as the official scenario each
+// maps to. Every one must be exercised by at least one guide, and the guides
+// carrying them must offer distinct implementation experiences.
+const requiredHandsOnThemes: OfficialScenarioId[] = [
+  'customer-support-resolution',
+  'claude-code-ci',
+  'structured-data-extraction',
+  'multi-agent-research',
+];
+
 export function validateHandsOnGuides(input: unknown, index: ContentIndex): string[] {
   const errors: string[] = [];
   const parsed = parseEach(handsOnGuideSchema, input, 'hands-on guide', errors);
   unique(rawIds(input), 'hands-on guides', errors);
+
+  const objectiveDomainById = new Map(
+    domains.flatMap((domain) => domain.objectives.map((objective) => [objective.id, domain.id] as const)),
+  );
+  const cardById = new Map(cards.map((card) => [card.id, card]));
+  const questionById = new Map(questions.map((question) => [question.id, question]));
+
   for (const guide of parsed) {
     const label = `hands-on guide ${guide.id}`;
     checkSourceIds(guide, 'hands-on guide', index, errors);
     checkReferences(guide.domainIds, index.domainIds, label, 'domain', errors);
+    checkReferences(guide.taskStatementIds, index.objectiveIds, label, 'task statement', errors);
+    checkReferences(guide.skillIds, index.skillIds, label, 'skill', errors);
     checkReferences(guide.officialScenarioIds, index.officialScenarioIds, label, 'official scenario', errors);
     checkReferences(guide.relatedCardIds, index.cardIds, label, 'card', errors);
     checkReferences(guide.relatedQuestionIds, index.questionIds, label, 'question', errors);
     for (const [field, ids] of [
       ['domainIds', guide.domainIds],
+      ['taskStatementIds', guide.taskStatementIds],
+      ['skillIds', guide.skillIds],
       ['officialScenarioIds', guide.officialScenarioIds],
       ['relatedCardIds', guide.relatedCardIds],
       ['relatedQuestionIds', guide.relatedQuestionIds],
@@ -552,6 +587,99 @@ export function validateHandsOnGuides(input: unknown, index: ContentIndex): stri
       unique(ids, `${label} ${field}`, errors);
     }
     unique(guide.steps.map((step) => step.id), `${label} steps`, errors);
+    unique(guide.troubleshooting.map((pitfall) => pitfall.id), `${label} troubleshooting`, errors);
+
+    // domainIds must be exactly the set of domains its task statements belong to.
+    const taskStatementIds = new Set(guide.taskStatementIds);
+    const expectedDomainIds = new Set(
+      guide.taskStatementIds.flatMap((id) => {
+        const domainId = objectiveDomainById.get(id);
+        return domainId === undefined ? [] : [domainId];
+      }),
+    );
+    const declaredDomainIds = new Set(guide.domainIds);
+    if (
+      expectedDomainIds.size !== declaredDomainIds.size
+      || [...expectedDomainIds].some((id) => !declaredDomainIds.has(id))
+    ) {
+      errors.push(`${label}: domainIds must exactly match the domains of its task statements`);
+    }
+
+    // Related cards and questions must sit inside the guide's domains and cover
+    // at least one of its task statements, so a link never sends the learner to
+    // material outside the exercise.
+    for (const [kind, ids, byId] of [
+      ['card', guide.relatedCardIds, cardById],
+      ['question', guide.relatedQuestionIds, questionById],
+    ] as const) {
+      for (const id of ids) {
+        const item = byId.get(id);
+        if (item && !item.objectiveIds.some((objectiveId) => taskStatementIds.has(objectiveId))) {
+          errors.push(`${label}: related ${kind} ${id} does not cover a guide task statement`);
+        }
+        if (item && !declaredDomainIds.has(item.domainId)) {
+          errors.push(`${label}: related ${kind} ${id} is outside the guide domains`);
+        }
+      }
+    }
+
+    // ja/en lists correspond item by item, so their lengths must match.
+    const listFields: Array<[string, LocalizedText<string[]> | undefined]> = [
+      ['learningObjectives', guide.learningObjectives],
+      ['prerequisites', guide.prerequisites],
+      ['environment', guide.environment],
+      ['setup', guide.setup],
+      ['deliverables', guide.deliverables],
+      ['verification', guide.verification],
+      ['securityNotes', guide.securityNotes],
+      ['costNotes', guide.costNotes],
+      ['reflection', guide.reflection],
+      ['cleanup', guide.cleanup],
+    ];
+    for (const step of guide.steps) {
+      listFields.push([`step ${step.id} instructions`, step.instructions]);
+      listFields.push([`step ${step.id} expectedResult`, step.expectedResult]);
+    }
+    for (const [field, value] of listFields) {
+      if (value && value.ja.length !== value.en.length) {
+        errors.push(`${label}: ${field} must have matching Japanese and English item counts`);
+      }
+    }
+  }
+
+  return errors;
+}
+
+// A cross-guide check kept apart from per-guide validation: every required theme
+// must be present in the full set, and no two distinct guides that carry a
+// required theme may share an identical skill set. This is a mechanical
+// guardrail that flags an exact skill-set match, not a judge of semantic
+// duplication — two genuinely similar guides that differ by one skill still pass,
+// so meaningful distinctness stays a content-review concern. Guides are deduped
+// by id, so a single guide that legitimately spans two themes is compared once,
+// not flagged against itself, and every theme-carrying guide is checked (not only
+// the first per theme).
+export function validateHandsOnThemes(
+  guideInput: Array<{ id: string; officialScenarioIds: string[]; skillIds: string[] }>,
+): string[] {
+  const errors: string[] = [];
+  const themeCarriers = new Map<string, { id: string; skillIds: string[] }>();
+  for (const theme of requiredHandsOnThemes) {
+    const guides = guideInput.filter((guide) => guide.officialScenarioIds.includes(theme));
+    if (guides.length === 0) {
+      errors.push(`hands-on guides: required theme ${theme} is not covered by any guide`);
+    }
+    for (const guide of guides) themeCarriers.set(guide.id, guide);
+  }
+  const signatureOwner = new Map<string, string>();
+  for (const guide of themeCarriers.values()) {
+    const signature = [...guide.skillIds].sort().join('+');
+    const owner = signatureOwner.get(signature);
+    if (owner) {
+      errors.push(`hands-on guides: theme guides ${owner} and ${guide.id} share an identical skill set`);
+    } else {
+      signatureOwner.set(signature, guide.id);
+    }
   }
   return errors;
 }
@@ -571,6 +699,7 @@ export function validateContent() {
     ...validateScenarioQuestionLinks(scenarios, questions),
     ...validateStudyGuideSections(studyGuideSections, index),
     ...validateHandsOnGuides(handsOnGuides, index),
+    ...validateHandsOnThemes(handsOnGuides),
   ];
 
   for (const [id, skill] of Object.entries(skillById)) {
