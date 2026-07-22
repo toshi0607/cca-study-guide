@@ -327,4 +327,4 @@ scaled score非算出・migration・compatibility・bundle非混入・API・stor
 
 - branch: `claude/task-8a-mock-exam-engine-bsqy6w`
 - base SHA: `0d9509ddf0103973cd53f1fefd700e1350b6675f`
-- PR URL: <記入>
+- PR URL: https://github.com/toshi0607/cca-study-guide/pull/36 （draft）
