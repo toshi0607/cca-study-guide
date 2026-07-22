@@ -1156,3 +1156,213 @@ test('official scenarios list and detail have no serious or critical accessibili
   axe = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa']).analyze();
   expect(axe.violations.filter((v) => v.impact === 'serious' || v.impact === 'critical')).toEqual([]);
 });
+
+// Task 7 — question metadata, per-choice rationale, and its deferred chunk.
+// A related-question button under an official scenario opens that exact question
+// as a one-question round, so these tests target a known question deterministically.
+const officialScenarioNav = {
+  ja: { guide: 'ガイド', list: '公式シナリオ一覧へ' },
+  en: { guide: 'Guide', list: 'Go to the official scenarios' },
+} as const;
+
+async function openScenarioQuestion(
+  page: import('@playwright/test').Page,
+  locale: 'ja' | 'en',
+  scenarioTitle: string,
+  questionId: string,
+) {
+  await page.getByRole('button', { name: officialScenarioNav[locale].guide }).first().click();
+  await page.getByRole('button', { name: officialScenarioNav[locale].list }).click();
+  await page.getByRole('button', { name: scenarioTitle }).click();
+  await page.locator('.official-view').getByRole('button', { name: new RegExp(questionId) }).click();
+  await expect(page.locator('.quiz-question')).toHaveCount(1);
+}
+
+test('shows human-readable difficulty and skills.ts skill titles in both locales, never raw ids', async ({ page }) => {
+  // #given — q-d1-fanout is difficulty "application" with skill "orchestration"
+  await openScenarioQuestion(page, 'ja', 'カスタマーサポート解決エージェント', 'q-d1-fanout');
+
+  // #then — Japanese labels, not raw enum/skill ids
+  const metaJa = page.locator('.quiz-question .question-meta');
+  await expect(metaJa).toContainText('認知レベル');
+  await expect(metaJa).toContainText('応用');
+  await expect(metaJa).toContainText('測定スキル');
+  await expect(metaJa).toContainText('分解と委譲の設計');
+  await expect(metaJa).not.toContainText('application');
+  await expect(metaJa).not.toContainText('orchestration');
+
+  // #when — the same question in English
+  await page.goto('/en/');
+  await openScenarioQuestion(page, 'en', 'Customer Support Resolution Agent', 'q-d1-fanout');
+
+  // #then — English labels from skills.ts
+  const metaEn = page.locator('.quiz-question .question-meta');
+  await expect(metaEn).toContainText('Application');
+  await expect(metaEn).toContainText('Decomposition and delegation');
+  await expect(metaEn).not.toContainText('orchestration');
+});
+
+test('defers the rationale chunk until the first answer, then reviews each choice', async ({ page }) => {
+  const rationaleRequests: string[] = [];
+  page.on('request', (request) => { if (/\/rationales\.[^/]+\.js/.test(request.url())) rationaleRequests.push(request.url()); });
+
+  await openScenarioQuestion(page, 'ja', 'カスタマーサポート解決エージェント', 'q-d1-fanout');
+
+  // #then — no rationale chunk and no per-choice text before answering
+  expect(rationaleRequests).toHaveLength(0);
+  await expect(page.locator('.choice-rationale')).toHaveCount(0);
+
+  // #when — answering (choice c is correct)
+  await page.locator('.choice-button').nth(2).click();
+  const feedback = page.locator('.quiz-feedback');
+  await expect(feedback).toBeVisible();
+  await expect(feedback).toBeFocused();
+
+  // #then — the chunk is requested exactly once, after the answer
+  await expect.poll(() => rationaleRequests.length).toBe(1);
+
+  // #then — whole-question judgment and per-choice reasoning are separate, labeled sections
+  await expect(feedback).toContainText('判断のポイント');
+  await expect(feedback).toContainText('選択肢別の解説');
+  await expect(feedback.locator('.choice-review-list > li')).toHaveCount(4);
+  await expect(feedback.locator('.choice-rationale')).toHaveCount(4);
+
+  // #then — the picked choice is the learner's correct pick; an unpicked one is labeled a wrong option
+  const picked = feedback.locator('.choice-review-list > li', { hasText: 'あなたの選択' });
+  await expect(picked).toHaveCount(1);
+  await expect(picked).toContainText('正解選択肢');
+  await expect(feedback.locator('.choice-review-list > li').first()).toContainText('誤答選択肢');
+
+  await page.getByRole('button', { name: '結果を見る' }).click();
+  await expect(page.getByRole('heading', { name: '演習結果' })).toBeVisible();
+});
+
+test('reviews a multiple-select answer choice by choice and counts one attempt on a double submit', async ({ page }) => {
+  // #given — q-d3-skill is multiple-select with correct choices a and c
+  await openScenarioQuestion(page, 'ja', 'Claude Codeによるコード生成', 'q-d3-skill');
+  await expect(page.getByText('複数選択：', { exact: false })).toBeVisible();
+
+  // #when — selecting a (correct) and b (incorrect), then double-firing submit before re-render
+  await page.locator('.choice-button').nth(0).click();
+  await page.locator('.choice-button').nth(1).click();
+  await page.evaluate(() => {
+    const submit = document.querySelector('.quiz-submit') as HTMLButtonElement;
+    submit.click(); submit.click();
+  });
+
+  const feedback = page.locator('.quiz-feedback');
+  await expect(feedback).toBeVisible();
+  const items = feedback.locator('.choice-review-list > li');
+  await expect(items).toHaveCount(4);
+  await expect(feedback.locator('.choice-rationale')).toHaveCount(4);
+
+  // #then — all four states are distinguishable by text alone
+  await expect(items.nth(0)).toContainText('正解選択肢');
+  await expect(items.nth(0)).toContainText('あなたの選択');
+  await expect(items.nth(1)).toContainText('誤答選択肢');
+  await expect(items.nth(1)).toContainText('あなたの選択');
+  await expect(items.nth(2)).toContainText('正解選択肢');
+  await expect(items.nth(2)).not.toContainText('あなたの選択');
+  await expect(items.nth(3)).toContainText('誤答選択肢');
+  await expect(items.nth(3)).not.toContainText('あなたの選択');
+
+  // #then — the double submit recorded exactly one attempt
+  const stats = await page.evaluate((key) => JSON.parse(localStorage.getItem(key) ?? '{}').quizStats ?? {}, STORAGE_KEY);
+  expect(Object.keys(stats)).toEqual(['q-d3-skill']);
+  expect(stats['q-d3-skill'].attempts).toBe(1);
+});
+
+test('reviews a missed question in the summary and adds no new storage keys', async ({ page }) => {
+  // #given — q-d1-fanout answered wrong (choice a; correct is c) as a one-question round
+  await openScenarioQuestion(page, 'ja', 'カスタマーサポート解決エージェント', 'q-d1-fanout');
+  await page.locator('.choice-button').nth(0).click();
+  await expect(page.locator('.quiz-verdict.is-incorrect')).toBeVisible();
+  await page.getByRole('button', { name: '結果を見る' }).click();
+  await expect(page.getByRole('heading', { name: '演習結果' })).toBeVisible();
+
+  // #when — expanding the missed-question review
+  const review = page.locator('.quiz-missed .quiz-review-item');
+  await expect(review).toHaveCount(1);
+  await review.locator('summary').click();
+
+  // #then — difficulty, skills, the learner's wrong pick, the correct answer, and both explanations
+  await expect(review.locator('.question-meta')).toContainText('応用');
+  await expect(review.locator('.question-meta')).toContainText('分解と委譲の設計');
+  await expect(review).toContainText('正解：');
+  await expect(review.locator('.choice-review-list > li', { hasText: 'あなたの選択' })).toContainText('誤答選択肢');
+  await expect(review).toContainText('判断のポイント');
+  await expect(review).toContainText('選択肢別の解説');
+  await expect(review.locator('.choice-rationale')).toHaveCount(4);
+
+  // #then — only quizStats gained a key; no new top-level storage keys, no persisted rationale state
+  const data = await page.evaluate((key) => JSON.parse(localStorage.getItem(key) ?? '{}'), STORAGE_KEY);
+  expect(Object.keys(data).sort()).toEqual(['handsOnProgress', 'quizStats', 'reviews', 'studyGuideProgress', 'version']);
+  expect(Object.keys(data.quizStats)).toEqual(['q-d1-fanout']);
+  expect(data.version).toBe(2);
+});
+
+test('keeps the answer and quizStats when the rationale chunk fails, and recovers via reload', async ({ page }) => {
+  let failedOnce = false;
+  await page.route('**/rationales.*.js', async (route) => {
+    if (!failedOnce) { failedOnce = true; await route.abort(); }
+    else await route.continue();
+  });
+
+  await openScenarioQuestion(page, 'ja', 'カスタマーサポート解決エージェント', 'q-d1-fanout');
+  await page.locator('.choice-button').nth(2).click();
+
+  // #then — the verdict stands and the stat is saved despite the failed chunk
+  const feedback = page.locator('.quiz-feedback');
+  await expect(feedback.locator('.quiz-verdict.is-correct')).toBeVisible();
+  await expect.poll(() => page.evaluate((key) => JSON.parse(localStorage.getItem(key) ?? '{}').quizStats?.['q-d1-fanout']?.attempts ?? 0, STORAGE_KEY)).toBe(1);
+
+  // #then — correctness labels survive without rationale text, and the failure is announced with a real reload path
+  await expect(feedback.locator('.choice-review-list > li')).toHaveCount(4);
+  await expect(feedback.locator('.choice-rationale')).toHaveCount(0);
+  const error = page.locator('.rationale-error');
+  await expect(error).toBeVisible();
+  const reload = error.getByRole('button', { name: 'ページを再読み込み' });
+  await expect(reload).toBeVisible();
+
+  // #when — using the reload recovery, then answering again
+  const loaded = page.waitForEvent('load');
+  await reload.click();
+  await loaded;
+  await openScenarioQuestion(page, 'ja', 'カスタマーサポート解決エージェント', 'q-d1-fanout');
+  await page.locator('.choice-button').nth(2).click();
+
+  // #then — the retried import now succeeds and the rationale renders
+  await expect(page.locator('.quiz-feedback .choice-rationale')).toHaveCount(4);
+});
+
+test('answer review and summary are accessible, keyboard-drivable, and free of horizontal overflow', async ({ page }) => {
+  // #given — reach and answer q-d1-fanout with the keyboard
+  await openScenarioQuestion(page, 'ja', 'カスタマーサポート解決エージェント', 'q-d1-fanout');
+  await page.locator('.choice-button').nth(2).press('Enter');
+  const feedback = page.locator('.quiz-feedback');
+  await expect(feedback).toBeVisible();
+  await expect(feedback).toBeFocused();
+
+  // #then — the lazily-loaded rationale does not steal focus from the feedback region
+  await expect(feedback.locator('.choice-rationale')).toHaveCount(4);
+  await expect(feedback).toBeFocused();
+
+  // #then — no serious or critical axe violations in the answer-review state
+  let axe = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa']).analyze();
+  expect(axe.violations.filter((v) => v.impact === 'serious' || v.impact === 'critical')).toEqual([]);
+
+  // #when — moving to the summary and expanding the missed-question review
+  await page.getByRole('button', { name: '結果を見る' }).click();
+  await expect(page.getByRole('heading', { name: '演習結果' })).toBeVisible();
+
+  axe = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa']).analyze();
+  expect(axe.violations.filter((v) => v.impact === 'serious' || v.impact === 'critical')).toEqual([]);
+
+  // #then — no horizontal overflow at three widths
+  for (const width of [360, 768, 1440]) {
+    await page.setViewportSize({ width, height: 900 });
+    const dims = await page.evaluate(() => ({ viewport: document.documentElement.clientWidth, document: document.documentElement.scrollWidth, body: document.body.scrollWidth }));
+    expect(dims.document, `document ${width}`).toBe(dims.viewport);
+    expect(dims.body, `body ${width}`).toBe(dims.viewport);
+  }
+});

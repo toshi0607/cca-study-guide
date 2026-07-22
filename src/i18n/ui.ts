@@ -1,4 +1,4 @@
-import type { LocalizedText } from '../content/types';
+import type { LocalizedText, QuestionDifficulty } from '../content/types';
 import type { Locale } from './locales';
 
 type View = 'today' | 'guide' | 'practice' | 'quiz' | 'progress' | 'hands-on' | 'official-scenarios';
@@ -285,6 +285,11 @@ export type UiCopy = {
     start: string;
     progressLabel: (current: number, total: number) => string;
     formats: Record<QuestionFormat, string>;
+    // Cognitive-demand level required by the question, not personal difficulty.
+    difficultyLegend: string;
+    difficulty: Record<QuestionDifficulty, string>;
+    skillsLabel: string;
+    domainLabel: string;
     singleHint: string;
     multipleHint: string;
     choicesLegend: string;
@@ -294,6 +299,15 @@ export type UiCopy = {
     correctAnswerLabel: string;
     correctBadge: string;
     selectedBadge: string;
+    // Whole-question judgment vs per-choice reasoning, kept clearly distinct.
+    explanationHeading: string;
+    rationaleHeading: string;
+    choiceCorrectLabel: string;
+    choiceIncorrectLabel: string;
+    yourChoiceLabel: string;
+    rationaleLoading: string;
+    rationaleLoadError: string;
+    rationaleRetry: string;
     officialSources: string;
     verified: (date: string) => string;
     next: string;
@@ -605,6 +619,10 @@ export const ui = {
       start: '演習を始める',
       progressLabel: (current, total) => `第${current}問 / 全${total}問`,
       formats: { single: '単一選択', multiple: '複数選択' },
+      difficultyLegend: '認知レベル',
+      difficulty: { foundation: '基礎', application: '応用', analysis: '分析' },
+      skillsLabel: '測定スキル',
+      domainLabel: '領域',
       singleHint: '正しい選択肢を1つ選んでください。選ぶと同時に回答になります。',
       multipleHint: '複数選択：当てはまる選択肢をすべて選び、「回答する」を押してください。',
       choicesLegend: '選択肢',
@@ -614,6 +632,14 @@ export const ui = {
       correctAnswerLabel: '正解：',
       correctBadge: '正解',
       selectedBadge: '選択',
+      explanationHeading: '判断のポイント',
+      rationaleHeading: '選択肢別の解説',
+      choiceCorrectLabel: '正解選択肢',
+      choiceIncorrectLabel: '誤答選択肢',
+      yourChoiceLabel: 'あなたの選択',
+      rationaleLoading: '選択肢別の解説を読み込んでいます…',
+      rationaleLoadError: '選択肢別の解説を読み込めませんでした。正誤と全体の解説は上に表示されています。',
+      rationaleRetry: 'ページを再読み込み',
       officialSources: '公式資料',
       verified: (date) => `最終確認 ${date}`,
       next: '次の問題へ',
@@ -918,6 +944,10 @@ export const ui = {
       start: 'Start quiz',
       progressLabel: (current, total) => `Question ${current} of ${total}`,
       formats: { single: 'Single select', multiple: 'Multiple select' },
+      difficultyLegend: 'Cognitive level',
+      difficulty: { foundation: 'Foundation', application: 'Application', analysis: 'Analysis' },
+      skillsLabel: 'Skills measured',
+      domainLabel: 'Domain',
       singleHint: 'Choose the one correct option. Selecting it submits your answer.',
       multipleHint: 'Multiple select: choose every option that applies, then press “Submit answer”.',
       choicesLegend: 'Options',
@@ -927,6 +957,14 @@ export const ui = {
       correctAnswerLabel: 'Correct answer:',
       correctBadge: 'Correct',
       selectedBadge: 'Your pick',
+      explanationHeading: 'Key judgment',
+      rationaleHeading: 'Per-choice rationale',
+      choiceCorrectLabel: 'Correct option',
+      choiceIncorrectLabel: 'Incorrect option',
+      yourChoiceLabel: 'Your choice',
+      rationaleLoading: 'Loading the per-choice rationale…',
+      rationaleLoadError: 'The per-choice rationale could not be loaded. The verdict and overall explanation are shown above.',
+      rationaleRetry: 'Reload page',
       officialSources: 'Official sources',
       verified: (date) => `Last verified ${date}`,
       next: 'Next question',

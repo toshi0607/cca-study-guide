@@ -6,6 +6,7 @@ import type { ChoiceQuestion, Scenario } from '../../content/types';
 import type { Locale } from '../../i18n/locales';
 import { localize, type UiCopy } from '../../i18n/ui';
 import { isAnswerCorrect, pickQuizQuestions, type QuizCount, type QuizDomainChoice } from '../../lib/quiz';
+import { useChoiceRationales } from '../../lib/rationales-loader';
 import type { QuizStat } from '../../lib/storage';
 import { QuizQuestion } from '../quiz/QuizQuestion';
 import { QuizSetup } from '../quiz/QuizSetup';
@@ -32,6 +33,11 @@ export function QuizView({ locale, copy, quizStats, onAnswer, targetQuestionId, 
   const [results, setResults] = useState<QuizResult[]>([]);
   const [targetAnnouncement, setTargetAnnouncement] = useState('');
   const [focusBackground, setFocusBackground] = useState(false);
+  // Flipped only after the first successful answer, which is what triggers the
+  // deferred rationale chunk to load. It stays true across questions and rounds
+  // so the cached module is reused rather than re-requested.
+  const [rationalesRequested, setRationalesRequested] = useState(false);
+  const rationalesState = useChoiceRationales(rationalesRequested);
   const feedbackRef = useRef<HTMLDivElement>(null);
   const targetAnnouncementRef = useRef<HTMLParagraphElement>(null);
   const backgroundHeadingRef = useRef<HTMLHeadingElement>(null);
@@ -104,9 +110,12 @@ export function QuizView({ locale, copy, quizStats, onAnswer, targetQuestionId, 
   const answer = (question: ChoiceQuestion, selectedIds: string[]) => {
     if (answeredIdRef.current === question.id) return;
     const correct = isAnswerCorrect(question, selectedIds);
+    // Save-first: the answered UI (and the rationale request) only advances once
+    // the stat is persisted, so a failed save never shows a "recorded" answer.
     if (!onAnswer(question.id, correct)) return;
     answeredIdRef.current = question.id;
     setResults((value) => [...value, { question, selectedIds, correct }]);
+    setRationalesRequested(true);
     requestAnimationFrame(() => feedbackRef.current?.focus());
   };
 
@@ -157,7 +166,7 @@ export function QuizView({ locale, copy, quizStats, onAnswer, targetQuestionId, 
 
       {current && <QuizQuestion
         current={current} index={index} total={round.length} scenario={scenario} locale={locale} copy={copy}
-        selected={selected} answered={answered} currentResult={currentResult} feedbackRef={feedbackRef}
+        selected={selected} answered={answered} currentResult={currentResult} rationalesState={rationalesState} feedbackRef={feedbackRef}
         onSelectSingle={(choiceId) => answer(current, [choiceId])}
         onToggleMultiple={(choiceId) => setSelected((value) => (value.includes(choiceId) ? value.filter((id) => id !== choiceId) : [...value, choiceId]))}
         onSubmitMultiple={() => answer(current, selected)}
@@ -165,7 +174,7 @@ export function QuizView({ locale, copy, quizStats, onAnswer, targetQuestionId, 
         onQuit={reset}
       />}
 
-      {phase === 'summary' && <QuizSummary results={results} correctCount={correctCount} wrongResults={wrongResults} locale={locale} copy={copy} onRetry={reset}/>}
+      {phase === 'summary' && <QuizSummary results={results} correctCount={correctCount} wrongResults={wrongResults} rationalesState={rationalesState} locale={locale} copy={copy} onRetry={reset}/>}
     </section>
   );
 }

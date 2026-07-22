@@ -721,6 +721,42 @@ main {
 .quiz-quit { min-height: 44px; margin: 4px 28px 24px; padding: 0; border: 0; background: transparent; color: var(--cyan-dark); cursor: pointer; font-weight: 700; text-decoration: underline; text-underline-offset: .2em; }
 .quiz-quit:hover { color: var(--ink); }
 
+/* Question metadata: domain, cognitive level, and measured skills as localized
+   labels. Wraps freely so 360px never overflows; skills read as text tags, not
+   color-coded chips. */
+.question-meta { margin: 0; padding: 12px 28px 0; display: grid; gap: 8px; }
+.question-meta-row { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 10px; margin: 0; }
+.question-meta-row dt { flex: 0 0 auto; color: var(--ink-soft); font: 700 .66rem var(--mono); letter-spacing: .04em; text-transform: uppercase; }
+.question-meta-row dd { margin: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; min-width: 0; }
+.difficulty-badge { padding: 3px 8px; border: 1px solid var(--ink); background: var(--surface); color: var(--ink); font: 700 .72rem var(--mono); }
+.skill-tags { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.skill-tags li { padding: 3px 8px; border: 1px solid var(--grid-strong); background: var(--cyan-pale); color: var(--cyan-dark); font-size: .74rem; font-weight: 700; }
+
+/* Post-answer / summary review: whole-question judgment and per-choice reasoning
+   under separate headings so the two explanations are never conflated. */
+.answer-section { margin-top: 20px; }
+.answer-section h4 { margin: 0 0 8px; font: 700 .95rem var(--display); }
+.answer-section > p { margin: 0; line-height: 1.8; }
+.choice-review { display: grid; gap: 12px; }
+.choice-review-list { margin: 0; padding: 0; display: grid; gap: 10px; list-style: none; }
+.choice-review-list .choice-button { min-height: 0; display: block; cursor: default; }
+.choice-review-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.choice-rationale { margin: 10px 0 0; font-size: .84rem; line-height: 1.75; color: var(--ink-soft); }
+.choice-mark--incorrect { color: var(--danger); }
+.choice-mark--picked { color: var(--ink); border-style: dashed; }
+.rationale-status { margin: 0; color: var(--ink-soft); font-size: .84rem; }
+.rationale-error { padding: 12px; border-left: 4px solid var(--amber); background: var(--amber-pale); }
+.rationale-error p { margin: 0 0 10px; }
+.rationale-error button { min-height: 44px; padding: 0 15px; border: 1px solid var(--cyan-dark); background: var(--cyan-dark); color: #fff; cursor: pointer; font-weight: 700; }
+.rationale-error button:hover { background: var(--cyan); border-color: var(--cyan); }
+
+/* Missed-question review inside the summary reuses the same review blocks,
+   collapsed per question so the summary is not crowded. */
+.quiz-review-item summary { min-height: 44px; display: flex; align-items: center; padding: 8px 0; cursor: pointer; font-weight: 700; }
+.quiz-review-body { padding-bottom: 8px; }
+.quiz-review-body .question-meta { padding-inline: 0; }
+.quiz-review-body .quiz-correct-answer { margin: 12px 0 0; line-height: 1.8; }
+
 .quiz-summary { display: grid; gap: 24px; margin-top: 24px; }
 .quiz-score, .quiz-domains, .quiz-missed { padding: clamp(24px, 4vw, 42px); border: 1px solid var(--grid-strong); background: var(--surface); }
 .quiz-score h3, .quiz-domains h3, .quiz-missed h3 { margin-top: 0; font: 700 1.65rem var(--display); }
@@ -913,6 +949,7 @@ main {
   .rating { grid-template-columns: 1fr; }
   .rating button { min-height: 52px; }
   .quiz-hint { margin-inline: 20px; }
+  .question-meta { padding-inline: 20px; }
   .choice-list { padding-inline: 20px; }
   .quiz-submit { width: calc(100% - 40px); margin-inline: 20px; }
   .quiz-feedback { padding: 24px 20px; }

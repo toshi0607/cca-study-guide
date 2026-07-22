@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { questions } from '../content/questions';
 import { domains } from '../content/domains';
-import { isAnswerCorrect, pickQuizQuestions } from './quiz';
+import { classifyChoice, isAnswerCorrect, pickQuizQuestions } from './quiz';
 
 function seededRandom(seed: number) {
   let state = seed;
@@ -78,5 +78,39 @@ describe('isAnswerCorrect', () => {
 
   it('rejects an empty selection', () => {
     expect(isAnswerCorrect(single, [])).toBe(false);
+  });
+});
+
+describe('classifyChoice', () => {
+  it('classifies a single-select answer choice by choice', () => {
+    // #given — correct is b, the learner picked b
+    const correct = ['b'];
+    const selected = ['b'];
+
+    // #then
+    expect(classifyChoice(correct, selected, 'b')).toBe('correct-selected');
+    expect(classifyChoice(correct, selected, 'a')).toBe('incorrect-unselected');
+  });
+
+  it('marks the correct answer a learner missed and the wrong answer they picked', () => {
+    // #given — single-select where the learner chose the wrong option a
+    const correct = ['b'];
+    const selected = ['a'];
+
+    // #then
+    expect(classifyChoice(correct, selected, 'b')).toBe('correct-unselected');
+    expect(classifyChoice(correct, selected, 'a')).toBe('incorrect-selected');
+  });
+
+  it('distinguishes all four states for a partial multiple-select answer', () => {
+    // #given — correct are a and b; the learner selected a (a correct one) and c (a wrong one)
+    const correct = ['a', 'b'];
+    const selected = ['a', 'c'];
+
+    // #then — every choice resolves to its own state
+    expect(classifyChoice(correct, selected, 'a')).toBe('correct-selected');
+    expect(classifyChoice(correct, selected, 'b')).toBe('correct-unselected');
+    expect(classifyChoice(correct, selected, 'c')).toBe('incorrect-selected');
+    expect(classifyChoice(correct, selected, 'd')).toBe('incorrect-unselected');
   });
 });
