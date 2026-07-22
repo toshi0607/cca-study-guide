@@ -652,10 +652,13 @@ export function validateHandsOnGuides(input: unknown, index: ContentIndex): stri
 
 // A cross-guide check kept apart from per-guide validation: every required theme
 // must be present in the full set, and no two distinct guides that carry a
-// required theme may share an identical skill set, so they cannot become
-// near-duplicate exercises. Guides are deduped by id, so a single guide that
-// legitimately spans two themes is compared once, not flagged against itself,
-// and every theme-carrying guide is checked (not only the first per theme).
+// required theme may share an identical skill set. This is a mechanical
+// guardrail that flags an exact skill-set match, not a judge of semantic
+// duplication — two genuinely similar guides that differ by one skill still pass,
+// so meaningful distinctness stays a content-review concern. Guides are deduped
+// by id, so a single guide that legitimately spans two themes is compared once,
+// not flagged against itself, and every theme-carrying guide is checked (not only
+// the first per theme).
 export function validateHandsOnThemes(
   guideInput: Array<{ id: string; officialScenarioIds: string[]; skillIds: string[] }>,
 ): string[] {

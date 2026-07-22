@@ -964,8 +964,8 @@ export const handsOnGuides: HandsOnGuide[] = [
           ],
         ),
         expectedResult: localized(
-          ['統合レポートの各事実から、根拠資料を1対1でたどれる。'],
-          ['From each fact in the synthesized report, you can trace to its source document one-to-one.'],
+          ['統合レポートの各事実から、その根拠となる1件以上の資料を直接たどれる。'],
+          ['Each fact in the synthesized report can be traced directly to one or more supporting sources.'],
         ),
       },
       {

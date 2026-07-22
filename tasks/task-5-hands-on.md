@@ -66,7 +66,14 @@ HandsOnGuide += taskStatementIds, skillIds: SkillId[], environment, setup,
 - [x] pnpm test:e2e 64/64 pass (single run, port 4325 cleared; no UI change so no regression)
 - [~] Independent content review + adversarial validation review (running)
 - [x] Resolve findings
-- [ ] PR
+- [x] PR #31 created; CI green (Vercel pass, lighthouse pass). Merge-ready, awaiting user merge.
+
+## Task 5B handoff (from 2nd-round review)
+- Do NOT assume no ho-ci-review progress records exist. A revision-1 handsOnProgress
+  record could arrive via manual v2 import. Task 5B MUST add a test that seeds a
+  ho-ci-review revision-1 record and proves stale-revision handling preserves its
+  completedAt/history (do not silently overwrite), never prunes unknown/future records,
+  and never prunes unknown step IDs on read.
 
 ## Notes
 - Verification subagent confirmed all official terms; content stayed at concept level
