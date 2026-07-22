@@ -1,8 +1,21 @@
 import type { ReviewState } from './scheduler';
+import {
+  isIsoDateTime,
+  isParsableDate,
+  isRecord,
+  unsafeRecordKeys,
+} from './storage-primitives';
+import type { MockExamAttempt, MockExamSession } from './mock-exam-types';
+import { parseActiveMockExam, parseMockExamAttempts } from './mock-exam-storage';
 
-// Stored study data, versioned. v1 is what shipped releases wrote; v2 adds the
-// Study Guide and Hands-on progress records. Only v2 crosses the storage
-// boundary into the app — v1 is normalized here and never leaks into the UI.
+// Re-exported so `storage.ts` keeps importing these guards from one place.
+export { isParsableDate, isRecord } from './storage-primitives';
+
+// Stored study data, versioned. v1 is what shipped releases wrote; v2 added the
+// Study Guide and Hands-on progress records; v3 adds the Mock Exam active session
+// and completed-attempt history. Only the current version crosses the storage
+// boundary into the app — older versions are migrated here and never leak into
+// the UI.
 export type QuizStat = { attempts: number; correct: number; lastAnsweredAt: string; lastCorrect: boolean };
 
 export type StudyDataV1 = {
@@ -37,41 +50,37 @@ export type StudyDataV2 = {
   handsOnProgress: Record<string, HandsOnProgress>;
 };
 
-export type StudyData = StudyDataV2;
+// v3 adds the Mock Exam foundation: at most one live session, and the immutable
+// history of completed attempts. `activeMockExam` is `null` when no exam is in
+// flight; `mockExamAttempts` is `[]` when none has finished. The whole Mock Exam
+// schema lives behind `mock-exam-storage`, so the parser here only wires it in.
+export type StudyDataV3 = {
+  version: 3;
+  reviews: Record<string, ReviewState>;
+  quizStats: Record<string, QuizStat>;
+  studyGuideProgress: Record<string, StudyGuideProgress>;
+  handsOnProgress: Record<string, HandsOnProgress>;
+  activeMockExam: MockExamSession | null;
+  mockExamAttempts: MockExamAttempt[];
+};
 
-export const CURRENT_STUDY_DATA_VERSION = 2;
+export type StudyData = StudyDataV3;
+
+export const CURRENT_STUDY_DATA_VERSION = 3;
 
 export function createEmptyStudyData(): StudyData {
-  return { version: 2, reviews: {}, quizStats: {}, studyGuideProgress: {}, handsOnProgress: {} };
+  return {
+    version: 3,
+    reviews: {},
+    quizStats: {},
+    studyGuideProgress: {},
+    handsOnProgress: {},
+    activeMockExam: null,
+    mockExamAttempts: [],
+  };
 }
 
 const ratings = new Set(['again', 'hard', 'good']);
-// JSON.parse keeps these as own keys, and `__proto__` in particular would reach
-// Object.prototype instead of the accumulator. No content id uses them, so the
-// storage boundary refuses all three rather than relying on how a later merge or
-// copy happens to be written.
-const unsafeRecordKeys = new Set(['__proto__', 'constructor', 'prototype']);
-// Date-only strings and 2026-02-30 style impossible dates must not pass.
-const isoDateTime = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d{1,3})?(?:Z|[+-]\d{2}:\d{2})$/;
-
-export const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === 'object' && value !== null && !Array.isArray(value);
-
-export const isParsableDate = (value: unknown): value is string =>
-  typeof value === 'string' && Number.isFinite(Date.parse(value));
-
-const isIsoDateTime = (value: unknown): value is string => {
-  if (typeof value !== 'string') return false;
-  const match = isoDateTime.exec(value);
-  if (!match) return false;
-  const [, year, month, day, hour, minute, second] = match.map(Number);
-  // Date.parse rolls an impossible day over (2026-02-30 becomes 2026-03-02),
-  // so the calendar date has to survive a UTC round trip unchanged.
-  const roundTrip = new Date(Date.UTC(year, month - 1, day));
-  return roundTrip.getUTCFullYear() === year && roundTrip.getUTCMonth() === month - 1 && roundTrip.getUTCDate() === day
-    && hour <= 23 && minute <= 59 && second <= 59
-    && Number.isFinite(Date.parse(value));
-};
 
 function isQuizStat(value: unknown): value is QuizStat {
   if (!isRecord(value)) return false;
@@ -169,6 +178,27 @@ export function parseStudyDataV2(value: unknown): StudyDataV2 | null {
   return { version: 2, reviews, quizStats, studyGuideProgress, handsOnProgress };
 }
 
+// Strict: every v2 record plus the two Mock Exam fields. `activeMockExam` must be
+// present and either null or a valid session; `mockExamAttempts` must be an array
+// of valid attempts. A single malformed Mock Exam entry rejects the whole
+// document rather than quietly discarding a session or a finished attempt.
+export function parseStudyDataV3(value: unknown): StudyDataV3 | null {
+  if (!isRecord(value) || value.version !== 3) return null;
+  const reviews = strictRecord(value.reviews, isReviewState);
+  const quizStats = strictRecord(value.quizStats, isQuizStatEntry);
+  const studyGuideProgress = strictRecord(value.studyGuideProgress, isStudyGuideProgress);
+  const handsOnProgress = strictRecord(value.handsOnProgress, isHandsOnProgress);
+  if (!reviews || !quizStats || !studyGuideProgress || !handsOnProgress) return null;
+
+  if (!('activeMockExam' in value) || !('mockExamAttempts' in value)) return null;
+  const activeMockExam = parseActiveMockExam(value.activeMockExam);
+  if (activeMockExam === undefined) return null; // undefined means the value was invalid
+  const mockExamAttempts = parseMockExamAttempts(value.mockExamAttempts);
+  if (!mockExamAttempts) return null;
+
+  return { version: 3, reviews, quizStats, studyGuideProgress, handsOnProgress, activeMockExam, mockExamAttempts };
+}
+
 // Pure: no clock, no randomness, no content lookup. v1 carries no Study Guide or
 // Hands-on progress, so those start empty rather than being guessed.
 export function migrateStudyDataV1ToV2(input: StudyDataV1): StudyDataV2 {
@@ -181,14 +211,37 @@ export function migrateStudyDataV1ToV2(input: StudyDataV1): StudyDataV2 {
   };
 }
 
+// v2 carries no Mock Exam state, so an active session is absent and the attempt
+// history is empty. Every existing record is preserved untouched.
+export function migrateStudyDataV2ToV3(input: StudyDataV2): StudyDataV3 {
+  return {
+    version: 3,
+    reviews: { ...input.reviews },
+    quizStats: { ...input.quizStats },
+    studyGuideProgress: { ...input.studyGuideProgress },
+    handsOnProgress: { ...input.handsOnProgress },
+    activeMockExam: null,
+    mockExamAttempts: [],
+  };
+}
+
 export type ParsedStudyData = { data: StudyData; migrated: boolean };
 
-// The single storage boundary: anything the app receives is a validated v2.
+// The single storage boundary: anything the app receives is a validated current
+// version. A v2 or v1 document is migrated up to v3 in memory; the legacy v1
+// path (v1 -> v2 -> v3) still reaches the latest version.
 export function parseStudyData(value: unknown): ParsedStudyData | null {
-  const current = parseStudyDataV2(value);
+  const current = parseStudyDataV3(value);
   if (current) return { data: current, migrated: false };
+
+  const v2 = parseStudyDataV2(value);
+  if (v2) {
+    const migrated = parseStudyDataV3(migrateStudyDataV2ToV3(v2));
+    return migrated ? { data: migrated, migrated: true } : null;
+  }
+
   const legacy = parseStudyDataV1(value);
   if (!legacy) return null;
-  const migrated = parseStudyDataV2(migrateStudyDataV1ToV2(legacy));
+  const migrated = parseStudyDataV3(migrateStudyDataV2ToV3(migrateStudyDataV1ToV2(legacy)));
   return migrated ? { data: migrated, migrated: true } : null;
 }

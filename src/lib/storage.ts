@@ -2,19 +2,19 @@ import {
   createEmptyStudyData,
   isParsableDate,
   isRecord,
-  migrateStudyDataV1ToV2,
   parseStudyData,
-  parseStudyDataV1,
-  parseStudyDataV2,
+  parseStudyDataV3,
   type StudyData,
 } from './storage-schema';
 
 export {
   createEmptyStudyData,
   migrateStudyDataV1ToV2,
+  migrateStudyDataV2ToV3,
   parseStudyData,
   parseStudyDataV1,
   parseStudyDataV2,
+  parseStudyDataV3,
   CURRENT_STUDY_DATA_VERSION,
 } from './storage-schema';
 export type {
@@ -24,6 +24,7 @@ export type {
   StudyData,
   StudyDataV1,
   StudyDataV2,
+  StudyDataV3,
   StudyGuideProgress,
 } from './storage-schema';
 
@@ -81,40 +82,43 @@ export function createStudyStorage(storage: StorageLike | undefined) {
 
   // A stored value this build cannot read — a corrupt document, or one written by
   // a newer release after a deploy rollback — must never be overwritten: whoever
-  // wrote it can still read it. Saving is refused until the user resets, which is
-  // reported like any other write failure.
+  // wrote it can still read it. A v2 (or v1) document under the current key is
+  // readable-and-migratable, so it is safe to write over; only a truly unknown
+  // shape blocks saving until the user resets, reported like any write failure.
   const isCurrentKeyWritable = (): boolean => {
     if (!storage) return false;
     try {
       const current = storage.getItem(STORAGE_KEY);
-      return current === null || parseStudyDataV2(parseJson(current)) !== null;
+      return current === null || parseStudyData(parseJson(current)) !== null;
     } catch {
       return false;
     }
   };
 
   return {
-    // Always returns current-version data. Reading never writes over a document it
-    // could not parse, and never deletes a key.
+    // Always returns current-version data. Reading never writes: a v2 document
+    // under the current key is migrated to v3 in memory and left on disk as v2
+    // until the next genuine save upgrades it, so loading a page never mutates
+    // storage. Only a legacy v1 document is written onto the current key on load,
+    // because it lives under a different key that would otherwise be re-migrated
+    // on every start (and an existing test depends on that one-time move).
     load(): StudyData {
       if (!storage) return createEmptyStudyData();
       try {
         const current = storage.getItem(STORAGE_KEY);
-        // An unreadable value is reported as empty rather than migrated over:
-        // migrating the legacy key here would mean overwriting it.
-        if (current !== null) return parseStudyDataV2(parseJson(current)) ?? createEmptyStudyData();
+        if (current !== null) return parseStudyData(parseJson(current))?.data ?? createEmptyStudyData();
 
         const legacy = storage.getItem(LEGACY_STORAGE_KEY);
         if (legacy === null) return createEmptyStudyData();
-        const parsedLegacy = parseStudyDataV1(parseJson(legacy));
-        if (!parsedLegacy) return createEmptyStudyData();
-        const migrated = parseStudyDataV2(migrateStudyDataV1ToV2(parsedLegacy));
-        if (!migrated) return createEmptyStudyData();
+        const parsedLegacy = parseStudyData(parseJson(legacy));
+        // Only a genuine older document migrates from the legacy key; a shape this
+        // build cannot read is left untouched rather than written to the current key.
+        if (!parsedLegacy || !parsedLegacy.migrated) return createEmptyStudyData();
 
-        // Best effort: if the v2 write fails the legacy key still holds the data,
+        // Best effort: if the write fails the legacy key still holds the data,
         // so the next load migrates again instead of losing it.
-        persist(migrated);
-        return migrated;
+        persist(parsedLegacy.data);
+        return parsedLegacy.data;
       } catch {
         return createEmptyStudyData();
       }
@@ -123,7 +127,7 @@ export function createStudyStorage(storage: StorageLike | undefined) {
     // nothing is silently pruned on the way in, and what is reported as saved
     // reloads identically. The parsed copy drops only export-wrapper fields.
     save(data: StudyData): boolean {
-      const validated = parseStudyDataV2(data);
+      const validated = parseStudyDataV3(data);
       if (!validated || !isCurrentKeyWritable()) return false;
       return persist(validated);
     },

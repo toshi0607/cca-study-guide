@@ -271,9 +271,12 @@ test('reviews a missed question in the summary and adds no new storage keys', as
   await expect(review).toContainText('選択肢別の解説');
   await expect(review.locator('.choice-rationale')).toHaveCount(4);
 
-  // #then — only quizStats gained a key; no new top-level storage keys, no persisted rationale state
+  // #then — only quizStats gained a key; no new top-level storage keys, no persisted rationale state.
+  // Saving the stat upgrades storage to v3, so the two Mock Exam fields are present and empty.
   const data = await page.evaluate((key) => JSON.parse(localStorage.getItem(key) ?? '{}'), STORAGE_KEY);
-  expect(Object.keys(data).sort()).toEqual(['handsOnProgress', 'quizStats', 'reviews', 'studyGuideProgress', 'version']);
+  expect(Object.keys(data).sort()).toEqual(['activeMockExam', 'handsOnProgress', 'mockExamAttempts', 'quizStats', 'reviews', 'studyGuideProgress', 'version']);
   expect(Object.keys(data.quizStats)).toEqual(['q-d1-fanout']);
-  expect(data.version).toBe(2);
+  expect(data.activeMockExam).toBeNull();
+  expect(data.mockExamAttempts).toEqual([]);
+  expect(data.version).toBe(3);
 });

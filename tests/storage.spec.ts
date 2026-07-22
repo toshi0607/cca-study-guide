@@ -1,6 +1,34 @@
+import { readFile } from 'node:fs/promises';
 import { cards } from '../src/content/cards';
 import { expect, openHandsOnList, openOfficialScenarios, supportGuideTitle, test } from './fixtures/app';
 import { LEGACY_STORAGE_KEY, STORAGE_KEY } from './fixtures/storage';
+
+// A valid v3 Mock Exam active session and one completed attempt, as a future
+// Task 8B build would persist. The question ids are arbitrary — storage validates
+// structure, not content existence — so this exercises the schema, not the UI.
+const activeMockExam = {
+  id: 'exam-e2e',
+  blueprintVersion: 1,
+  status: 'in_progress',
+  questionRefs: [{ questionId: 'q-a', revision: 1 }, { questionId: 'q-b', revision: 1 }],
+  currentIndex: 0,
+  answers: { 'q-a': { selectedChoiceIds: ['a'], answeredAt: '2026-07-20T00:05:00.000Z' } },
+  flaggedQuestionIds: ['q-b'],
+  startedAt: '2026-07-20T00:00:00.000Z',
+  expiresAt: '2026-07-20T02:00:00.000Z',
+  updatedAt: '2026-07-20T00:05:00.000Z',
+};
+const mockExamAttempt = {
+  id: 'attempt-e2e',
+  blueprintVersion: 1,
+  outcome: 'submitted',
+  questionRefs: [{ questionId: 'q-a', revision: 1 }],
+  answers: [{ questionId: 'q-a', questionRevision: 1, selectedChoiceIds: ['a'], correct: true, answeredAt: '2026-07-19T00:05:00.000Z' }],
+  flaggedQuestionIds: [],
+  startedAt: '2026-07-19T00:00:00.000Z',
+  expiresAt: '2026-07-19T02:00:00.000Z',
+  completedAt: '2026-07-19T01:00:00.000Z',
+};
 
 test('does not write stale guide progress on read and reconfirms without replacing its original completion time', async ({ page }) => {
   // This section is revision 2 after a material content update; revision 1 is
@@ -123,15 +151,18 @@ test('migrates progress saved by an earlier release without losing anything', as
   const d1Total = cards.filter((card) => card.domainId === 'd1').length;
   await expect(page.getByText(`1/${d1Total}`).first()).toBeVisible();
 
-  // #then — the migrated document is stored under the current key, with the new
-  // progress records empty and the legacy key left in place for a rollback
+  // #then — the migrated document is stored under the current key at the latest
+  // version, with the new progress and Mock Exam records empty and the legacy key
+  // left in place for a rollback
   const migrated = await page.evaluate((key) => JSON.parse(localStorage.getItem(key) ?? 'null'), STORAGE_KEY);
   expect(migrated).toEqual({
-    version: 2,
+    version: 3,
     reviews: legacy.reviews,
     quizStats: legacy.quizStats,
     studyGuideProgress: {},
     handsOnProgress: {},
+    activeMockExam: null,
+    mockExamAttempts: [],
   });
   expect(await page.evaluate((key) => JSON.parse(localStorage.getItem(key) ?? 'null'), LEGACY_STORAGE_KEY)).toEqual(legacy);
 
@@ -183,4 +214,50 @@ test('viewing official scenarios never writes storage and preserves unknown or f
 
   const after = await page.evaluate((key) => localStorage.getItem(key), STORAGE_KEY);
   expect(JSON.parse(after ?? '{}')).toEqual(initial);
+});
+
+test('exports, resets, and re-imports Mock Exam state alongside existing progress', async ({ page }, testInfo) => {
+  page.on('dialog', (dialog) => dialog.accept());
+  const review = { cardId: 'd1-loop-stop', cardRevisionSeen: 1, dueAt: '2027-01-01T00:00:00.000Z', intervalDays: 3, streak: 1, lapses: 0, lastRating: 'good' };
+  const seed = {
+    version: 3,
+    reviews: { 'd1-loop-stop': review },
+    quizStats: {},
+    studyGuideProgress: {},
+    handsOnProgress: {},
+    activeMockExam,
+    mockExamAttempts: [mockExamAttempt],
+  };
+  await page.evaluate(([key, value]) => localStorage.setItem(key, value), [STORAGE_KEY, JSON.stringify(seed)]);
+  await page.reload();
+
+  // #then — existing progress survives loading a document that carries Mock Exam state
+  await page.getByRole('button', { name: '進捗' }).first().click();
+  const d1Total = cards.filter((card) => card.domainId === 'd1').length;
+  await expect(page.getByText(`1/${d1Total}`).first()).toBeVisible();
+
+  // #when — exporting writes the Mock Exam state into the file
+  const downloadPromise = page.waitForEvent('download');
+  await page.getByRole('button', { name: '進捗をJSONで書き出す' }).click();
+  const exportPath = testInfo.outputPath('mock-export.json');
+  await (await downloadPromise).saveAs(exportPath);
+  const exported = JSON.parse(await readFile(exportPath, 'utf8'));
+  expect(exported.activeMockExam).toEqual(activeMockExam);
+  expect(exported.mockExamAttempts).toEqual([mockExamAttempt]);
+
+  // #when — a reset clears everything, Mock Exam state included
+  await page.getByRole('button', { name: 'この端末の進捗を削除' }).click();
+  await expect(page.getByText('この端末の進捗を削除しました。')).toBeVisible();
+  expect(await page.evaluate((key) => localStorage.getItem(key), STORAGE_KEY)).toBeNull();
+
+  // #when — importing the exported file restores the Mock Exam state and the review
+  const chooserPromise = page.waitForEvent('filechooser');
+  await page.getByRole('button', { name: '進捗をJSONから読み込む' }).click();
+  await (await chooserPromise).setFiles(exportPath);
+  await expect(page.getByText('JSONから進捗を読み込みました。')).toBeVisible();
+
+  const restored = await page.evaluate((key) => JSON.parse(localStorage.getItem(key) ?? 'null'), STORAGE_KEY);
+  expect(restored.activeMockExam).toEqual(activeMockExam);
+  expect(restored.mockExamAttempts).toEqual([mockExamAttempt]);
+  expect(restored.reviews['d1-loop-stop']).toEqual(review);
 });
