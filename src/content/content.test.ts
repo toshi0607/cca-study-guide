@@ -16,6 +16,7 @@ import {
   validateChoiceRationales,
   validateDomains,
   validateHandsOnGuides,
+  validateHandsOnThemes,
   validateOfficialScenarios,
   validateQuestions,
   validateSkillCoverage,
@@ -36,7 +37,7 @@ describe('study content', () => {
       officialScenarioCount: 6,
       skillCount: 14,
       studyGuideSectionCount: 8,
-      handsOnGuideCount: 1,
+      handsOnGuideCount: 4,
     });
     expect(domains.map((domain) => domain.weight)).toEqual([27, 18, 20, 20, 15]);
   });
@@ -716,20 +717,35 @@ describe('hands-on validation', () => {
     title: localized('固定のハンズオン', 'A fixed hands-on guide'),
     summary: localized('ハンズオンの概要', 'The guide summary'),
     domainIds: ['d3'],
+    taskStatementIds: ['3.6'],
+    skillIds: ['claude-code-workflow'],
     officialScenarioIds: ['claude-code-ci'],
     learningObjectives: localizedList(['非対話実行を説明できる'], ['Explain non-interactive execution']),
     prerequisites: localizedList(['実行できる端末'], ['A machine that can run the CLI']),
+    environment: localizedList(['Claude Code CLI'], ['The Claude Code CLI']),
     estimatedMinutes: 45,
+    setup: localizedList(['リポジトリを用意する'], ['Prepare a repository']),
     steps: [
       {
         id: 'step-one',
         title: localized('手順1', 'Step one'),
         instructions: localizedList(['対象を決める'], ['Decide the target']),
+        expectedResult: localizedList(['対象が決まっている'], ['The target is decided']),
       },
     ],
     deliverables: localizedList(['スクリプト'], ['A script']),
     verification: localizedList(['実行して確認する'], ['Run it and check']),
+    troubleshooting: [
+      {
+        id: 'tp-one',
+        symptom: localized('ジョブが止まる', 'The job hangs'),
+        isolation: localized('非対話実行か確認する', 'Check it runs non-interactively'),
+      },
+    ],
+    securityNotes: localizedList(['キーをシークレットで渡す'], ['Pass the key as a secret']),
+    costNotes: localizedList(['小さな差分で試す'], ['Try a small diff first']),
     cleanup: localizedList(['ジョブを削除する'], ['Delete the job']),
+    reflection: localizedList(['ローカルとCIの役割は'], ['What is local versus CI for']),
     relatedCardIds: ['d3-ci'],
     relatedQuestionIds: ['q-d3-ci-design'],
     sourceIds: ['exam-guide', 'headless'],
@@ -869,5 +885,160 @@ describe('hands-on validation', () => {
 
     // #then
     expect(errors).toContain('hands-on guides has duplicate IDs: ho-fixture');
+  });
+
+  it('rejects a task statement that does not exist', () => {
+    // #when
+    const errors = withGuide((guide) => { guide.taskStatementIds = ['9.9']; guide.domainIds = ['d3']; });
+
+    // #then
+    expect(errors).toContain('hands-on guide ho-fixture: orphan task statement 9.9');
+  });
+
+  it('rejects a skill that does not exist', () => {
+    // #when
+    const errors = withGuide((guide) => { guide.skillIds = ['made-up-skill']; });
+
+    // #then
+    expect(errors).toContain('hands-on guide ho-fixture: orphan skill made-up-skill');
+  });
+
+  it('rejects domainIds that do not match the task statement domains', () => {
+    // #given — 3.6 is a domain d3 task statement, but the guide claims d4
+    // #when
+    const errors = withGuide((guide) => { guide.domainIds = ['d4']; });
+
+    // #then
+    expect(errors).toContain('hands-on guide ho-fixture: domainIds must exactly match the domains of its task statements');
+  });
+
+  it('rejects a related card outside the guide domains', () => {
+    // #given — d1-loop-stop is a domain d1 card, but the guide is d3
+    // #when
+    const errors = withGuide((guide) => { guide.relatedCardIds = ['d1-loop-stop']; });
+
+    // #then
+    expect(errors).toContain('hands-on guide ho-fixture: related card d1-loop-stop is outside the guide domains');
+  });
+
+  it('rejects a related card that covers no guide task statement', () => {
+    // #given — d3-skills is a domain d3 card for 3.2, but the guide covers 3.6
+    // #when
+    const errors = withGuide((guide) => { guide.relatedCardIds = ['d3-skills']; });
+
+    // #then
+    expect(errors).toContain('hands-on guide ho-fixture: related card d3-skills does not cover a guide task statement');
+  });
+
+  it('rejects an empty troubleshooting list', () => {
+    // #when
+    const errors = withGuide((guide) => { guide.troubleshooting = []; });
+
+    // #then
+    expect(errors).toContain('hands-on guide ho-fixture: troubleshooting');
+  });
+
+  it('rejects duplicated troubleshooting IDs', () => {
+    // #when
+    const errors = withGuide((guide) => { guide.troubleshooting = [guide.troubleshooting[0], { ...guide.troubleshooting[0] }]; });
+
+    // #then
+    expect(errors).toContain('hands-on guide ho-fixture troubleshooting has duplicate IDs: tp-one');
+  });
+
+  it('rejects a step with no expected result', () => {
+    // #when
+    const errors = withGuide((guide) => { guide.steps[0].expectedResult = localizedList([], []); });
+
+    // #then
+    expect(errors).toContain('hands-on guide ho-fixture: steps.0.expectedResult');
+  });
+
+  it('rejects a list whose Japanese and English item counts differ', () => {
+    // #when
+    const errors = withGuide((guide) => { guide.environment = localizedList(['一つ', '二つ'], ['One']); });
+
+    // #then
+    expect(errors).toContain('hands-on guide ho-fixture: environment must have matching Japanese and English item counts');
+  });
+
+  it('rejects a step whose instruction counts differ across languages', () => {
+    // #when
+    const errors = withGuide((guide) => { guide.steps[0].instructions = localizedList(['一', '二'], ['One']); });
+
+    // #then
+    expect(errors).toContain('hands-on guide ho-fixture: step step-one instructions must have matching Japanese and English item counts');
+  });
+
+  it('rejects missing security notes', () => {
+    // #when
+    const errors = withGuide((guide) => { guide.securityNotes = localizedList([], []); });
+
+    // #then
+    expect(errors).toContain('hands-on guide ho-fixture: securityNotes');
+  });
+
+  it('reports a required theme that no guide covers', () => {
+    // #given — the fixture covers only claude-code-ci
+    // #when
+    const errors = validateHandsOnThemes([validGuide()]).join('\n');
+
+    // #then
+    expect(errors).toContain('hands-on guides: required theme customer-support-resolution is not covered by any guide');
+  });
+
+  it('rejects two distinct theme guides that share an identical skill set', () => {
+    // #given — two different guides on two required themes with identical skills
+    const supportGuide = { id: 'ho-support', officialScenarioIds: ['customer-support-resolution'], skillIds: ['agent-loop'] };
+    const ciGuide = { id: 'ho-ci', officialScenarioIds: ['claude-code-ci'], skillIds: ['agent-loop'] };
+
+    // #when
+    const errors = validateHandsOnThemes([supportGuide, ciGuide]).join('\n');
+
+    // #then
+    expect(errors).toContain('hands-on guides: theme guides ho-support and ho-ci share an identical skill set');
+  });
+
+  it('catches a duplicate when a theme has more than one guide', () => {
+    // #given — the second claude-code-ci guide duplicates the support guide's skills
+    const support = { id: 'ho-a', officialScenarioIds: ['customer-support-resolution'], skillIds: ['agent-loop'] };
+    const ciFirst = { id: 'ho-b', officialScenarioIds: ['claude-code-ci'], skillIds: ['orchestration'] };
+    const ciSecond = { id: 'ho-c', officialScenarioIds: ['claude-code-ci'], skillIds: ['agent-loop'] };
+    const extraction = { id: 'ho-d', officialScenarioIds: ['structured-data-extraction'], skillIds: ['evaluation'] };
+    const research = { id: 'ho-e', officialScenarioIds: ['multi-agent-research'], skillIds: ['context-management'] };
+
+    // #when — guides[0]-only logic would miss ho-c; every carrier must be checked
+    const errors = validateHandsOnThemes([support, ciFirst, ciSecond, extraction, research]).join('\n');
+
+    // #then
+    expect(errors).toContain('hands-on guides: theme guides ho-a and ho-c share an identical skill set');
+  });
+
+  it('does not flag a single guide that spans two required themes', () => {
+    // #given — one guide carries two themes; deduped by id, it is not compared to itself
+    const spanning = { id: 'ho-span', officialScenarioIds: ['customer-support-resolution', 'multi-agent-research'], skillIds: ['agent-loop', 'orchestration'] };
+    const ci = { id: 'ho-ci', officialScenarioIds: ['claude-code-ci'], skillIds: ['claude-code-workflow'] };
+    const extraction = { id: 'ho-ex', officialScenarioIds: ['structured-data-extraction'], skillIds: ['evaluation'] };
+
+    // #when
+    const errors = validateHandsOnThemes([spanning, ci, extraction]).join('\n');
+
+    // #then — every required theme is covered and no distinct-skill error fires
+    expect(errors).not.toContain('share an identical skill set');
+  });
+
+  it('keeps the ho-ci-review guide ID stable as the CI theme core', () => {
+    // #then — the pre-existing guide ID must not be renamed
+    expect(handsOnGuides.some((guide) => guide.id === 'ho-ci-review')).toBe(true);
+  });
+
+  it('covers four distinct required themes across the real guides', () => {
+    // #given
+    const themes = new Set(handsOnGuides.flatMap((guide) => guide.officialScenarioIds));
+
+    // #then
+    for (const theme of ['customer-support-resolution', 'claude-code-ci', 'structured-data-extraction', 'multi-agent-research']) {
+      expect(themes.has(theme as (typeof handsOnGuides)[number]['officialScenarioIds'][number])).toBe(true);
+    }
   });
 });
