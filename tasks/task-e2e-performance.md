@@ -2,8 +2,8 @@
 
 独立PR。プロダクト機能は変更しない（Task 7 との競合回避）。検証能力・決定性・アクセシビリティ保証を落とさず、開発中の待ち時間と full E2E の wall-clock を短縮する。
 
-- Base branch: `claude/playwright-e2e-perf-2e9922` (off `main` @ d1dc280, Task 6 #33)
-- Task 7 は未マージ（最新は #33）。base は現行 main。
+- Base branch: `claude/playwright-e2e-perf-2e9922`。当初 `main` @ d1dc280（Task 6 #33, 81 tests）で計測・実装。
+- **Task 7 (#34) が session 中に main へマージ**（2dacab9, QuizView.tsx +13/-2 と app.spec.ts に Quiz テスト +6）。branch を最新 main へ **rebase** し、その6件を分割後 spec へ verbatim 移設 → **計 87 tests**。src は無変更（Task 7 実装保持）。baseline は d1dc280(81) で取得済のため、after も 81 基準で比較（6件は同じ nav 節約を受ける quiz flow）。
 
 ## Constraints (Ledger)
 
