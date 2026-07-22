@@ -929,20 +929,20 @@ export const choiceRationales: ChoiceRationales = {
   },
   'q-d3-command-vs-skill': {
     a: localized(
-      'どちらもコマンドにすると、状況に応じて自動で参照されるべき知識まで利用者の明示起動を必要とし、必要な場面で読み込まれません。',
-      'Making both commands forces knowledge that should load automatically when relevant to depend on explicit invocation, so it is not there when needed.',
+      '.claude/commands/ は互換で動きますが、custom commandはSkillへ統合済みで、両者を別の仕組みとして設計するのは古いモデルです。新規設計はSkillへ一本化し、起動制御はfrontmatterで行います。',
+      '.claude/commands/ still works for compatibility, but custom commands are merged into Skills, so designing them as separate mechanisms is the outdated model. New designs consolidate on Skills and control invocation via frontmatter.',
     ),
     b: localized(
-      'どちらもSkillにすると、利用者が明示的に起動したい定型操作まで自動判断任せになり、意図した時に確実に実行できません。',
-      'Making both Skills leaves even the routine a user wants to invoke explicitly to automatic selection, so it may not run exactly when intended.',
+      '両方をSkillにするのは正しい方向ですが、明示起動を封じると副作用のあるworkflowを利用者が意図した時に実行できません。既定では利用者もClaudeも起動でき、制御はfrontmatterで絞ります。',
+      "Making both Skills is the right direction, but blocking explicit invocation means a side-effect workflow cannot be run when the user intends. By default both the user and Claude can invoke, and you narrow that with frontmatter.",
     ),
     c: localized(
-      '手順をすべてCLAUDE.mdに書くと毎セッションで常時読み込まれ、関係のない場面でもコンテキストを消費して肥大化します。',
-      'Putting every procedure in CLAUDE.md loads it in every session, consuming context even when irrelevant and bloating the file.',
+      '手順をすべてCLAUDE.mdに書くと毎セッション常時読み込まれて肥大化し、起動制御も仕組み化されません。再利用手順はSkillにして必要時のみ読み込ませます。',
+      'Putting every procedure in CLAUDE.md loads it every session and bloats context, with no built-in invocation control. Reusable procedures belong in Skills that load only when needed.',
     ),
     d: localized(
-      '利用者が起動する定型操作をコマンド、状況に応じて参照される知識をSkillにすると、起動方法と読み込みタイミングがそれぞれの性質に合います。',
-      'Making the user-invoked routine a command and the situationally-referenced knowledge a Skill matches each to how it is invoked and loaded.',
+      '現在のClaude CodeではcommandはSkillへ統合され、副作用のある明示実行workflowは disable-model-invocation: true、Claudeだけが参照する背景知識は user-invocable: false で作り分けます。同じ仕組みの上でfrontmatterが起動者を決めます。',
+      'In current Claude Code, commands are merged into Skills; you distinguish a side-effect explicit workflow with disable-model-invocation: true and background knowledge with user-invocable: false. On the same mechanism, frontmatter decides who invokes.',
     ),
   },
   'q-d4-fewshot': {
@@ -1005,8 +1005,8 @@ export const choiceRationales: ChoiceRationales = {
       'Limiting the schema to the fields the downstream needs and avoiding deep nesting keeps it maintainable and less brittle; excess complexity makes both generation and downstream handling harder.',
     ),
     b: localized(
-      '列挙値の大文字小文字は構造化出力でも保証されないため、比較を大文字小文字非依存にしておくと表記揺れで取りこぼしません。',
-      'Because enum capitalization is not guaranteed even with structured outputs, comparing case-insensitively avoids missing values due to casing differences.',
+      'additionalProperties: false は構造化出力でも強制され、スキーマに定義していないフィールドの混入を防ぎます。後段が想定した形だけを受け取れる堅い設計です。',
+      'additionalProperties: false is enforced by structured outputs and blocks fields not defined in the schema, so the downstream receives only the intended shape — a robust design.',
     ),
     c: localized(
       '全項目を最初から網羅し深くネストするほど良いというのは誤りで、不要な複雑さは脆さとコストを増やします。実際に使う項目に絞るべきです。',
