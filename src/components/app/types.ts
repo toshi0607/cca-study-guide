@@ -1,1 +1,1 @@
-export type View = 'today' | 'guide' | 'practice' | 'quiz' | 'progress';
+export type View = 'today' | 'guide' | 'practice' | 'quiz' | 'progress' | 'hands-on';

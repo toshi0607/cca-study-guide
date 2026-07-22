@@ -1,7 +1,8 @@
 import type { LocalizedText } from '../content/types';
 import type { Locale } from './locales';
 
-type View = 'today' | 'guide' | 'practice' | 'quiz' | 'progress';
+type View = 'today' | 'guide' | 'practice' | 'quiz' | 'progress' | 'hands-on';
+type HandsOnStatus = 'not_started' | 'in_progress' | 'completed' | 'stale' | 'future';
 type CardKind = 'recall' | 'contrast' | 'scenario';
 type QuestionFormat = 'single' | 'multiple';
 type ReviewFilter = 'due' | 'all' | 'unseen' | 'reviewed' | 'weak';
@@ -103,11 +104,66 @@ export type UiCopy = {
     serviceTitle: string;
     serviceBody: string;
     pathTitle: string;
-    path: ReadonlyArray<{ label: string; available: boolean }>;
+    path: ReadonlyArray<{ label: string; available: boolean; target?: View }>;
     availabilityNow: string;
     availabilityLater: string;
     calendarTitle: string;
     calendarBody: string;
+  };
+  handsOn: {
+    eyebrow: string;
+    title: string;
+    introduction: string;
+    entryTitle: string;
+    entryBody: string;
+    openList: string;
+    loading: string;
+    loadError: string;
+    retry: string;
+    listProgress: (completed: number, total: number) => string;
+    minutes: (count: number) => string;
+    stepCount: (completed: number, total: number) => string;
+    status: Record<HandsOnStatus, string>;
+    open: string;
+    backToList: string;
+    domains: string;
+    scenarios: string;
+    skills: string;
+    taskStatements: string;
+    estimatedTime: string;
+    objectives: string;
+    prerequisites: string;
+    environment: string;
+    setup: string;
+    stepsLegend: string;
+    expectedResult: string;
+    deliverables: string;
+    verification: string;
+    troubleshooting: string;
+    symptom: string;
+    isolation: string;
+    security: string;
+    cost: string;
+    cleanup: string;
+    reflection: string;
+    relatedCards: string;
+    relatedQuestions: string;
+    officialSources: string;
+    start: string;
+    complete: string;
+    reconfirm: string;
+    completeHint: string;
+    staleNote: string;
+    futureNote: string;
+    actionDone: {
+      start: string;
+      complete: string;
+      reconfirm: string;
+      // Step notices carry the running count so the aria-live region re-announces
+      // each toggle even when consecutive actions are the same direction.
+      step: (completed: number, total: number) => string;
+      unstep: (completed: number, total: number) => string;
+    };
   };
   practice: {
     eyebrow: string;
@@ -256,7 +312,7 @@ export const ui = {
       opensNewTab: '（新しいタブで開く）',
     },
     languageNames: { ja: '日本語', en: 'English' },
-    views: { today: '今日', guide: 'ガイド', practice: '練習', quiz: '演習', progress: '進捗' },
+    views: { today: '今日', guide: 'ガイド', practice: '練習', quiz: '演習', progress: '進捗', 'hands-on': 'ハンズオン' },
     pageTitle: 'CCA Field Notes — Claude Certified Architect非公式学習ガイド',
     notices: {
       saveFailed: '進捗を保存できませんでした。ブラウザのサイトデータ設定または空き容量を確認してください。',
@@ -330,9 +386,62 @@ export const ui = {
       serviceTitle: 'このサービスでできること／できないこと',
       serviceBody: '公開資料に基づく独自のガイド、カード、選択式演習を提供します。非公式であり、実試験問題やexam dumpは使用せず、合格を保証しません。Claude Code、API、MCP、CIの実システム経験は、ご自身の環境で別途行ってください。',
       pathTitle: '8段階の学習パス（独自の学習上の提案）',
-      path: [{ label: '初回診断', available: true }, { label: 'D1/D2/D5 基礎', available: true }, { label: 'D3/D4 実装・運用', available: true }, { label: 'Hands-on', available: false }, { label: 'シナリオ判断', available: true }, { label: '模試', available: false }, { label: '誤答修正', available: false }, { label: '本番直前チェック', available: false }],
-      availabilityNow: '現在利用可能: Guide、Practice、Quiz', availabilityLater: 'この段階の詳細機能は今後の学習計画です。実環境での作業はこのサービス外で行ってください。',
+      path: [{ label: '初回診断', available: true }, { label: 'D1/D2/D5 基礎', available: true }, { label: 'D3/D4 実装・運用', available: true }, { label: 'Hands-on', available: true, target: 'hands-on' }, { label: 'シナリオ判断', available: true }, { label: '模試', available: false }, { label: '誤答修正', available: false }, { label: '本番直前チェック', available: false }],
+      availabilityNow: '現在利用可能: Guide、Hands-on、Practice、Quiz', availabilityLater: 'この段階の詳細機能は今後の学習計画です。実環境での作業はこのサービス外で行ってください。',
       calendarTitle: '8月末までの進め方', calendarBody: '残り期間では、先にガイドで範囲を確認し、カードで想起し、選択式演習で判断を言語化する順に繰り返してください。遅れた場合は未完了セクションを優先し、固定の日数や合格可能性は前提にしません。',
+    },
+    handsOn: {
+      eyebrow: 'HANDS-ON / BUILD IN YOUR OWN ENVIRONMENT',
+      title: 'ハンズオン',
+      introduction: '試験範囲に対応した設計・実装・検証を、ご自身の環境で再現できるガイドです。ブラウザ内に実行環境は作りません。手順は独自の推奨、技術的事実は公式資料に基づきます。',
+      entryTitle: 'ハンズオンで実システムを試す',
+      entryBody: '各ガイドは、何を・なぜ・どの順で作り、何をもって成功とするか、どこで失敗しやすいか、どの権限・コスト・セキュリティに注意するかを示します。進捗はこの端末に保存されます。',
+      openList: 'ハンズオン一覧へ',
+      loading: 'ハンズオンを読み込んでいます。',
+      loadError: 'ハンズオンを読み込めませんでした。もう一度お試しください。',
+      retry: 'ページを再読み込み',
+      listProgress: (completed, total) => `${total}件中${completed}件を現行版で完了`,
+      minutes: (count) => `約${count}分`,
+      stepCount: (completed, total) => `${total}ステップ中${completed}ステップ完了`,
+      status: { not_started: '未着手', in_progress: '進行中', completed: '完了', stale: '更新内容の再確認が必要', future: 'この端末では新しい版の記録' },
+      open: 'ガイドを開く',
+      backToList: 'ハンズオン一覧に戻る',
+      domains: '対象ドメイン',
+      scenarios: '公式シナリオ',
+      skills: '対応スキル',
+      taskStatements: '対象タスクステートメント',
+      estimatedTime: '想定所要時間',
+      objectives: '学習目的',
+      prerequisites: '前提知識',
+      environment: '必要な環境',
+      setup: '準備',
+      stepsLegend: '実装ステップ（完了したものにチェック）',
+      expectedResult: '期待結果・確認方法',
+      deliverables: '最終成果物',
+      verification: '最終確認',
+      troubleshooting: '典型的な失敗と切り分け',
+      symptom: '症状',
+      isolation: '切り分け',
+      security: 'セキュリティ上の注意',
+      cost: 'コスト上の注意',
+      cleanup: '後片付け',
+      reflection: '振り返り質問',
+      relatedCards: '関連カードを開く',
+      relatedQuestions: '関連設問を開く',
+      officialSources: '公式資料',
+      start: 'このガイドを開始',
+      complete: '完了として記録',
+      reconfirm: '更新内容を再確認して再開',
+      completeHint: 'すべてのステップを完了すると記録できます。',
+      staleNote: '内容が更新されています。再確認して再開すると、変更されたステップを確認できます（過去の完了日時は保持されず、進行中として再開します）。',
+      futureNote: 'この端末には、この版より新しい記録があります。ここでは変更しません。新しい版で開いてください。',
+      actionDone: {
+        start: 'ガイドを開始として記録しました。',
+        complete: 'ガイドを完了として記録しました。',
+        reconfirm: '更新内容を再確認し、進行中として再開しました。',
+        step: (completed, total) => `ステップを完了として記録しました（${completed}/${total}）。`,
+        unstep: (completed, total) => `ステップの完了を取り消しました（${completed}/${total}）。`,
+      },
     },
     practice: {
       eyebrow: 'INDEPENDENT RETRIEVAL PRACTICE',
@@ -474,7 +583,7 @@ export const ui = {
       opensNewTab: ' (opens in a new tab)',
     },
     languageNames: { ja: '日本語', en: 'English' },
-    views: { today: 'Today', guide: 'Guide', practice: 'Practice', quiz: 'Quiz', progress: 'Progress' },
+    views: { today: 'Today', guide: 'Guide', practice: 'Practice', quiz: 'Quiz', progress: 'Progress', 'hands-on': 'Hands-on' },
     pageTitle: 'CCA Field Notes — Unofficial Claude Certified Architect study guide',
     notices: {
       saveFailed: 'Your progress could not be saved. Check this browser’s site-data settings or available storage.',
@@ -548,9 +657,62 @@ export const ui = {
       serviceTitle: 'What this service provides — and does not',
       serviceBody: 'It provides independently written guides, cards, and choice practice grounded in public sources. It is unofficial, uses no live exam questions or exam dumps, and offers no pass guarantee. Gain real Claude Code, API, MCP, and CI experience separately in your own environment.',
       pathTitle: 'Eight-stage learning path (independent study guidance)',
-      path: [{ label: 'Initial orientation', available: true }, { label: 'D1/D2/D5 foundations', available: true }, { label: 'D3/D4 implementation and operations', available: true }, { label: 'Hands-on work', available: false }, { label: 'Scenario judgment', available: true }, { label: 'Mock exam', available: false }, { label: 'Incorrect-answer repair', available: false }, { label: 'Final check', available: false }],
-      availabilityNow: 'Available now: Guide, Practice, and Quiz', availabilityLater: 'Detailed tooling for this stage is a future study-plan step. Do real-environment work outside this service.',
+      path: [{ label: 'Initial orientation', available: true }, { label: 'D1/D2/D5 foundations', available: true }, { label: 'D3/D4 implementation and operations', available: true }, { label: 'Hands-on work', available: true, target: 'hands-on' }, { label: 'Scenario judgment', available: true }, { label: 'Mock exam', available: false }, { label: 'Incorrect-answer repair', available: false }, { label: 'Final check', available: false }],
+      availabilityNow: 'Available now: Guide, Hands-on, Practice, and Quiz', availabilityLater: 'Detailed tooling for this stage is a future study-plan step. Do real-environment work outside this service.',
       calendarTitle: 'How to use the time through the end of August', calendarBody: 'Use the remaining time in cycles: map the scope in the guide, retrieve it with cards, then articulate decisions in choice practice. If time gets tight, prioritize unfinished sections; this plan does not assume fixed days or predict an outcome.',
+    },
+    handsOn: {
+      eyebrow: 'HANDS-ON / BUILD IN YOUR OWN ENVIRONMENT',
+      title: 'Hands-on',
+      introduction: 'Reproducible guides for designing, building, and verifying real systems on the exam scope in your own environment. The app runs no runtime in the browser. The order of work is the recommended sequence; the technical facts are grounded in official sources.',
+      entryTitle: 'Build real systems with hands-on guides',
+      entryBody: 'Each guide states what to build, why, in what order, what counts as success, where it typically fails, and which permission, cost, and security cautions apply. Progress is saved on this device.',
+      openList: 'Go to the hands-on list',
+      loading: 'Loading the hands-on guides.',
+      loadError: 'The hands-on guides could not be loaded. Try again.',
+      retry: 'Reload page',
+      listProgress: (completed, total) => `${completed} of ${total} complete at the current revision`,
+      minutes: (count) => `about ${count} min`,
+      stepCount: (completed, total) => `${completed} of ${total} steps complete`,
+      status: { not_started: 'Not started', in_progress: 'In progress', completed: 'Completed', stale: 'Review updates required', future: 'Recorded by a newer version' },
+      open: 'Open guide',
+      backToList: 'Back to the hands-on list',
+      domains: 'Domains covered',
+      scenarios: 'Official scenarios',
+      skills: 'Skills',
+      taskStatements: 'Task statements covered',
+      estimatedTime: 'Estimated time',
+      objectives: 'Learning objectives',
+      prerequisites: 'Prerequisites',
+      environment: 'Environment required',
+      setup: 'Setup',
+      stepsLegend: 'Implementation steps (check off what you finish)',
+      expectedResult: 'Expected result and how to verify',
+      deliverables: 'Deliverables',
+      verification: 'Final verification',
+      troubleshooting: 'Typical failures and how to isolate them',
+      symptom: 'Symptom',
+      isolation: 'Isolation',
+      security: 'Security notes',
+      cost: 'Cost notes',
+      cleanup: 'Cleanup',
+      reflection: 'Reflection questions',
+      relatedCards: 'Open related cards',
+      relatedQuestions: 'Open related questions',
+      officialSources: 'Official sources',
+      start: 'Start this guide',
+      complete: 'Mark complete',
+      reconfirm: 'Review updates and resume',
+      completeHint: 'You can record completion once every step is done.',
+      staleNote: 'This guide has been updated. Reviewing and resuming lets you re-check the changed steps (the earlier completion time is not kept; it resumes as in progress).',
+      futureNote: 'This device has a record from a newer version. It is not changed here. Open a newer app version.',
+      actionDone: {
+        start: 'Guide start recorded.',
+        complete: 'Guide completion recorded.',
+        reconfirm: 'Updates reviewed; resumed as in progress.',
+        step: (completed, total) => `Step marked complete (${completed}/${total}).`,
+        unstep: (completed, total) => `Step completion cleared (${completed}/${total}).`,
+      },
     },
     practice: {
       eyebrow: 'INDEPENDENT RETRIEVAL PRACTICE',

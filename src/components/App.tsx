@@ -5,11 +5,13 @@ import { localePaths, type Locale } from '../i18n/locales';
 import { ui } from '../i18n/ui';
 import { isDue, scheduleReview, type Rating } from '../lib/scheduler';
 import { completeStudyGuideSection, reconfirmStudyGuideSection, startStudyGuideSection } from '../lib/study-guide-progress';
+import { completeHandsOnGuide, reconfirmHandsOnGuide, setHandsOnStepCompletion, startHandsOnGuide } from '../lib/hands-on-progress';
 import { buildStudyDataExport, createEmptyStudyData, createStudyStorage, parseStudyDataImport, type ImportedStudyData, type StudyData } from '../lib/storage';
 import { AppBottomNav, AppHeader } from './app/AppNavigation';
 import { formatDate } from './app/format';
 import type { View } from './app/types';
 import { GuideEntry } from './GuideEntry';
+import { HandsOnEntry } from './HandsOnEntry';
 import { PracticeView, type StateFilter } from './views/PracticeView';
 import { ProgressView } from './views/ProgressView';
 import { QuizView } from './views/QuizView';
@@ -200,6 +202,46 @@ function App({ locale, analyticsEnabled = false }: { locale: Locale; analyticsEn
     return saved;
   };
 
+  // Save-first Hands-on updates. Each re-reads canonical storage inside
+  // commitData so a concurrent tab's change is never lost, and the visible state
+  // only advances after the save succeeds. Guide-level transitions move focus to
+  // the notice because the pressed control unmounts; a step toggle only announces
+  // through the aria-live notice so keyboard focus stays on the checkbox.
+  type HandsOnRecord = StudyData['handsOnProgress'][string];
+  const saveHandsOn = (
+    guideId: string,
+    change: (record: HandsOnRecord | undefined) => HandsOnRecord | undefined,
+    buildNotice: (next: HandsOnRecord) => string,
+    moveFocus: boolean,
+  ) => {
+    let savedNext: HandsOnRecord | undefined;
+    const saved = commitData((current) => {
+      const record = current.handsOnProgress[guideId];
+      const next = change(record);
+      if (!next || next === record) return null;
+      savedNext = next;
+      return { ...current, handsOnProgress: { ...current.handsOnProgress, [guideId]: next } };
+    });
+    if (saved && savedNext) {
+      setNotice(buildNotice(savedNext));
+      if (moveFocus) focusNotice();
+    }
+    return saved;
+  };
+
+  const saveHandsOnStart = (guideId: string, revision: number) =>
+    saveHandsOn(guideId, (record) => startHandsOnGuide(record, revision, new Date()), () => copy.handsOn.actionDone.start, true);
+  const saveHandsOnStep = (guideId: string, revision: number, stepIds: string[], stepId: string, complete: boolean) =>
+    saveHandsOn(guideId, (record) => setHandsOnStepCompletion(record, revision, stepIds, stepId, complete, new Date()), (next) => {
+      const done = new Set(next.completedStepIds);
+      const completed = stepIds.filter((id) => done.has(id)).length;
+      return complete ? copy.handsOn.actionDone.step(completed, stepIds.length) : copy.handsOn.actionDone.unstep(completed, stepIds.length);
+    }, false);
+  const saveHandsOnComplete = (guideId: string, revision: number, stepIds: string[]) =>
+    saveHandsOn(guideId, (record) => completeHandsOnGuide(record, revision, stepIds, new Date()), () => copy.handsOn.actionDone.complete, true);
+  const saveHandsOnReconfirm = (guideId: string, revision: number) =>
+    saveHandsOn(guideId, (record) => reconfirmHandsOnGuide(record, revision, new Date()), () => copy.handsOn.actionDone.reconfirm, true);
+
   const openWeakPractice = (domainId: string) => {
     setQuery('');
     setDomainFilter(domainId);
@@ -224,7 +266,9 @@ function App({ locale, analyticsEnabled = false }: { locale: Locale; analyticsEn
         <p ref={noticeRef} class="notice" tabIndex={-1} aria-live="polite">{notice}</p>
         {view === 'today' && <TodayView locale={locale} copy={copy} now={now} ready={ready} reviews={data.reviews} dueCards={dueCards} onStartDueReview={startDueReview} onOpenWeakDomain={openWeakPractice}/>}
 
-        {view === 'guide' && <GuideEntry locale={locale} copy={copy} records={data.studyGuideProgress} onProgressAction={saveGuideProgress} onOpenCard={openGuideCard} onOpenQuestion={openGuideQuestion}/>}
+        {view === 'guide' && <GuideEntry locale={locale} copy={copy} records={data.studyGuideProgress} onProgressAction={saveGuideProgress} onOpenCard={openGuideCard} onOpenQuestion={openGuideQuestion} onOpenHandsOn={() => navigate('hands-on')}/>}
+
+        {view === 'hands-on' && <HandsOnEntry locale={locale} copy={copy} records={data.handsOnProgress} onStart={saveHandsOnStart} onToggleStep={saveHandsOnStep} onComplete={saveHandsOnComplete} onReconfirm={saveHandsOnReconfirm} onOpenCard={openGuideCard} onOpenQuestion={openGuideQuestion}/>}
 
         {view === 'practice' && <PracticeView
           locale={locale} copy={copy} reviews={data.reviews} now={now} dueCount={dueCards.length}

@@ -157,6 +157,155 @@ test('drops a synchronous duplicate guide action before it can write twice', asy
   expect(await page.evaluate(() => (window as Window & { guideWrites?: number }).guideWrites)).toBe(1);
 });
 
+async function openHandsOnList(page: import('@playwright/test').Page) {
+  await page.getByRole('button', { name: 'ガイド' }).first().click();
+  await page.getByRole('button', { name: 'ハンズオン一覧へ' }).click();
+  await expect(page.getByRole('heading', { name: 'ハンズオン', exact: true })).toBeFocused();
+}
+
+const supportGuideTitle = '複数ツールと人へのエスカレーションを持つエージェント';
+const supportStepIds = ['step-tool-contracts', 'step-loop', 'step-failure-classes', 'step-escalation', 'step-least-privilege-observability'];
+
+test('walks the keyboard path from the guide into hands-on, checks every step, and completes save-first', async ({ page }) => {
+  await openHandsOnList(page);
+  await expect(page.locator('.handson-card')).toHaveCount(4);
+
+  await page.getByRole('button', { name: supportGuideTitle }).click();
+  // Focus moves to the detail heading on open.
+  await expect(page.getByRole('heading', { name: supportGuideTitle })).toBeFocused();
+
+  await page.getByRole('button', { name: 'このガイドを開始' }).click();
+  await expect(page.getByText('ガイドを開始として記録しました。')).toBeFocused();
+
+  const complete = page.getByRole('button', { name: '完了として記録' });
+  await expect(complete).toBeDisabled();
+  const checkboxes = page.getByRole('checkbox');
+  await expect(checkboxes).toHaveCount(supportStepIds.length);
+  for (const box of await checkboxes.all()) await box.check();
+  await expect(complete).toBeEnabled();
+
+  // Progress is derived from content and completed ids, never persisted.
+  const beforeComplete = await page.evaluate((key) => JSON.parse(localStorage.getItem(key) ?? '{}').handsOnProgress['ho-support-agent-escalation'], STORAGE_KEY);
+  expect(beforeComplete.status).toBe('in_progress');
+  expect([...beforeComplete.completedStepIds].sort()).toEqual([...supportStepIds].sort());
+  expect('completedAt' in beforeComplete).toBe(false);
+
+  await complete.click();
+  await expect(page.getByText('ガイドを完了として記録しました。')).toBeFocused();
+  const saved = await page.evaluate((key) => JSON.parse(localStorage.getItem(key) ?? '{}').handsOnProgress['ho-support-agent-escalation'], STORAGE_KEY);
+  expect(saved.status).toBe('completed');
+  expect(typeof saved.completedAt).toBe('string');
+
+  // Explicit in-app back returns to the list and focuses its heading.
+  await page.getByRole('button', { name: 'ハンズオン一覧に戻る' }).click();
+  await expect(page.getByRole('heading', { name: 'ハンズオン', exact: true })).toBeFocused();
+  await expect(page.locator('.handson-card').first()).toContainText('完了');
+});
+
+test('shows a stale hands-on guide read-only and reconfirms it without inventing a completion time', async ({ page }) => {
+  // ho-ci-review is revision 2; a revision-1 record is a valid prior v2 record.
+  const originalCompletedAt = '2026-07-05T08:00:00.000Z';
+  const initial = {
+    version: 2, reviews: {}, quizStats: {}, studyGuideProgress: {},
+    handsOnProgress: { 'ho-ci-review': { revision: 1, status: 'completed', completedStepIds: ['step-scope', 'step-local-run'], updatedAt: originalCompletedAt, completedAt: originalCompletedAt } },
+  };
+  await page.evaluate(([key, value]) => localStorage.setItem(key, value), [STORAGE_KEY, JSON.stringify(initial)]);
+  await page.reload();
+  const beforeRead = await page.evaluate((key) => localStorage.getItem(key), STORAGE_KEY);
+
+  await openHandsOnList(page);
+  await page.getByRole('button', { name: 'Claude Codeのチーム設定とCI差分レビュー' }).click();
+  await expect(page.locator('.guide-state-note')).toContainText('内容が更新されています');
+  // Reading a stale record never rewrites storage.
+  expect(await page.evaluate((key) => localStorage.getItem(key), STORAGE_KEY)).toBe(beforeRead);
+  // Its step checkboxes are read-only until reconfirmed.
+  await expect(page.getByRole('checkbox').first()).toBeDisabled();
+
+  await page.getByRole('button', { name: '更新内容を再確認して再開' }).click();
+  const saved = await page.evaluate((key) => JSON.parse(localStorage.getItem(key) ?? '{}').handsOnProgress['ho-ci-review'], STORAGE_KEY);
+  expect(saved.revision).toBe(2);
+  expect(saved.status).toBe('in_progress');
+  expect([...saved.completedStepIds].sort()).toEqual(['step-local-run', 'step-scope']);
+  expect('completedAt' in saved).toBe(false);
+  // The two preserved steps are checked; the rest are not.
+  await expect(page.getByRole('checkbox').first()).toBeEnabled();
+});
+
+test('keeps the checkbox unchanged and focuses the notice when a step save fails', async ({ page }) => {
+  await page.addInitScript((studyKey) => {
+    const original = Storage.prototype.setItem;
+    let allowed = 1; // let the "start" write through, block the step toggle
+    Storage.prototype.setItem = function (key, value) {
+      if (key === studyKey) {
+        if (allowed <= 0) throw new DOMException('blocked', 'QuotaExceededError');
+        allowed -= 1;
+      }
+      return original.call(this, key, value);
+    };
+  }, STORAGE_KEY);
+  await page.goto('/');
+  await openHandsOnList(page);
+  await page.getByRole('button', { name: supportGuideTitle }).click();
+  await page.getByRole('button', { name: 'このガイドを開始' }).click();
+
+  const firstBox = page.getByRole('checkbox').first();
+  // click (not check) — a controlled checkbox reverts when the save fails, which
+  // would make Playwright's check() assertion throw before the notice appears.
+  await firstBox.click();
+  await expect(page.getByText('進捗を保存できませんでした。ブラウザのサイトデータ設定または空き容量を確認してください。')).toBeFocused();
+  await expect(firstBox).not.toBeChecked();
+  const record = await page.evaluate((key) => JSON.parse(localStorage.getItem(key) ?? '{}').handsOnProgress['ho-support-agent-escalation'], STORAGE_KEY);
+  expect(record.completedStepIds).toEqual([]);
+});
+
+test('preserves future and unrelated records while a hands-on step is saved', async ({ page }) => {
+  const review = { cardId: 'd1-loop-stop', cardRevisionSeen: 1, dueAt: '2026-08-01T00:00:00.000Z', intervalDays: 3, streak: 1, lapses: 0, lastRating: 'good' };
+  const quizStat = { attempts: 1, correct: 1, lastAnsweredAt: '2026-07-20T00:00:00.000Z', lastCorrect: true };
+  const studyGuide = { revision: 2, status: 'completed', updatedAt: '2026-07-20T00:00:00.000Z', completedAt: '2026-07-20T00:00:00.000Z' };
+  const futureGuide = { revision: 9, status: 'in_progress', completedStepIds: ['x'], updatedAt: '2026-07-20T00:00:00.000Z' };
+  await page.evaluate(([key, value]) => localStorage.setItem(key, value), [STORAGE_KEY, JSON.stringify({
+    version: 2, reviews: { 'd1-loop-stop': review }, quizStats: { 'q-d1-loop-continue': quizStat },
+    studyGuideProgress: { 'sg-agentic-loop': studyGuide }, handsOnProgress: { 'ho-multi-agent-research': futureGuide, 'ho-removed-guide': { revision: 1, status: 'in_progress', completedStepIds: [], updatedAt: '2026-07-20T00:00:00.000Z' } },
+  })]);
+  await page.reload();
+
+  await openHandsOnList(page);
+  await page.getByRole('button', { name: supportGuideTitle }).click();
+  await page.getByRole('button', { name: 'このガイドを開始' }).click();
+  await page.getByRole('checkbox').first().check();
+  await expect(page.getByText('ステップを完了として記録しました（1/5）。')).toBeVisible();
+
+  const saved = await page.evaluate((key) => JSON.parse(localStorage.getItem(key) ?? '{}'), STORAGE_KEY);
+  expect(saved.reviews['d1-loop-stop']).toEqual(review);
+  expect(saved.quizStats['q-d1-loop-continue']).toEqual(quizStat);
+  expect(saved.studyGuideProgress['sg-agentic-loop']).toEqual(studyGuide);
+  expect(saved.handsOnProgress['ho-multi-agent-research']).toEqual(futureGuide);
+  expect(saved.handsOnProgress['ho-removed-guide']).toBeDefined();
+  expect(saved.handsOnProgress['ho-support-agent-escalation'].completedStepIds).toEqual(['step-tool-contracts']);
+});
+
+test('hands-on list and detail have no serious or critical axe violations', async ({ page }) => {
+  await openHandsOnList(page);
+  let axe = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa']).analyze();
+  expect(axe.violations.filter((v) => v.impact === 'serious' || v.impact === 'critical')).toEqual([]);
+
+  await page.getByRole('button', { name: supportGuideTitle }).click();
+  await page.getByRole('button', { name: 'このガイドを開始' }).click();
+  axe = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa']).analyze();
+  expect(axe.violations.filter((v) => v.impact === 'serious' || v.impact === 'critical')).toEqual([]);
+});
+
+for (const width of [360, 768, 1440]) {
+  test(`hands-on detail does not overflow horizontally at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 900 });
+    await openHandsOnList(page);
+    await page.getByRole('button', { name: supportGuideTitle }).click();
+    const dimensions = await page.evaluate(() => ({ viewport: document.documentElement.clientWidth, document: document.documentElement.scrollWidth, body: document.body.scrollWidth }));
+    expect(dimensions.document).toBe(dimensions.viewport);
+    expect(dimensions.body).toBe(dimensions.viewport);
+  });
+}
+
 test('merges a Guide write with a review saved by another already-open tab', async ({ page, context }) => {
   const guidePage = await context.newPage();
   await guidePage.goto('/');

@@ -19,11 +19,12 @@ type Props = {
   onProgressAction: (sectionId: string, revision: number, action: 'start' | 'complete' | 'reconfirm') => boolean;
   onOpenCard: (cardId: string) => void;
   onOpenQuestion: (questionId: string) => void;
+  onOpenHandsOn: () => void;
 };
 
 const diagnosisStarts = ['sg-agentic-loop', 'sg-tool-and-mcp', 'sg-context-and-handoff'];
 
-export function GuideView({ locale, copy, records, onProgressAction, onOpenCard, onOpenQuestion }: Props) {
+export function GuideView({ locale, copy, records, onProgressAction, onOpenCard, onOpenQuestion, onOpenHandsOn }: Props) {
   const [diagnosis, setDiagnosis] = useState('');
   const [recommendation, setRecommendation] = useState<string | null>(null);
   const resultRef = useRef<HTMLParagraphElement>(null);
@@ -63,7 +64,21 @@ export function GuideView({ locale, copy, records, onProgressAction, onOpenCard,
 
       <section class="guide-path" aria-labelledby="guide-path-title">
         <h3 id="guide-path-title">{copy.guide.pathTitle}</h3>
-        <ol>{copy.guide.path.map((stage, index) => <li key={stage.label}><strong>{index + 1}.</strong> {stage.label}<span class={stage.available ? 'guide-now' : 'guide-later'}> — {stage.available ? copy.guide.availabilityNow : copy.guide.availabilityLater}</span></li>)}</ol>
+        <ol>{copy.guide.path.map((stage, index) => (
+          <li key={stage.label}>
+            <strong>{index + 1}.</strong>{' '}
+            {stage.target === 'hands-on'
+              ? <button type="button" class="guide-path-link" onClick={onOpenHandsOn}>{stage.label}</button>
+              : stage.label}
+            <span class={stage.available ? 'guide-now' : 'guide-later'}> — {stage.available ? copy.guide.availabilityNow : copy.guide.availabilityLater}</span>
+          </li>
+        ))}</ol>
+      </section>
+
+      <section class="guide-handson-entry" aria-labelledby="guide-handson-title">
+        <h3 id="guide-handson-title">{copy.handsOn.entryTitle}</h3>
+        <p>{copy.handsOn.entryBody}</p>
+        <button type="button" class="guide-handson-open" onClick={onOpenHandsOn}>{copy.handsOn.openList}</button>
       </section>
 
       <section class="guide-calendar" aria-labelledby="guide-calendar-title"><h3 id="guide-calendar-title">{copy.guide.calendarTitle}</h3><p>{copy.guide.calendarBody}</p></section>
