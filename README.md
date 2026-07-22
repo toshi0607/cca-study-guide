@@ -27,6 +27,29 @@ pnpm build
 
 Astroの静的ビルドを使用します。サーバー、APIキー、データベースは不要です。
 
+### E2Eテスト（Playwright）
+
+`tests/`は機能別のspecに分割し、共通処理は`tests/fixtures/`（クリーンなstorageで1 navigation開始・共有UIヘルパー・axe/storageヘルパー）に集約しています。純粋ロジックの網羅検証はVitest（`pnpm test`）、ブラウザ統合・focus・storage・routing・遅延chunk・download・アクセシビリティ・レスポンシブはE2Eが担当します。
+
+```sh
+pnpm test:e2e          # 完全回帰（毎回production buildを作成）。マージゲート
+pnpm test:e2e:fast     # 開発中の反復用。@slow（axe・レスポンシブ・重いシナリオ）を除外
+pnpm test:e2e:a11y     # アクセシビリティ(axe)のみ
+pnpm test:e2e:ui       # Playwright UIモード
+```
+
+`test:e2e:fast`は起動済みサーバーを再利用する前提の速いフィードバック用です（下記手順でサーバーを起動しておくと、ビルドを省いて数十秒で完了します）。サーバー未起動なら自動でビルドするため、その初回はゲート同等の時間がかかります。
+
+`pnpm test:e2e`は毎回productionビルドを作り直すため、開発中に繰り返すと待ち時間が長くなります。ローカルでプレビューサーバーを起動済みなら、明示的に再利用できます（古いビルドを誤って使わないよう、既定では再利用しません）。
+
+```sh
+# 別ターミナルで起動（analyticsテストが測定IDを要求するため、webServerと同じIDでビルド）
+PUBLIC_GA_MEASUREMENT_ID=G-TEST123456 pnpm build && pnpm preview --host 127.0.0.1 --port 4325
+pnpm test:e2e:reuse   # または test:e2e:fast。起動済みサーバーへ実行
+```
+
+`test:e2e:fast`は開発中のフィードバック用で、マージ前には必ず`pnpm test:e2e`（full）を通してください。ワーカー数は`PW_WORKERS`で上書きできます（既定2）。
+
 ### Webフォント
 
 見出し用フォント（Barlow Condensed / Zen Kaku Gothic New）は、使用文字だけにサブセットしたwoff2を`public/fonts/`にコミットしてセルフホストしています。見出しやUI文言を変更してサブセットに文字が足りなくなると`pnpm test`が失敗するので、その場合は次で再生成してください。

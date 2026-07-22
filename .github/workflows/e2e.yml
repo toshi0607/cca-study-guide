@@ -1,0 +1,37 @@
+name: E2E
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  playwright:
+    runs-on: ubuntu-latest
+    env:
+      PUBLIC_GA_MEASUREMENT_ID: G-TEST123456
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # Only Chromium is exercised (see playwright.config.ts projects).
+      - run: pnpm exec playwright install --with-deps chromium
+      # webServer builds a fresh production preview and runs the full suite at
+      # the committed worker count (playwright.config.ts default = 1; a sweep
+      # found 2 workers flaky on this suite). This is the merge gate — never the
+      # fast or reuse variants, so it can't run against a stale build or skip
+      # @slow. To try parallel on a beefier runner, set PW_WORKERS here.
+      - run: pnpm test:e2e
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: playwright-report
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7
+          if-no-files-found: ignore
