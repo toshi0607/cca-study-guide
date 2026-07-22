@@ -1,5 +1,5 @@
 import { expectNoSeriousOrCritical, expectNoViolations } from './fixtures/accessibility';
-import { expect, openHandsOnList, openOfficialScenarios, supportGuideTitle, test } from './fixtures/app';
+import { expect, openHandsOnList, openOfficialScenarios, openScenarioQuestion, supportGuideTitle, test } from './fixtures/app';
 
 test('hands-on list and detail have no serious or critical axe violations', { tag: '@slow' }, async ({ page }) => {
   await openHandsOnList(page);
@@ -50,4 +50,36 @@ test('official scenarios list and detail have no serious or critical accessibili
 
   await page.getByRole('button', { name: 'カスタマーサポート解決エージェント' }).click();
   await expectNoSeriousOrCritical(page);
+});
+
+// Task 7 (#34): the quiz answer-review (metadata + per-choice rationale) and
+// summary states. @slow — heavy axe + multi-width overflow in one flow.
+test('answer review and summary are accessible, keyboard-drivable, and free of horizontal overflow', { tag: '@slow' }, async ({ page }) => {
+  // #given — reach and answer q-d1-fanout with the keyboard
+  await openScenarioQuestion(page, 'ja', 'カスタマーサポート解決エージェント', 'q-d1-fanout');
+  await page.locator('.choice-button').nth(2).press('Enter');
+  const feedback = page.locator('.quiz-feedback');
+  await expect(feedback).toBeVisible();
+  await expect(feedback).toBeFocused();
+
+  // #then — the lazily-loaded rationale does not steal focus from the feedback region
+  await expect(feedback.locator('.choice-rationale')).toHaveCount(4);
+  await expect(feedback).toBeFocused();
+
+  // #then — no serious or critical axe violations in the answer-review state
+  await expectNoSeriousOrCritical(page);
+
+  // #when — moving to the summary and expanding the missed-question review
+  await page.getByRole('button', { name: '結果を見る' }).click();
+  await expect(page.getByRole('heading', { name: '演習結果' })).toBeVisible();
+
+  await expectNoSeriousOrCritical(page);
+
+  // #then — no horizontal overflow at three widths
+  for (const width of [360, 768, 1440]) {
+    await page.setViewportSize({ width, height: 900 });
+    const dims = await page.evaluate(() => ({ viewport: document.documentElement.clientWidth, document: document.documentElement.scrollWidth, body: document.body.scrollWidth }));
+    expect(dims.document, `document ${width}`).toBe(dims.viewport);
+    expect(dims.body, `body ${width}`).toBe(dims.viewport);
+  }
 });

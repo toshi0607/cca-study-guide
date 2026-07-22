@@ -49,3 +49,25 @@ export async function openOfficialScenarios(page: Page): Promise<void> {
   await page.getByRole('button', { name: '公式シナリオ一覧へ' }).click();
   await expect(page.getByRole('heading', { name: '公式シナリオで設計判断を学ぶ' })).toBeFocused();
 }
+
+export const officialScenarioNav = {
+  ja: { guide: 'ガイド', list: '公式シナリオ一覧へ' },
+  en: { guide: 'Guide', list: 'Go to the official scenarios' },
+} as const;
+
+// Opens a specific question as a one-question round via its related-question
+// button under an official scenario, so the rationale-review tests target a
+// known question deterministically. Shared by quiz, chunk-failure, and
+// accessibility specs.
+export async function openScenarioQuestion(
+  page: Page,
+  locale: 'ja' | 'en',
+  scenarioTitle: string,
+  questionId: string,
+): Promise<void> {
+  await page.getByRole('button', { name: officialScenarioNav[locale].guide }).first().click();
+  await page.getByRole('button', { name: officialScenarioNav[locale].list }).click();
+  await page.getByRole('button', { name: scenarioTitle }).click();
+  await page.locator('.official-view').getByRole('button', { name: new RegExp(questionId) }).click();
+  await expect(page.locator('.quiz-question')).toHaveCount(1);
+}
