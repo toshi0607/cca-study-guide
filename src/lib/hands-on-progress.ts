@@ -127,8 +127,12 @@ export function completeHandsOnGuide(
 /**
  * A learner must explicitly acknowledge a changed guide. A stale record moves to
  * the current revision as in_progress: because the guide's steps may have changed,
- * completion has to be re-earned rather than silently carried over, and the prior
- * completedAt is dropped honestly rather than overwritten with the current time.
+ * completion has to be re-earned rather than silently carried over. The record is
+ * never shown as completed at a revision that may have added steps, but the prior
+ * completion time is preserved in `previousCompletedAt` rather than being erased
+ * or overwritten with the current time — so the learner never loses the fact that
+ * they finished the earlier revision. The original time survives repeated bumps
+ * (a stale in_progress record already carrying `previousCompletedAt` forwards it).
  * completedStepIds are kept as stored (not pruned); the display intersects them
  * with the current steps.
  */
@@ -139,7 +143,9 @@ export function reconfirmHandsOnGuide(
 ): HandsOnProgress | undefined {
   const updatedAt = timestamp(now);
   if (!progress || !updatedAt || getHandsOnGuideStatus(progress, currentRevision) !== 'stale') return progress;
-  return { revision: currentRevision, status: 'in_progress', completedStepIds: progress.completedStepIds, updatedAt };
+  const previousCompletedAt = progress.status === 'completed' ? progress.completedAt : progress.previousCompletedAt;
+  const base = { revision: currentRevision, status: 'in_progress' as const, completedStepIds: progress.completedStepIds, updatedAt };
+  return previousCompletedAt ? { ...base, previousCompletedAt } : base;
 }
 
 /**

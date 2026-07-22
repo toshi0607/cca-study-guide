@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'preact/hooks';
+import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
 import { formatNumber } from '../app/format';
 import { domains } from '../../content/domains';
 import type { Card } from '../../content/types';
@@ -69,31 +69,39 @@ export function PracticeSession({ locale, copy, initialCards, reviews, dueCount,
     setRevealed(false);
   };
 
+  const onKeyDown = (event: KeyboardEvent) => {
+    if (event.repeat) return;
+    const target = event.target instanceof HTMLElement ? event.target : null;
+    if (target?.closest('input, textarea, select, [contenteditable=""], [contenteditable="true"]')) return;
+    if (event.key === 'Escape') {
+      if (!finished) requestAbort();
+      return;
+    }
+    if (finished) return;
+    if (!revealed && (event.key === ' ' || event.key === 'Enter')) {
+      // Focused interactive controls (reveal button, links, disclosures) keep their native activation.
+      if (target?.closest('button, a, summary')) return;
+      event.preventDefault();
+      reveal();
+      return;
+    }
+    if (revealed && (event.key === '1' || event.key === '2' || event.key === '3')) {
+      event.preventDefault();
+      rate(event.key === '1' ? 'again' : event.key === '2' ? 'hard' : 'good');
+    }
+  };
+  // The handler closes over `revealed`, so it must always be the current render's.
+  // A passive effect re-binds asynchronously after paint, leaving a window where a
+  // key pressed right after reveal is served by the stale (revealed=false) closure
+  // and dropped. Keep the latest handler in a ref, updated synchronously before
+  // paint, and bind one stable listener that forwards to it.
+  const onKeyDownRef = useRef(onKeyDown);
+  useLayoutEffect(() => { onKeyDownRef.current = onKeyDown; });
   useEffect(() => {
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.repeat) return;
-      const target = event.target instanceof HTMLElement ? event.target : null;
-      if (target?.closest('input, textarea, select, [contenteditable=""], [contenteditable="true"]')) return;
-      if (event.key === 'Escape') {
-        if (!finished) requestAbort();
-        return;
-      }
-      if (finished) return;
-      if (!revealed && (event.key === ' ' || event.key === 'Enter')) {
-        // Focused interactive controls (reveal button, links, disclosures) keep their native activation.
-        if (target?.closest('button, a, summary')) return;
-        event.preventDefault();
-        reveal();
-        return;
-      }
-      if (revealed && (event.key === '1' || event.key === '2' || event.key === '3')) {
-        event.preventDefault();
-        rate(event.key === '1' ? 'again' : event.key === '2' ? 'hard' : 'good');
-      }
-    };
-    document.addEventListener('keydown', onKeyDown);
-    return () => document.removeEventListener('keydown', onKeyDown);
-  });
+    const listener = (event: KeyboardEvent) => onKeyDownRef.current(event);
+    document.addEventListener('keydown', listener);
+    return () => document.removeEventListener('keydown', listener);
+  }, []);
 
   if (finished) {
     return (

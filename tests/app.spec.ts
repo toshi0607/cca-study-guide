@@ -227,6 +227,9 @@ test('shows a stale hands-on guide read-only and reconfirms it without inventing
   expect(saved.status).toBe('in_progress');
   expect([...saved.completedStepIds].sort()).toEqual(['step-local-run', 'step-scope']);
   expect('completedAt' in saved).toBe(false);
+  // The original completion time is preserved, not erased and not overwritten with now.
+  expect(saved.previousCompletedAt).toBe(originalCompletedAt);
+  await expect(page.locator('.guide-state-note--completed')).toBeVisible();
   // The two preserved steps are checked; the rest are not.
   await expect(page.getByRole('checkbox').first()).toBeEnabled();
 });

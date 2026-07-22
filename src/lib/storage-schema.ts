@@ -18,8 +18,13 @@ export type StudyGuideProgress =
   | { revision: number; status: 'in_progress'; updatedAt: string }
   | { revision: number; status: 'completed'; updatedAt: string; completedAt: string };
 
+// `previousCompletedAt` is an optional, backward-compatible v2 field (no version
+// bump, no migration): it rides along on an `in_progress` record so that a guide
+// which was completed at an older revision keeps its original completion time
+// after the learner reconfirms it. Records written before this field existed —
+// and every `completed` record — simply omit it.
 export type HandsOnProgress =
-  | { revision: number; status: 'in_progress'; completedStepIds: string[]; updatedAt: string }
+  | { revision: number; status: 'in_progress'; completedStepIds: string[]; updatedAt: string; previousCompletedAt?: string }
   | { revision: number; status: 'completed'; completedStepIds: string[]; updatedAt: string; completedAt: string };
 
 export type StudyDataV2 = {
@@ -102,9 +107,16 @@ function isStudyGuideProgress(value: unknown): value is StudyGuideProgress {
 function isHandsOnProgress(value: unknown): value is HandsOnProgress {
   if (!isRecord(value) || !hasValidProgressCore(value)) return false;
   const steps = value.completedStepIds;
-  return Array.isArray(steps)
-    && steps.every((step) => typeof step === 'string')
-    && new Set(steps).size === steps.length;
+  if (!Array.isArray(steps) || !steps.every((step) => typeof step === 'string') || new Set(steps).size !== steps.length) return false;
+  // Optional prior-completion time: only on an in_progress record, a real
+  // datetime, and no later than when the record was last written.
+  if (value.previousCompletedAt !== undefined) {
+    const prev = value.previousCompletedAt;
+    const updated = value.updatedAt;
+    if (value.status !== 'in_progress' || !isIsoDateTime(prev) || !isIsoDateTime(updated)) return false;
+    if (Date.parse(prev) > Date.parse(updated)) return false;
+  }
+  return true;
 }
 
 // v1 only: releases before v2 stored data this validator never saw, so a single

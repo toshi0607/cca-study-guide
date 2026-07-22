@@ -74,5 +74,21 @@ on read.
   Conclusion: 4-worker resource-contention flakiness (matches known port/parallelism caveat), NOT a
   regression. E2E is not in CI (only lighthouse + Vercel).
 
+## Round-2 review fixes (Request changes → addressed)
+- P1 (completedAt loss): reconfirm no longer erases the prior completion time. Added an
+  OPTIONAL, backward-compatible v2 field `previousCompletedAt` on the in_progress variant
+  (no version/key/migration change; existing + completed records omit it; parseStudyDataV2
+  validates it). reconfirmHandsOnGuide carries the original completion time (survives repeated
+  bumps); UI shows a "previously completed on <date>" note; storage-schema + progress + E2E
+  tests updated. DESIGN.md stale-handling + schema policy rewritten.
+- P2 (E2E not deterministic): root-caused the flaky "session keyboard shortcuts" test to a
+  real product bug — PracticeSession's keydown listener re-binds via a passive effect after
+  paint, so a key pressed right after reveal hit the stale revealed=false closure and was
+  dropped (~35-40% flaky, even single-worker). Fixed with the latest-ref pattern (stable
+  listener bound once, forwards to a ref updated in useLayoutEffect). Verified 8/8 repeat-each.
+  Also set workers:1 in playwright.config.ts (single fixed-port preview server; removes the
+  parallel contention that flaked the other 3 tests). Product session code otherwise unchanged.
+
 ## Notes
-(deviations logged here)
+- PracticeSession keyboard fix is a small out-of-scope product robustness fix surfaced by the
+  reviewer's determinism requirement; behavior-preserving (same handler logic, current closure).

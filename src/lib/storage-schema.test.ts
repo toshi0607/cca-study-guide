@@ -159,6 +159,30 @@ describe('parseStudyDataV2', () => {
     expect(parseStudyDataV2(document)).toEqual(document);
   });
 
+  it('accepts an in_progress hands-on record that preserves a prior completion time', () => {
+    // #given — a stale completed guide reconfirmed keeps its original completion time
+    const document = validV2({
+      handsOnProgress: { guide: handsOnProgress({ previousCompletedAt: '2026-07-10T00:00:00.000Z' }) },
+    });
+
+    // #when / #then
+    expect(parseStudyDataV2(document)).toEqual(document);
+  });
+
+  it('rejects an invalid or misplaced previousCompletedAt', () => {
+    // #given — only valid on in_progress, a real datetime, no later than updatedAt
+    const cases: Partial<HandsOnProgress>[] = [
+      { previousCompletedAt: 'not-a-date' } as Partial<HandsOnProgress>,
+      { previousCompletedAt: '2099-01-01T00:00:00.000Z' } as Partial<HandsOnProgress>, // after updatedAt
+      { status: 'completed', completedAt: '2026-07-19T00:00:00.000Z', previousCompletedAt: '2026-07-10T00:00:00.000Z' } as Partial<HandsOnProgress>,
+    ];
+    for (const overrides of cases) {
+      const document = validV2({ handsOnProgress: { guide: handsOnProgress(overrides) } });
+      // #when / #then
+      expect(parseStudyDataV2(document)).toBeNull();
+    }
+  });
+
   it('does not accept a v1 document as v2', () => {
     // #given / #when / #then
     expect(parseStudyDataV2(validV1())).toBeNull();

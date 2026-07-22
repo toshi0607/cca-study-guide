@@ -3,6 +3,11 @@ import { defineConfig, devices } from '@playwright/test';
 export default defineConfig({
   testDir: './tests',
   fullyParallel: true,
+  // A single preview server on the fixed port 4325 backs the whole run. Multiple
+  // parallel workers saturate the machine and intermittently time out the
+  // timing-sensitive save-failure and analytics tests, so the suite runs
+  // serially to keep `pnpm test:e2e` deterministic.
+  workers: 1,
   reporter: 'line',
   use: {
     baseURL: 'http://127.0.0.1:4325',

@@ -478,6 +478,7 @@ main {
 .guide-domain-badges, .guide-statement-ids { display: flex; flex-wrap: wrap; gap: 7px; margin: 0; }
 .guide-statement-ids code { padding: 3px 6px; background: var(--cyan-pale); color: var(--cyan-dark); font: 700 .72rem var(--mono); }
 .guide-state-note { padding: 10px; border-left: 4px solid var(--amber); background: var(--amber-pale); }
+.guide-state-note--completed { border-left-color: var(--green); background: #eef7f2; }
 .guide-targets { display: flex; flex-wrap: wrap; gap: 8px; }
 .guide-targets button { min-height: 44px; padding: 0 10px; border: 1px solid var(--grid-strong); background: var(--surface); color: var(--cyan-dark); cursor: pointer; font: 700 .75rem var(--mono); }
 .guide-actions { margin-top: 22px; }

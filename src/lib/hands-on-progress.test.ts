@@ -124,6 +124,14 @@ describe('setHandsOnStepCompletion', () => {
     setHandsOnStepCompletion(record, 2, ['s1', 's2'], 's2', true, now);
     expect(record).toEqual(snapshot);
   });
+
+  it('preserves previousCompletedAt when toggling a step on a reconfirmed record', () => {
+    const record: HandsOnProgress = { revision: 2, status: 'in_progress', completedStepIds: ['s1'], updatedAt: '2026-07-22T09:00:00.000Z', previousCompletedAt: '2026-07-10T00:00:00.000Z' };
+    expect(setHandsOnStepCompletion(record, 2, ['s1', 's2'], 's2', true, now)).toEqual({
+      revision: 2, status: 'in_progress', completedStepIds: ['s1', 's2'],
+      updatedAt: '2026-07-22T10:30:00.000Z', previousCompletedAt: '2026-07-10T00:00:00.000Z',
+    });
+  });
 });
 
 describe('completeHandsOnGuide', () => {
@@ -153,16 +161,38 @@ describe('completeHandsOnGuide', () => {
 });
 
 describe('reconfirmHandsOnGuide', () => {
-  it('moves a stale record to the current revision as in progress, dropping the old completion time', () => {
+  it('moves a stale completed guide to in progress while preserving its original completion time', () => {
+    // completed(1) carries completedAt '2026-07-20T09:00:00.000Z'
     const stale = completed(1, ['s1', 's2']);
     const next = reconfirmHandsOnGuide(stale, 2, now);
-    expect(next).toEqual({ revision: 2, status: 'in_progress', completedStepIds: ['s1', 's2'], updatedAt: '2026-07-22T10:30:00.000Z' });
+    expect(next).toEqual({
+      revision: 2, status: 'in_progress', completedStepIds: ['s1', 's2'],
+      updatedAt: '2026-07-22T10:30:00.000Z', previousCompletedAt: '2026-07-20T09:00:00.000Z',
+    });
+    // It becomes in_progress (not completed), but the history is not lost.
     expect(next && 'completedAt' in next).toBe(false);
+    expect(next && next.status === 'in_progress' && next.previousCompletedAt).toBe('2026-07-20T09:00:00.000Z');
   });
 
-  it('keeps stored completed step ids so unchanged steps stay credited', () => {
+  it('does not overwrite the preserved completion time with the current time', () => {
+    const next = reconfirmHandsOnGuide(completed(1), 2, now);
+    expect(next && next.status === 'in_progress' && next.previousCompletedAt).toBe('2026-07-20T09:00:00.000Z');
+    expect(next?.updatedAt).toBe('2026-07-22T10:30:00.000Z');
+  });
+
+  it('carries an existing previousCompletedAt forward across a second reconfirm', () => {
+    const staleAgain: HandsOnProgress = { revision: 1, status: 'in_progress', completedStepIds: ['s1'], updatedAt: '2026-07-21T00:00:00.000Z', previousCompletedAt: '2026-07-10T00:00:00.000Z' };
+    expect(reconfirmHandsOnGuide(staleAgain, 2, now)).toEqual({
+      revision: 2, status: 'in_progress', completedStepIds: ['s1'],
+      updatedAt: '2026-07-22T10:30:00.000Z', previousCompletedAt: '2026-07-10T00:00:00.000Z',
+    });
+  });
+
+  it('keeps stored completed step ids and adds no previousCompletedAt for a stale never-completed record', () => {
     const stale = inProgress(1, ['s1', 'old-only']);
-    expect(reconfirmHandsOnGuide(stale, 2, now)?.completedStepIds).toEqual(['s1', 'old-only']);
+    const next = reconfirmHandsOnGuide(stale, 2, now);
+    expect(next?.completedStepIds).toEqual(['s1', 'old-only']);
+    expect(next && 'previousCompletedAt' in next).toBe(false);
   });
 
   it('rejects non-stale records and invalid revisions without changing them', () => {

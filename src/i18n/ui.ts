@@ -155,6 +155,7 @@ export type UiCopy = {
     completeHint: string;
     staleNote: string;
     futureNote: string;
+    previouslyCompleted: (date: string) => string;
     actionDone: {
       start: string;
       complete: string;
@@ -433,8 +434,9 @@ export const ui = {
       complete: '完了として記録',
       reconfirm: '更新内容を再確認して再開',
       completeHint: 'すべてのステップを完了すると記録できます。',
-      staleNote: '内容が更新されています。再確認して再開すると、変更されたステップを確認できます（過去の完了日時は保持されず、進行中として再開します）。',
+      staleNote: '内容が更新されています。再確認して再開すると、変更されたステップを確認できます。以前の完了日時は保持され、進行中として再開します（現在の版で改めて完了できます）。',
       futureNote: 'この端末には、この版より新しい記録があります。ここでは変更しません。新しい版で開いてください。',
+      previouslyCompleted: (date) => `以前 ${date} に完了しています（再確認のうえ進行中として再開しました）。`,
       actionDone: {
         start: 'ガイドを開始として記録しました。',
         complete: 'ガイドを完了として記録しました。',
@@ -704,8 +706,9 @@ export const ui = {
       complete: 'Mark complete',
       reconfirm: 'Review updates and resume',
       completeHint: 'You can record completion once every step is done.',
-      staleNote: 'This guide has been updated. Reviewing and resuming lets you re-check the changed steps (the earlier completion time is not kept; it resumes as in progress).',
+      staleNote: 'This guide has been updated. Reviewing and resuming lets you re-check the changed steps. Your earlier completion time is kept, and it resumes as in progress (you can complete it again at the current revision).',
       futureNote: 'This device has a record from a newer version. It is not changed here. Open a newer app version.',
+      previouslyCompleted: (date) => `Previously completed on ${date} (reviewed and resumed as in progress).`,
       actionDone: {
         start: 'Guide start recorded.',
         complete: 'Guide completion recorded.',

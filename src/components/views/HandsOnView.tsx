@@ -13,6 +13,7 @@ import {
 } from '../../lib/hands-on-progress';
 import type { HandsOnProgress } from '../../lib/storage';
 import { SourceLinks } from '../app/SourceLinks';
+import { formatDate } from '../app/format';
 import type { Locale } from '../../i18n/locales';
 
 type Props = {
@@ -65,6 +66,7 @@ export function HandsOnView({ locale, copy, records, onStart, onToggleStep, onCo
 
         {status === 'stale' && <p class="guide-state-note" role="note">{c.staleNote}</p>}
         {status === 'future' && <p class="guide-state-note" role="note">{c.futureNote}</p>}
+        {status === 'in_progress' && record?.status === 'in_progress' && record.previousCompletedAt && <p class="guide-state-note guide-state-note--completed" role="note">{c.previouslyCompleted(formatDate(new Date(record.previousCompletedAt), locale))}</p>}
 
         <div class="handson-badges">
           <div><h3>{c.domains}</h3><p class="guide-domain-badges">{domains.filter((domain) => selected.domainIds.includes(domain.id)).map((domain) => <span class="card-domain" key={domain.id}>D{domain.number} {localize(domain.title, locale)}</span>)}</p></div>
