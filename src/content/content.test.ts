@@ -10,6 +10,7 @@ import { skillById, skills } from './skills';
 import { questionDifficulties } from './types';
 import { sources } from './sources';
 import { studyGuideSections } from './study-guide';
+import { MOCK_EXAM_DOMAIN_DISTRIBUTION, MOCK_EXAM_QUESTION_COUNT } from '../lib/mock-exam-blueprint';
 import {
   buildContentIndex,
   genericSourceIds,
@@ -35,7 +36,7 @@ describe('study content', () => {
       objectiveCount: 30,
       cardCount: cards.length,
       questionCount: questions.length,
-      choiceRationaleCount: 152,
+      choiceRationaleCount: 240,
       scenarioCount: scenarios.length,
       officialScenarioCount: 6,
       officialScenarioLearningCount: 6,
@@ -69,6 +70,20 @@ describe('study content', () => {
     for (const { weight, share } of shareByDomain) {
       expect(Math.abs(share - weight)).toBeLessThanOrEqual(6);
     }
+  });
+
+  it('supplies the full question bank in exactly the Mock Exam blueprint distribution', () => {
+    // #given — the Mock Exam engine buckets the whole bank (standalone + scenario)
+    // by domain, so the bank must meet the blueprint counts exactly to build a
+    // 60-question exam. Asserted against the blueprint constants, not hardcoded IDs.
+    const countByDomain = questions.reduce<Record<string, number>>((counts, question) => {
+      counts[question.domainId] = (counts[question.domainId] ?? 0) + 1;
+      return counts;
+    }, {});
+
+    // #then — total is exactly the blueprint size, and every domain meets its quota
+    expect(questions.length).toBe(MOCK_EXAM_QUESTION_COUNT);
+    expect(countByDomain).toEqual(MOCK_EXAM_DOMAIN_DISTRIBUTION);
   });
 
   it('keeps at least 30% of the standalone questions in multiple-select format', () => {

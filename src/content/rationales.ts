@@ -691,4 +691,402 @@ export const choiceRationales: ChoiceRationales = {
       'A list at the end shows only that the report drew on some set of articles; the link between an individual fact and its evidence cannot be reconstructed from it. This is the current practice, and it is what created the problem.',
     ),
   },
+
+  // --- Task 8A.1: rationales for the 22 expansion questions. ---
+  'q-d1-loop-toolresult': {
+    a: localized(
+      '結果を1件ずつ別々のメッセージで返すと、同じ応答内で要求された他のtool_useブロックが対応するtool_resultを欠いたまま次の呼び出しへ進み、対応関係が崩れます。',
+      'Returning results one message at a time leaves the other tool_use blocks from the same response without their tool_result before the next call, breaking the pairing the API expects.',
+    ),
+    b: localized(
+      '並列に要求された各tool_useに対応するtool_resultを1つのuserメッセージへまとめて返すと、ブロックの対応が保たれたままループを継続できます。',
+      'Returning every parallel tool_use’s matching tool_result together in a single user message keeps the blocks paired and lets the loop continue cleanly.',
+    ),
+    c: localized(
+      '最初のツールだけ実行して他を保留すると、残りのtool_useが未応答のまま残り、モデルは欠けた結果を待って停滞します。次のstop_reasonはこの状況では返りません。',
+      'Running only the first tool leaves the remaining tool_use blocks unanswered, so the model stalls waiting for results that never arrive; no next stop_reason comes in this state.',
+    ),
+    d: localized(
+      '自然文の要約はtool_resultブロックではないため、モデルはどのツールの結果かを構造的に対応付けられず、ツール実行の往復契約を満たしません。',
+      'A prose summary is not a tool_result block, so the model cannot structurally attribute it to a call and the tool round-trip contract is not satisfied.',
+    ),
+  },
+  'q-d1-stop-max-tokens': {
+    a: localized(
+      'max_tokensは正常な完結ではなく上限での打ち切りを表すため、完結として採用すると欠落した出力をそのまま使うことになります。',
+      'max_tokens signals truncation at the limit, not a natural finish, so accepting it as complete uses output that is missing its tail.',
+    ),
+    b: localized(
+      'max_tokensは上限到達による途中終了なので、上限を引き上げるか打ち切られた続きを生成させて欠落を補うのが正しい対応です。',
+      'Because max_tokens is an early stop at the limit, raising the limit or continuing the truncated response to recover the missing part is the correct response.',
+    ),
+    c: localized(
+      'ツールを実行して継続すべきなのはstop_reasonがtool_useのときで、max_tokensはツール要求を意味しません。ここでツールを走らせるのは別の停止理由への対応です。',
+      'You run a tool and continue when stop_reason is tool_use; max_tokens is not a tool request, so running a tool here answers the wrong stop reason.',
+    ),
+    d: localized(
+      '安全性による拒否はrefusalが示す別の停止理由で、max_tokensとは異なります。フォールバックへの切替はrefusal時の対応であり、打ち切りには効きません。',
+      'A safety refusal is the separate refusal stop reason, distinct from max_tokens; switching to a fallback answers a refusal, not truncation.',
+    ),
+  },
+  'q-d1-single-vs-multi': {
+    a: localized(
+      '密に依存し共有文脈が多い工程を並列サブエージェントに分けると、独立文脈の前提が崩れ、結果統合と文脈受け渡しのコストばかりが増えます。',
+      'Splitting tightly coupled, context-heavy steps into parallel subagents breaks the premise of independent context and only adds the cost of integrating results and passing context.',
+    ),
+    b: localized(
+      'サブエージェントを常に工程数だけ用意するのは、依存関係や規模を無視した過剰分割で、いま必要のない調整コストを固定的に抱え込みます。',
+      'Always creating one subagent per step over-fragments regardless of dependency or size, locking in coordination cost that this task does not need.',
+    ),
+    c: localized(
+      '依存が密で共有文脈が多く工程も小さい場合、分離のオーバーヘッドが利得を上回るため、単一ループで順に処理する方が無駄がありません。',
+      'When steps are tightly coupled, share much context, and are small, the isolation overhead outweighs the benefit, so handling them in one loop is the leaner choice.',
+    ),
+    d: localized(
+      '共有文脈を毎回全文渡して同期する構成は、分離の利点であるコンテキスト節約を打ち消し、往復ごとに同じ文脈を運ぶ無駄を生みます。',
+      'Syncing the full shared context on every call cancels the context savings that isolation is meant to provide and repeatedly ships the same context back and forth.',
+    ),
+  },
+  'q-d1-coordination': {
+    a: localized(
+      '複数サブタスクの出力を1つの成果物へまとめる責任者が要る場合、統合の所有権を中央に置くオーケストレーターが適します。',
+      'When one owner must fold several subtasks’ outputs into a single deliverable, a central orchestrator that holds integration ownership fits.',
+    ),
+    b: localized(
+      '各サブタスクが独立して完結し互いの結果を参照しないなら、調整役は不要で、並列に流して個別に返せば足ります。中央化はむしろ不要なボトルネックです。',
+      'If each subtask completes independently and never references another’s result, no coordinator is needed — run them in parallel and return each; centralizing would only add a bottleneck.',
+    ),
+    c: localized(
+      '進行を1か所で監視し、失敗時の再割り当てを一元的に判断したい場合、状態を集約する中央オーケストレーターが向きます。',
+      'When you want to watch progress in one place and decide reassignment on failure centrally, a central orchestrator that aggregates state is the fit.',
+    ),
+    d: localized(
+      '一方向パイプラインは各段が次段へ直接引き継げるため、途中に調整役を挟む必要がありません。ハンドオフだけで流れます。',
+      'A one-way pipeline hands each stage straight to the next, so no coordinator is needed in between; plain handoffs carry it.',
+    ),
+  },
+  'q-d1-subagent-scope': {
+    a: localized(
+      '読んだ全ファイルと全ツール結果を親履歴へ連結すると、サブエージェントで中間過程を分離した意味が失われ、親のコンテキストが調査の生データで埋まります。',
+      'Concatenating every file and tool result into the parent history throws away the isolation the subagent provided and fills the parent’s context with raw research data.',
+    ),
+    b: localized(
+      '中間の思考や全文引用を省かず返すのも同様に親側の負担で、取捨選択を親に押し付けるだけで、要約という委譲の目的を果たしません。',
+      'Returning the full reasoning and verbatim quotes similarly burdens the parent, pushing the filtering onto it and defeating the summarization the delegation was for.',
+    ),
+    c: localized(
+      'パス一覧だけでは、親は何が分かったのかを判断できず、結局ファイルを読み直すことになります。結論が欠けているため委譲の成果になりません。',
+      'A list of paths alone leaves the parent unable to tell what was learned and forces it to re-read the files; with no conclusion it is not a usable delegation result.',
+    ),
+    d: localized(
+      '判断に必要な結論と根拠だけを要約して返すと、親のコンテキストを浪費せずに成果を統合できます。これがサブエージェントに委譲する本来の目的です。',
+      'Returning only the conclusion and the evidence needed to act lets the parent integrate the result without wasting context — the whole point of delegating to a subagent.',
+    ),
+  },
+  'q-d1-handoff-data': {
+    a: localized(
+      '会話全文を添付し次段に読み取らせる前提は、必要な識別子や決定が長い履歴に埋もれ、取りこぼしや解釈違いを招きます。',
+      'Attaching the whole conversation and expecting the next stage to read it out buries the needed identifiers and decisions in a long history, inviting misses and misreads.',
+    ),
+    b: localized(
+      '次段が確実に使う識別子や確定済みの決定事項を構造化フィールドで明示すると、会話に依存せず正確に引き継げます。',
+      'Stating the identifiers and settled decisions the next stage will use as explicit structured fields lets the handoff carry them accurately without depending on the conversation.',
+    ),
+    c: localized(
+      '自然文の依頼だけを渡して項目を推測させると、必須データが本文表現に左右され、機械的に取り出せません。人間向けの体裁は引き継ぎの信頼性を保証しません。',
+      'Passing only a prose request and letting the next stage infer fields makes required data hinge on wording and impossible to extract mechanically; a human-friendly tone does not guarantee handoff reliability.',
+    ),
+    d: localized(
+      '引き継ぐ理由と、次段が満たすべき前提・完了条件を構造化して渡すと、受け手は何をどこまでやればよいかを曖昧さなく判断できます。',
+      'Passing the reason plus the preconditions and completion conditions the next stage must meet, in structured form, lets the receiver tell exactly what to do and how far without ambiguity.',
+    ),
+  },
+  'q-d1-hook-exitcode': {
+    a: localized(
+      '実行前のPreToolUseフックが終了コード2で終了すると、その呼び出しは開始前に遮断されます。これが決定的にツール実行を止める正しい仕組みです。',
+      'A PreToolUse hook that exits with code 2 blocks the call before it starts — the correct, deterministic way to stop the tool execution.',
+    ),
+    b: localized(
+      'PostToolUseは書き込みが済んだ後に走るため、警告を出しても実行済みの操作は巻き戻せません。遮断ではなく事後の記録にしかなりません。',
+      'PostToolUse runs after the write has completed, so a warning cannot roll back the operation that already happened; it is after-the-fact logging, not blocking.',
+    ),
+    c: localized(
+      '終了コード0は正常終了で、呼び出しはそのまま継続します。遮断したいときにコード0を返すのは意図と逆の結果になります。',
+      'Exit code 0 means success and the call proceeds as normal; returning 0 when you want to block does the opposite of the intent.',
+    ),
+    d: localized(
+      '標準出力へ文言を出すだけでは呼び出しは止まりません。遮断はコード2（またはblock決定の返却）が必要で、単なる出力は情報表示にとどまります。',
+      'Printing text to stdout does not stop the call; blocking requires exit code 2 (or a returned block decision), while plain output only surfaces information.',
+    ),
+  },
+  'q-d1-fork-resume': {
+    a: localized(
+      '同一セッションをresumeして別案に切り替えると、元のスレッドが上書きされ、後で元の続きへ戻れなくなります。分岐ではなく継続だからです。',
+      'Resuming the same session and switching to the alternative overwrites the original thread, so you cannot return to it later — resume continues, it does not branch.',
+    ),
+    b: localized(
+      '空のセッションを新規開始すると、これまでの読取や決定といった文脈を失い、手で貼り直す手間とヌケが生じます。継続の利点が消えます。',
+      'Starting a blank session loses the prior reading and decisions, forcing error-prone manual re-pasting; the benefit of continuing is gone.',
+    ),
+    c: localized(
+      'forkは元履歴のコピーから分岐した別セッションを作り、元のセッションは変更されません。別案を試しつつ元の続きも保てる、この要件に合う操作です。',
+      'Fork creates a separate session branched from a copy of the original history while leaving the original untouched — exactly the action that lets you try an alternative and still keep the original thread.',
+    ),
+    d: localized(
+      '元のセッションを削除すると別案は進められても元の案へ戻る道が失われ、「後で続けられるよう保つ」という要件に反します。',
+      'Deleting the original lets you pursue the alternative but destroys the path back, violating the requirement to keep the original available to continue later.',
+    ),
+  },
+  'q-d2-builtin-tools': {
+    a: localized(
+      '探索を狭く絞った検索から始めると、無関係なファイルを大量に読み込まずに対象へ近づけ、コンテキストを節約できます。',
+      'Beginning exploration with a narrow, targeted search reaches the target without pulling in many irrelevant files, saving context.',
+    ),
+    b: localized(
+      '対象を読まずに編集を適用するのは、前提を確認しないまま変更する行為で、失敗時の差分確認では手遅れになりやすく取り返しがつきません。',
+      'Editing without reading the target changes code without checking assumptions; catching it only in the diff afterward is often too late to undo cleanly.',
+    ),
+    c: localized(
+      '変更前に対象を読み、変更後に検証を走らせると、意図した変更かを確かめられ、壊れた場合もすぐ気付けます。安全な編集の基本です。',
+      'Reading the target before editing and running a verification afterward confirms the change was intended and surfaces breakage quickly — the basis of safe editing.',
+    ),
+    d: localized(
+      '破壊的なコマンドを検査せず実行後ログだけで判断するのは、取り返しのつかない操作を検証前に走らせる運用で、事前遮断の機会を捨てています。',
+      'Skipping inspection of destructive commands and judging only from the post-run log runs irreversible operations before validation and throws away the chance to block them beforehand.',
+    ),
+  },
+  'q-d2-tool-disambiguation': {
+    a: localized(
+      '両方のツールを常に呼んで人が選別するのは、往復と処理を二重化する無駄で、誤選択の原因である説明の曖昧さ自体は残ったままです。',
+      'Always calling both tools and having a person sort the results doubles the round trips and work while leaving the real cause — ambiguous descriptions — untouched.',
+    ),
+    b: localized(
+      '各ツールの説明に用途・非用途・入力の意味を具体的に書き分けると、モデルが選択判断に使う契約が明確になり、誤選択が根本から減ります。',
+      'Rewriting each description to state its use, non-use, and input meaning gives the model a clear contract to select on, reducing misselection at the source.',
+    ),
+    c: localized(
+      'tool_choiceで常に一方を強制すると、もう一方のツールが必要な場面でも使えなくなり、選択問題を解く代わりに機能を失わせます。',
+      'Forcing one tool with tool_choice every time makes the other unusable even when it is needed, losing functionality instead of solving the selection problem.',
+    ),
+    d: localized(
+      'ツール名を似た短い語に揃えると区別の手掛かりがさらに減り、モデルの誤選択を助長します。名前の曖昧さは問題を悪化させます。',
+      'Renaming the tools to similar short words removes even more of the cue to tell them apart and worsens misselection; ambiguous names make it harder, not easier.',
+    ),
+  },
+  'q-d3-plan-mode': {
+    a: localized(
+      '範囲が広く不慣れな変更では、plan modeで読取と設計を実装前に済ませて範囲と検証方法を固めると、誤った問題を解く事故を避けられます。',
+      'For a broad, unfamiliar change, using plan mode to read and design before implementing — settling scope and verification — avoids solving the wrong problem.',
+    ),
+    b: localized(
+      '不慣れなまま全ファイルを即編集すると、依存や影響範囲を把握しないまま壊し、修正のやり直しが増えて収束が遅くなります。',
+      'Editing all files immediately in unfamiliar code breaks things without grasping dependencies or blast radius, multiplying rework and slowing convergence.',
+    ),
+    c: localized(
+      'plan modeにはオーバーヘッドがあり、些末な変更にまで常時詳細設計を書くのは過剰です。一文で差分を説明できる作業では省くべきです。',
+      'Plan mode has overhead, so writing a detailed design for every trivial change is excessive; when you could describe the diff in one sentence, skip it.',
+    ),
+    d: localized(
+      '設計を省きテストを後回しにすると、不慣れな領域ほど誤りが後段まで潜伏し、検証の遅れが手戻りを大きくします。',
+      'Skipping design and deferring tests lets mistakes lurk into later stages — worse in unfamiliar areas — and the delayed verification enlarges the rework.',
+    ),
+  },
+  'q-d3-iterative-eval': {
+    a: localized(
+      '基準を決めず「良くなった感触」で修正を続けると、進捗を客観的に測れず、いつ止めるかも比較もできません。',
+      'Revising by “feels better” with no criteria gives no objective measure of progress and no way to know when to stop or to compare approaches.',
+    ),
+    b: localized(
+      '評価基準を反復の前に定義しておくと、各版を同じ物差しで測れ、改善が本物かを客観的に判断できます。',
+      'Defining the criteria before iterating lets you measure each version on the same yardstick and judge objectively whether an improvement is real.',
+    ),
+    c: localized(
+      '修正ごとに以前通っていた項目の回帰を確認すると、ある改善が別の箇所を壊す後退を早期に捕まえられます。',
+      'Checking regressions in previously passing items after each revision catches backsliding — where one improvement breaks something else — early.',
+    ),
+    d: localized(
+      '大量の変更を一括で入れて最後にまとめて評価すると、どの変更が効いたか切り分けられず、問題箇所の特定が難しくなります。',
+      'Bundling many changes and evaluating only at the end makes it impossible to isolate which change helped and hard to locate the problem.',
+    ),
+  },
+  'q-d3-headless-perms': {
+    a: localized(
+      'すべてのツールを許可して事後に目視するのは、CIで危険な操作まで無制限に走らせ、人手のレビューに頼る点で非対話実行の安全設計に反します。',
+      'Allowing all tools and eyeballing afterward lets dangerous operations run unrestricted in CI and leans on manual review, which is against safe non-interactive design.',
+    ),
+    b: localized(
+      '自然文出力を正規表現で抽出する方式は表現の揺れに弱く、CIの合否判定が壊れやすくなります。結果は構造化して受けるべきです。',
+      'Extracting a pass/fail from prose with a regex is brittle against wording changes and makes CI gating fragile; results should be received structured.',
+    ),
+    c: localized(
+      'allowedToolsを最小権限に絞り、JSON出力と終了コードで成否を判定すると、CIが機械的かつ安全に結果を扱えます。非対話実行の定石です。',
+      'Scoping allowedTools to least privilege and judging success by JSON output and exit code lets CI handle results mechanically and safely — the standard for non-interactive runs.',
+    ),
+    d: localized(
+      '対話的な権限確認をCIで有効にすると、承認する人がいないため実行が停止します。非対話環境では承認待ちが破綻を招きます。',
+      'Enabling interactive permission prompts in CI stalls the run because no one is there to approve; waiting on approval breaks in a non-interactive environment.',
+    ),
+  },
+  'q-d3-command-vs-skill': {
+    a: localized(
+      'どちらもコマンドにすると、状況に応じて自動で参照されるべき知識まで利用者の明示起動を必要とし、必要な場面で読み込まれません。',
+      'Making both commands forces knowledge that should load automatically when relevant to depend on explicit invocation, so it is not there when needed.',
+    ),
+    b: localized(
+      'どちらもSkillにすると、利用者が明示的に起動したい定型操作まで自動判断任せになり、意図した時に確実に実行できません。',
+      'Making both Skills leaves even the routine a user wants to invoke explicitly to automatic selection, so it may not run exactly when intended.',
+    ),
+    c: localized(
+      '手順をすべてCLAUDE.mdに書くと毎セッションで常時読み込まれ、関係のない場面でもコンテキストを消費して肥大化します。',
+      'Putting every procedure in CLAUDE.md loads it in every session, consuming context even when irrelevant and bloating the file.',
+    ),
+    d: localized(
+      '利用者が起動する定型操作をコマンド、状況に応じて参照される知識をSkillにすると、起動方法と読み込みタイミングがそれぞれの性質に合います。',
+      'Making the user-invoked routine a command and the situationally-referenced knowledge a Skill matches each to how it is invoked and loaded.',
+    ),
+  },
+  'q-d4-fewshot': {
+    a: localized(
+      '典型例だけを大量に並べても、判断が割れる境界のケースは示されず、モデルは曖昧な入力への基準を学べません。',
+      'Piling up typical examples never shows the borderline cases where judgment splits, so the model gains no criterion for ambiguous input.',
+    ),
+    b: localized(
+      '誤りやすい境界例を望む入出力の対応として加え、指示と矛盾させないと、曖昧な規則が具体化し境界での判断が安定します。',
+      'Adding the error-prone borderline cases as input-output pairs, consistent with the instructions, makes the ambiguous rule concrete and steadies borderline judgment.',
+    ),
+    c: localized(
+      '例と指示が矛盾したまま数だけ増やすと、モデルはどちらに従うか迷い、かえって判断が乱れます。数は矛盾の解消にはなりません。',
+      'Adding more examples while they contradict the instructions leaves the model unsure which to follow and destabilizes judgment; count does not resolve contradiction.',
+    ),
+    d: localized(
+      '正解ラベルを伏せた入力だけを並べても、望ましい出力が示されず、モデルは基準を推測するしかありません。few-shotの効果を得られません。',
+      'Listing inputs with the labels hidden shows no desired output, leaving the model to guess the criterion — the few-shot benefit is lost.',
+    ),
+  },
+  'q-d4-multipass': {
+    a: localized(
+      '生成する役と評価する役を分けると、モデルが自分の出力を甘く採点する偏りを避けられ、評価の客観性が上がります。',
+      'Separating the generating role from the evaluating role avoids the bias of grading one’s own output leniently and makes evaluation more objective.',
+    ),
+    b: localized(
+      'パスを分ければ必ずトークンが減るとは限りません。各パスで文脈を再提示することもあり、コスト削減はパス分離の目的ではありません。',
+      'Splitting passes does not necessarily reduce tokens — each pass may re-present context — and cost reduction is not the goal of separating passes.',
+    ),
+    c: localized(
+      'パスを分けても最終統合での全体整合の再確認は不要になりません。局所評価が通っても全体で矛盾しうるため、統合時の確認はむしろ必要です。',
+      'Splitting passes does not remove the need to recheck global consistency at integration; local checks can pass while the whole still conflicts, so the integration check is still needed.',
+    ),
+    d: localized(
+      '各パスの役割を明確に分けると、局所評価と全体統合をそれぞれ独立して検証でき、巨大プロンプトに詰め込むより誤りを見つけやすくなります。',
+      'Giving each pass a clear role lets you verify focused evaluation and final integration independently, making errors easier to catch than in one huge prompt.',
+    ),
+  },
+  'q-d4-review-criteria': {
+    a: localized(
+      'レビュアー1人の主観に任せて基準を明文化しないと、判定がその人の裁量に依存し、別のレビュアーとの結果のぶれが解消しません。',
+      'Leaving it to one reviewer’s judgment with unwritten criteria makes the verdict depend on their discretion and does not resolve variance against another reviewer.',
+    ),
+    b: localized(
+      '長く詳細なら高品質という規則は、冗長さを品質と取り違えます。観察可能でも品質と相関しない指標で、要件を満たしません。',
+      'A rule that longer, more detailed means higher quality mistakes verbosity for quality; it is observable but does not correlate with quality and misses the requirement.',
+    ),
+    c: localized(
+      '「高品質」を観察可能な合否条件や尺度へ分解し評価前に定義すると、誰が見ても同じ基準で判定でき、レビュアー間のぶれが減ります。',
+      'Breaking “high quality” into observable pass/fail conditions or a scale, defined before evaluating, lets anyone judge by the same criterion and reduces inter-reviewer variance.',
+    ),
+    d: localized(
+      '評価のたびにその場で基準を変えると、案件間で結果を比較できず、再現性も失われます。基準は評価前に固定すべきです。',
+      'Deciding criteria on the spot each time makes results incomparable across cases and non-reproducible; criteria should be fixed before evaluating.',
+    ),
+  },
+  'q-d4-schema-design': {
+    a: localized(
+      '後段が必要とする項目に絞り深いネストを避けると、スキーマは保守しやすく壊れにくくなります。過度な複雑さはモデルの生成と後段の扱いの双方を難しくします。',
+      'Limiting the schema to the fields the downstream needs and avoiding deep nesting keeps it maintainable and less brittle; excess complexity makes both generation and downstream handling harder.',
+    ),
+    b: localized(
+      '列挙値の大文字小文字は構造化出力でも保証されないため、比較を大文字小文字非依存にしておくと表記揺れで取りこぼしません。',
+      'Because enum capitalization is not guaranteed even with structured outputs, comparing case-insensitively avoids missing values due to casing differences.',
+    ),
+    c: localized(
+      '全項目を最初から網羅し深くネストするほど良いというのは誤りで、不要な複雑さは脆さとコストを増やします。実際に使う項目に絞るべきです。',
+      'Covering every field and nesting deeply is not better; unnecessary complexity adds brittleness and cost, so the schema should be limited to the fields actually used.',
+    ),
+    d: localized(
+      '業務ルールをenumやパターンで表現しても、値の意味的妥当性まではスキーマで保証されません。アプリ側の値検証は依然として必要です。',
+      'Expressing business rules as enums or patterns does not make the schema guarantee the semantic validity of values; application-side value validation is still required.',
+    ),
+  },
+  'q-d4-batch-tradeoff': {
+    a: localized(
+      '即時応答が要る対話パスを同期、待てる夜間処理を非同期バッチにすると、レイテンシとコストの双方の要件を満たせます。',
+      'Serving the interactive path synchronously and batching the nightly work asynchronously meets both the latency and the cost requirements.',
+    ),
+    b: localized(
+      '両方を同期にすると、締切のない夜間の大量処理までコストの高い即時経路で流すことになり、バッチの割安さを活かせません。',
+      'Handling both synchronously routes even the deadline-free nightly bulk work through the costlier immediate path and forgoes the batch discount.',
+    ),
+    c: localized(
+      '両方をバッチにすると、対話パスの応答がバッチ完了まで待たされ、ユーザーが待つ経路のレイテンシ要件を満たせません。',
+      'Batching both makes the interactive response wait until the batch completes, missing the latency requirement of the path where users wait.',
+    ),
+    d: localized(
+      '対話をバッチ、夜間を同期にするのは要件と逆で、待てない経路を遅くし、待てる経路を割高にします。',
+      'Batching the interactive path and running the nightly job synchronously is the reverse of the requirements — it slows the path that cannot wait and makes the one that can wait more expensive.',
+    ),
+  },
+  'q-d5-exploration': {
+    a: localized(
+      '関係しそうなディレクトリを端から全ファイル読むと、コンテキストを大量に消費し、性能低下と無関係情報の混入を招きます。',
+      'Reading every file across plausibly related directories consumes a great deal of context, degrading performance and mixing in irrelevant material.',
+    ),
+    b: localized(
+      '検索せず記憶にある一般的構造を前提に変更すると、実際の構造と食い違ったまま進み、誤った箇所を触るリスクが高まります。',
+      'Changing code from a remembered general structure without searching proceeds on a possibly wrong picture and raises the risk of touching the wrong place.',
+    ),
+    c: localized(
+      'まず広範囲を書き換えて壊れた箇所から構造を推定するのは、破壊を通じて学ぶ危険な手順で、取り返しのつかない変更を先に入れてしまいます。',
+      'Rewriting a broad area first and inferring structure from what breaks learns through damage and lands irreversible changes before understanding.',
+    ),
+    d: localized(
+      '狭い仮説に基づく検索から対象を絞り、変更前に実ファイルで前提を検証すると、コンテキストを浪費せず構造を正確に把握できます。',
+      'Focusing from a narrow hypothesis-driven search and verifying assumptions against real files before changing grasps the structure accurately without wasting context.',
+    ),
+  },
+  'q-d5-provenance-carry': {
+    a: localized(
+      '対立する主張を丸めず、各主張に出典IDを保ったまま両方の根拠を提示すると、どの主張がどの出典に基づくかを後から検証できます。',
+      'Not collapsing the conflicting claims and keeping each claim tied to its source ID with both pieces of evidence lets you later verify which claim rests on which source.',
+    ),
+    b: localized(
+      '読みやすさのため片方だけ採用して対応を1つにまとめると、もう一方の主張と出典が消え、来歴が失われます。',
+      'Adopting only one claim for readability and collapsing the mapping erases the other claim and its source, losing provenance.',
+    ),
+    c: localized(
+      '両主張を1文に融合し出典を片方だけにすると、どの部分がどの出典由来かの対応が壊れ、追跡できなくなります。',
+      'Merging both claims into one sentence with a single source breaks the mapping of which part came from which source and makes it untraceable.',
+    ),
+    d: localized(
+      '対立部分の出典対応を外して要約すると、根拠との結び付きが失われ、後からの人手再付与は誤りやコストを招きます。',
+      'Dropping the source mapping for the conflicting part when summarizing severs the link to the evidence, and later manual re-attachment invites errors and cost.',
+    ),
+  },
+  'q-d5-error-propagation': {
+    a: localized(
+      '元の失敗原因を握りつぶさず分類とともに構造化して返すと、上流は何が起きたかを機械的に判断でき、次の行動を選べます。',
+      'Returning the original cause structured with a classification, rather than swallowing it, lets the caller tell mechanically what happened and choose the next action.',
+    ),
+    b: localized(
+      '失敗を空の成功として隠すと、上流は問題に気付けず復旧や再試行の機会を失います。原因を保全すべき場面で情報を消しています。',
+      'Hiding the failure as an empty success keeps the caller from noticing and forfeits recovery or retry; it erases information exactly where the cause should be preserved.',
+    ),
+    c: localized(
+      '内部のスタックトレースや秘密情報を全文添付すると、情報漏えいの危険とコンテキストの浪費を招きます。上流に必要なのは原因の分類であって生の内部詳細ではありません。',
+      'Attaching the full internal stack trace and secrets risks leaking information and wastes context; the caller needs a classified cause, not raw internal detail.',
+    ),
+    d: localized(
+      '再試行可能かどうかと得られた部分結果を併せて返すと、上流は再試行・代替・打ち切りを的確に選べます。回復判断に必要な情報です。',
+      'Returning whether it is retryable together with any partial results lets the caller pick retry, fallback, or stop precisely — the information a recovery decision needs.',
+    ),
+  },
 };
