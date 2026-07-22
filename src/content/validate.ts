@@ -7,6 +7,7 @@ import { handsOnGuides } from './hands-on';
 import { questions } from './questions';
 import { choiceRationales } from './rationales';
 import { officialScenarioById, officialScenarios, scenarios } from './scenarios';
+import { officialScenarioLearningById, officialScenarioLearnings } from './official-scenarios';
 import { skillById, skills } from './skills';
 import { sources } from './sources';
 import { studyGuideSections } from './study-guide';
@@ -58,6 +59,40 @@ const officialScenarioSchema = z.object({
   title: localizedStringSchema,
   summary: localizedStringSchema,
   domainIds: requiredIdListSchema,
+  sourceIds: requiredIdListSchema,
+  verifiedAt: date,
+});
+const officialScenarioLearningSchema = z.object({
+  id: z.string().min(1),
+  revision: z.number().int().positive(),
+  domainIds: requiredIdListSchema,
+  taskStatementIds: requiredIdListSchema,
+  skillIds: requiredIdListSchema,
+  estimatedMinutes: z.number().int().positive(),
+  learningObjectives: localizedStringArraySchema,
+  requirements: localizedStringArraySchema,
+  decisionPoints: z.array(z.object({
+    id: z.string().min(1),
+    decision: localizedStringSchema,
+    considerations: localizedStringArraySchema,
+  }).strict()).min(1),
+  recommendedApproach: localizedStringArraySchema,
+  rationale: localizedStringArraySchema,
+  antiPatterns: z.array(z.object({
+    id: z.string().min(1),
+    mistake: localizedStringSchema,
+    consequence: localizedStringSchema,
+  }).strict()).min(1),
+  tradeoffs: z.array(z.object({
+    id: z.string().min(1),
+    condition: localizedStringSchema,
+    shift: localizedStringSchema,
+  }).strict()).min(1),
+  relatedPracticeScenarioIds: requiredIdListSchema,
+  // May be empty: not every official scenario has a hands-on guide.
+  relatedHandsOnGuideIds: idListSchema,
+  relatedCardIds: requiredIdListSchema,
+  relatedQuestionIds: requiredIdListSchema,
   sourceIds: requiredIdListSchema,
   verifiedAt: date,
 });
@@ -316,6 +351,152 @@ export function validateOfficialScenarios(input: unknown, index: ContentIndex): 
   }
   for (const id of index.officialScenarioIds) {
     if (!parsed.some((scenario) => scenario.id === id)) errors.push(`official scenarios: ${id} is declared but has no entry`);
+  }
+  return errors;
+}
+
+// The design-judgment learning layer over the six official scenarios. Mechanical
+// validation proves reference integrity, exact 6-coverage, non-contradiction
+// between the learning layer and the classification axis, and ja/en item-count
+// parity. It cannot prove semantic non-duplication, technical accuracy, or
+// learning value — those stay a content-review responsibility.
+export function validateOfficialScenarioLearnings(input: unknown, index: ContentIndex): string[] {
+  const errors: string[] = [];
+  const parsed = parseEach(officialScenarioLearningSchema, input, 'official scenario learning', errors);
+  unique(rawIds(input), 'official scenario learnings', errors);
+
+  const objectiveDomainById = new Map(
+    domains.flatMap((domain) => domain.objectives.map((objective) => [objective.id, domain.id] as const)),
+  );
+  const cardById = new Map(cards.map((card) => [card.id, card]));
+  const questionById = new Map(questions.map((question) => [question.id, question]));
+  const practiceById = new Map<string, (typeof scenarios)[number]>(scenarios.map((scenario) => [scenario.id, scenario]));
+  const handsOnById = new Map<string, (typeof handsOnGuides)[number]>(handsOnGuides.map((guide) => [guide.id, guide]));
+
+  for (const learning of parsed) {
+    const label = `official scenario learning ${learning.id}`;
+    if (!index.officialScenarioIds.has(learning.id)) {
+      errors.push(`${label}: id is not part of the official scenario set`);
+    }
+    checkSourceIds(learning, 'official scenario learning', index, errors);
+    checkReferences(learning.domainIds, index.domainIds, label, 'domain', errors);
+    checkReferences(learning.taskStatementIds, index.objectiveIds, label, 'task statement', errors);
+    checkReferences(learning.skillIds, index.skillIds, label, 'skill', errors);
+    checkReferences(learning.relatedPracticeScenarioIds, index.scenarioIds, label, 'practice scenario', errors);
+    checkReferences(learning.relatedHandsOnGuideIds, new Set(handsOnById.keys()), label, 'hands-on guide', errors);
+    checkReferences(learning.relatedCardIds, index.cardIds, label, 'card', errors);
+    checkReferences(learning.relatedQuestionIds, index.questionIds, label, 'question', errors);
+    for (const [field, ids] of [
+      ['domainIds', learning.domainIds],
+      ['taskStatementIds', learning.taskStatementIds],
+      ['skillIds', learning.skillIds],
+      ['relatedPracticeScenarioIds', learning.relatedPracticeScenarioIds],
+      ['relatedHandsOnGuideIds', learning.relatedHandsOnGuideIds],
+      ['relatedCardIds', learning.relatedCardIds],
+      ['relatedQuestionIds', learning.relatedQuestionIds],
+      ['sourceIds', learning.sourceIds],
+    ] as const) {
+      unique(ids, `${label} ${field}`, errors);
+    }
+    unique(learning.decisionPoints.map((point) => point.id), `${label} decisionPoints`, errors);
+    unique(learning.antiPatterns.map((pattern) => pattern.id), `${label} antiPatterns`, errors);
+    unique(learning.tradeoffs.map((tradeoff) => tradeoff.id), `${label} tradeoffs`, errors);
+
+    // domainIds must be exactly the set of domains its task statements belong to.
+    const taskStatementIds = new Set(learning.taskStatementIds);
+    const skillIds = new Set(learning.skillIds);
+    const expectedDomainIds = new Set(
+      learning.taskStatementIds.flatMap((id) => {
+        const domainId = objectiveDomainById.get(id);
+        return domainId === undefined ? [] : [domainId];
+      }),
+    );
+    const declaredDomainIds = new Set(learning.domainIds);
+    if (
+      expectedDomainIds.size !== declaredDomainIds.size
+      || [...expectedDomainIds].some((id) => !declaredDomainIds.has(id))
+    ) {
+      errors.push(`${label}: domainIds must exactly match the domains of its task statements`);
+    }
+
+    // The learning layer must not contradict the classification axis: its domains
+    // are a subset of the domains the official scenario itself declares.
+    const axis = officialScenarioById[learning.id as keyof typeof officialScenarioById];
+    if (axis) {
+      const axisDomains = new Set(axis.domainIds);
+      for (const domainId of learning.domainIds) {
+        if (!axisDomains.has(domainId)) {
+          errors.push(`${label}: domain ${domainId} is not declared on the official scenario classification`);
+        }
+      }
+    }
+
+    // A related practice scenario must exist and list this official scenario, so
+    // the "study the matching case next" link always leads somewhere relevant.
+    for (const id of learning.relatedPracticeScenarioIds) {
+      const practice = practiceById.get(id);
+      if (practice && !(practice.officialScenarioIds as readonly string[]).includes(learning.id)) {
+        errors.push(`${label}: related practice scenario ${id} does not reference this official scenario`);
+      }
+    }
+    for (const id of learning.relatedHandsOnGuideIds) {
+      const guide = handsOnById.get(id);
+      if (guide && !(guide.officialScenarioIds as readonly string[]).includes(learning.id)) {
+        errors.push(`${label}: related hands-on guide ${id} does not reference this official scenario`);
+      }
+    }
+
+    // Related cards and questions must support at least one of the scenario's task
+    // statements or skills, so a link never sends the learner to unrelated material.
+    for (const id of learning.relatedCardIds) {
+      const card = cardById.get(id);
+      if (card && !card.objectiveIds.some((objectiveId) => taskStatementIds.has(objectiveId))) {
+        errors.push(`${label}: related card ${id} does not support a task statement`);
+      }
+    }
+    for (const id of learning.relatedQuestionIds) {
+      const question = questionById.get(id);
+      if (question
+        && !question.objectiveIds.some((objectiveId) => taskStatementIds.has(objectiveId))
+        && !question.skills.some((skillId) => skillIds.has(skillId))) {
+        errors.push(`${label}: related question ${id} does not support a task statement or skill`);
+      }
+    }
+
+    // ja/en lists correspond item by item, so their lengths must match.
+    const listFields: Array<[string, LocalizedText<string[]>]> = [
+      ['learningObjectives', learning.learningObjectives],
+      ['requirements', learning.requirements],
+      ['recommendedApproach', learning.recommendedApproach],
+      ['rationale', learning.rationale],
+    ];
+    for (const point of learning.decisionPoints) {
+      listFields.push([`decisionPoint ${point.id} considerations`, point.considerations]);
+    }
+    for (const [field, value] of listFields) {
+      if (value.ja.length !== value.en.length) {
+        errors.push(`${label}: ${field} must have matching Japanese and English item counts`);
+      }
+    }
+  }
+  return errors;
+}
+
+// Cross-collection coverage, kept apart from per-entry validation (mirroring
+// validateHandsOnThemes) so a single-entry fixture test does not trip these:
+// exactly the six official scenarios once each, and all five domains covered
+// across the set.
+export function validateOfficialScenarioLearningCoverage(input: unknown, index: ContentIndex): string[] {
+  const errors: string[] = [];
+  const parsed = parseEach(officialScenarioLearningSchema, input, 'official scenario learning', errors);
+  for (const id of index.officialScenarioIds) {
+    if (!parsed.some((learning) => learning.id === id)) {
+      errors.push(`official scenario learnings: ${id} is declared but has no learning entry`);
+    }
+  }
+  const coveredDomainIds = new Set(parsed.flatMap((learning) => learning.domainIds));
+  if (coveredDomainIds.size !== index.domainIds.size || [...index.domainIds].some((id) => !coveredDomainIds.has(id))) {
+    errors.push('official scenario learnings must cover all five domains');
   }
   return errors;
 }
@@ -695,6 +876,8 @@ export function validateContent() {
     ...validateQuestions(questions, index),
     ...validateChoiceRationales(choiceRationales, questions),
     ...validateOfficialScenarios(officialScenarios, index),
+    ...validateOfficialScenarioLearnings(officialScenarioLearnings, index),
+    ...validateOfficialScenarioLearningCoverage(officialScenarioLearnings, index),
     ...validateScenarios(scenarios, index),
     ...validateScenarioQuestionLinks(scenarios, questions),
     ...validateStudyGuideSections(studyGuideSections, index),
@@ -708,6 +891,9 @@ export function validateContent() {
   for (const [id, scenario] of Object.entries(officialScenarioById)) {
     if (scenario.id !== id) errors.push(`official scenario ${id}: record key does not match its id ${scenario.id}`);
   }
+  for (const [id, learning] of Object.entries(officialScenarioLearningById)) {
+    if (learning.id !== id) errors.push(`official scenario learning ${id}: record key does not match its id ${learning.id}`);
+  }
 
   if (errors.length) throw new Error(`Content validation failed:\n${errors.join('\n')}`);
   return {
@@ -719,6 +905,7 @@ export function validateContent() {
     choiceRationaleCount: Object.values(choiceRationales).reduce((sum, entry) => sum + Object.keys(entry).length, 0),
     scenarioCount: scenarios.length,
     officialScenarioCount: officialScenarios.length,
+    officialScenarioLearningCount: officialScenarioLearnings.length,
     skillCount: skills.length,
     studyGuideSectionCount: studyGuideSections.length,
     handsOnGuideCount: handsOnGuides.length,

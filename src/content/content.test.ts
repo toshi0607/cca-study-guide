@@ -5,6 +5,7 @@ import { handsOnGuides } from './hands-on';
 import { questions, standaloneQuestions } from './questions';
 import { choiceRationales } from './rationales';
 import { officialScenarioById, officialScenarios, scenarios } from './scenarios';
+import { officialScenarioLearnings } from './official-scenarios';
 import { skillById, skills } from './skills';
 import { questionDifficulties } from './types';
 import { sources } from './sources';
@@ -18,6 +19,8 @@ import {
   validateHandsOnGuides,
   validateHandsOnThemes,
   validateOfficialScenarios,
+  validateOfficialScenarioLearnings,
+  validateOfficialScenarioLearningCoverage,
   validateQuestions,
   validateSkillCoverage,
   validateSkills,
@@ -35,6 +38,7 @@ describe('study content', () => {
       choiceRationaleCount: 152,
       scenarioCount: scenarios.length,
       officialScenarioCount: 6,
+      officialScenarioLearningCount: 6,
       skillCount: 14,
       studyGuideSectionCount: 8,
       handsOnGuideCount: 4,
@@ -1040,5 +1044,285 @@ describe('hands-on validation', () => {
     for (const theme of ['customer-support-resolution', 'claude-code-ci', 'structured-data-extraction', 'multi-agent-research']) {
       expect(themes.has(theme as (typeof handsOnGuides)[number]['officialScenarioIds'][number])).toBe(true);
     }
+  });
+});
+
+describe('official scenario learning validation', () => {
+  const index = buildContentIndex();
+  const localized = (ja: string, en: string) => ({ ja, en });
+  const localizedList = (ja: string[], en: string[]) => ({ ja, en });
+  // A well-formed fixture for the customer-support scenario. Its domains
+  // (d1/d2/d5) exactly match the domains of its task statements and are a subset
+  // of what the classification axis declares.
+  const validLearning = () => ({
+    id: 'customer-support-resolution' as const,
+    revision: 1,
+    domainIds: ['d1', 'd2', 'd5'],
+    taskStatementIds: ['1.1', '2.1', '5.2'],
+    skillIds: ['agent-loop', 'human-oversight'],
+    estimatedMinutes: 25,
+    learningObjectives: localizedList(['分類できる'], ['Can classify']),
+    requirements: localizedList(['曖昧な入力'], ['Ambiguous input']),
+    decisionPoints: [
+      {
+        id: 'dp-one',
+        decision: localized('単一かオーケストレーションか', 'Single or orchestration'),
+        considerations: localizedList(['独立照会が多いか'], ['Are lookups independent']),
+      },
+    ],
+    recommendedApproach: localizedList(['強い権限を分離する'], ['Isolate strong permissions']),
+    rationale: localizedList(['誤選択を減らす'], ['Reduces wrong choices']),
+    antiPatterns: [
+      {
+        id: 'ap-one',
+        mistake: localized('全ツールを1エージェントに', 'One agent, all tools'),
+        consequence: localized('取り違えが増える', 'More confusion'),
+      },
+    ],
+    tradeoffs: [
+      {
+        id: 'to-one',
+        condition: localized('単一照会が多い場合', 'When lookups are simple'),
+        shift: localized('単一構成が妥当になりうる', 'A single agent can be fine'),
+      },
+    ],
+    relatedPracticeScenarioIds: ['sc-support-agents'],
+    relatedHandsOnGuideIds: ['ho-support-agent-escalation'],
+    relatedCardIds: ['d1-loop-stop', 'd2-interface'],
+    relatedQuestionIds: ['q-d1-loop-continue', 'q-d5-escalation'],
+    sourceIds: ['exam-guide', 'user-input'],
+    verifiedAt: '2026-07-21',
+  });
+  const withLearning = (change: (learning: ReturnType<typeof validLearning>) => void) => {
+    const learning = validLearning();
+    change(learning);
+    return validateOfficialScenarioLearnings([learning], index).join('\n');
+  };
+
+  it('accepts the real official scenario learnings', () => {
+    // #then
+    expect(validateOfficialScenarioLearnings(officialScenarioLearnings, index)).toEqual([]);
+  });
+
+  it('covers exactly the six official scenarios, once each, with matching record keys', () => {
+    // #then
+    expect(officialScenarioLearnings.length).toBe(6);
+    const ids = officialScenarioLearnings.map((learning) => learning.id);
+    expect(new Set(ids).size).toBe(6);
+    for (const id of Object.keys(officialScenarioById)) {
+      expect(ids).toContain(id);
+    }
+  });
+
+  it('accepts a well-formed fixture', () => {
+    // #then
+    expect(validateOfficialScenarioLearnings([validLearning()], index)).toEqual([]);
+  });
+
+  it('accepts the real coverage across all six scenarios and five domains', () => {
+    // #then
+    expect(validateOfficialScenarioLearningCoverage(officialScenarioLearnings, index)).toEqual([]);
+  });
+
+  it('reports a scenario that is declared but has no learning entry', () => {
+    // #when
+    const errors = validateOfficialScenarioLearningCoverage(officialScenarioLearnings.slice(1), index).join('\n');
+
+    // #then
+    expect(errors).toContain('official scenario learnings: customer-support-resolution is declared but has no learning entry');
+  });
+
+  it('reports when the five domains are not fully covered', () => {
+    // #when — keep only the customer-support entry (d1/d2/d5); d3 and d4 go uncovered
+    const errors = validateOfficialScenarioLearningCoverage(
+      officialScenarioLearnings.filter((learning) => learning.id === 'customer-support-resolution'),
+      index,
+    ).join('\n');
+
+    // #then
+    expect(errors).toContain('official scenario learnings must cover all five domains');
+  });
+
+  it('rejects an id outside the official scenario set', () => {
+    // #when
+    const errors = withLearning((learning) => { (learning as { id: string }).id = 'agentic-rag'; });
+
+    // #then
+    expect(errors).toContain('official scenario learning agentic-rag: id is not part of the official scenario set');
+  });
+
+  it('rejects duplicated learning IDs', () => {
+    // #when
+    const errors = validateOfficialScenarioLearnings([validLearning(), validLearning()], index).join('\n');
+
+    // #then
+    expect(errors).toContain('official scenario learnings has duplicate IDs: customer-support-resolution');
+  });
+
+  it('rejects a non-positive revision', () => {
+    // #when
+    const errors = withLearning((learning) => { learning.revision = 0; });
+
+    // #then
+    expect(errors).toContain('official scenario learning customer-support-resolution: revision');
+  });
+
+  it('rejects a task statement that does not exist', () => {
+    // #when
+    const errors = withLearning((learning) => { learning.taskStatementIds = ['1.1', '9.9']; });
+
+    // #then
+    expect(errors).toContain('official scenario learning customer-support-resolution: orphan task statement 9.9');
+  });
+
+  it('rejects a skill that does not exist', () => {
+    // #when
+    const errors = withLearning((learning) => { learning.skillIds = ['agent-loop', 'made-up-skill']; });
+
+    // #then
+    expect(errors).toContain('official scenario learning customer-support-resolution: orphan skill made-up-skill');
+  });
+
+  it('rejects domainIds that do not match the domains of the task statements', () => {
+    // #when — task statements are d1/d2/d5, but d3 is added
+    const errors = withLearning((learning) => { learning.domainIds = ['d1', 'd2', 'd5', 'd3']; });
+
+    // #then
+    expect(errors).toContain('official scenario learning customer-support-resolution: domainIds must exactly match the domains of its task statements');
+  });
+
+  it('rejects a domain not declared on the classification axis', () => {
+    // #when — d3 tasks and domains are self-consistent but d3 is not on customer-support classification (d1/d2/d5)
+    const errors = withLearning((learning) => {
+      learning.taskStatementIds = ['1.1', '3.1'];
+      learning.domainIds = ['d1', 'd3'];
+    });
+
+    // #then
+    expect(errors).toContain('official scenario learning customer-support-resolution: domain d3 is not declared on the official scenario classification');
+  });
+
+  it('rejects a related practice scenario that does not reference this official scenario', () => {
+    // #when — sc-extraction-pipeline exists but does not list customer-support-resolution
+    const errors = withLearning((learning) => { learning.relatedPracticeScenarioIds = ['sc-extraction-pipeline']; });
+
+    // #then
+    expect(errors).toContain('official scenario learning customer-support-resolution: related practice scenario sc-extraction-pipeline does not reference this official scenario');
+  });
+
+  it('rejects a related practice scenario that does not exist', () => {
+    // #when
+    const errors = withLearning((learning) => { learning.relatedPracticeScenarioIds = ['sc-made-up']; });
+
+    // #then
+    expect(errors).toContain('official scenario learning customer-support-resolution: orphan practice scenario sc-made-up');
+  });
+
+  it('rejects a related hands-on guide that does not reference this official scenario', () => {
+    // #when — ho-ci-review exists but references claude-code-ci, not customer-support
+    const errors = withLearning((learning) => { learning.relatedHandsOnGuideIds = ['ho-ci-review']; });
+
+    // #then
+    expect(errors).toContain('official scenario learning customer-support-resolution: related hands-on guide ho-ci-review does not reference this official scenario');
+  });
+
+  it('rejects a related hands-on guide that does not exist', () => {
+    // #when
+    const errors = withLearning((learning) => { learning.relatedHandsOnGuideIds = ['ho-made-up']; });
+
+    // #then
+    expect(errors).toContain('official scenario learning customer-support-resolution: orphan hands-on guide ho-made-up');
+  });
+
+  it('accepts an empty related hands-on guide list', () => {
+    // #then — not every official scenario has a hands-on guide
+    const errors = withLearning((learning) => { learning.relatedHandsOnGuideIds = []; });
+    expect(errors).toBe('');
+  });
+
+  it('rejects a related card that does not support a task statement', () => {
+    // #when — d3-ci covers 3.6, not any of 1.1/2.1/5.2
+    const errors = withLearning((learning) => { learning.relatedCardIds = ['d3-ci']; });
+
+    // #then
+    expect(errors).toContain('official scenario learning customer-support-resolution: related card d3-ci does not support a task statement');
+  });
+
+  it('rejects a related question that supports neither a task statement nor a skill', () => {
+    // #when — q-d3-glob covers 3.3 with skill claude-code-configuration; neither is in the fixture
+    const errors = withLearning((learning) => { learning.relatedQuestionIds = ['q-d3-glob']; });
+
+    // #then
+    expect(errors).toContain('official scenario learning customer-support-resolution: related question q-d3-glob does not support a task statement or skill');
+  });
+
+  it('accepts a related question supported only by a shared skill', () => {
+    // #then — q-d5-escalation has skill human-oversight, which the fixture lists
+    const errors = withLearning((learning) => { learning.relatedQuestionIds = ['q-d5-escalation']; });
+    expect(errors).toBe('');
+  });
+
+  it('rejects duplicated decision point IDs', () => {
+    // #when
+    const errors = withLearning((learning) => { learning.decisionPoints = [learning.decisionPoints[0], { ...learning.decisionPoints[0] }]; });
+
+    // #then
+    expect(errors).toContain('official scenario learning customer-support-resolution decisionPoints has duplicate IDs: dp-one');
+  });
+
+  it('rejects an empty anti-pattern list', () => {
+    // #when
+    const errors = withLearning((learning) => { learning.antiPatterns = []; });
+
+    // #then
+    expect(errors).toContain('official scenario learning customer-support-resolution: antiPatterns');
+  });
+
+  it('rejects a duplicate reference in a related list', () => {
+    // #when
+    const errors = withLearning((learning) => { learning.relatedCardIds = ['d1-loop-stop', 'd1-loop-stop']; });
+
+    // #then
+    expect(errors).toContain('official scenario learning customer-support-resolution relatedCardIds has duplicate IDs: d1-loop-stop');
+  });
+
+  it('rejects mismatched Japanese and English item counts', () => {
+    // #when
+    const errors = withLearning((learning) => { learning.requirements = localizedList(['a', 'b'], ['a']); });
+
+    // #then
+    expect(errors).toContain('official scenario learning customer-support-resolution: requirements must have matching Japanese and English item counts');
+  });
+
+  it('rejects mismatched item counts inside a decision point', () => {
+    // #when
+    const errors = withLearning((learning) => { learning.decisionPoints[0].considerations = localizedList(['a', 'b'], ['a']); });
+
+    // #then
+    expect(errors).toContain('official scenario learning customer-support-resolution: decisionPoint dp-one considerations must have matching Japanese and English item counts');
+  });
+
+  it('rejects an empty string in a learning objective', () => {
+    // #when
+    const errors = withLearning((learning) => { learning.learningObjectives = localizedList([''], ['']); });
+
+    // #then
+    expect(errors).toContain('official scenario learning customer-support-resolution: learningObjectives');
+  });
+
+  it('requires at least one claim-specific source', () => {
+    // #when — only generic sources
+    const errors = withLearning((learning) => { learning.sourceIds = ['exam-guide']; });
+
+    // #then
+    expect(errors).toContain('official scenario learning customer-support-resolution: missing claim-specific source');
+  });
+
+  it('rejects an invalid verification date', () => {
+    // #when
+    const errors = withLearning((learning) => { learning.verifiedAt = '2026-02-30'; });
+
+    // #then
+    expect(errors).toContain('official scenario learning customer-support-resolution: verifiedAt');
   });
 });

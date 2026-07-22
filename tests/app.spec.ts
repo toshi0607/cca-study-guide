@@ -1020,3 +1020,139 @@ for (const route of [
     });
   }
 }
+
+// Official scenario learning: a Guide sub-area (no bottom-nav item). Reached from
+// the learning-path stage-5 link and the Guide entry section.
+async function openOfficialScenarios(page: import('@playwright/test').Page) {
+  await page.getByRole('button', { name: 'ガイド' }).first().click();
+  await page.getByRole('button', { name: '公式シナリオ一覧へ' }).click();
+  await expect(page.getByRole('heading', { name: '公式シナリオで設計判断を学ぶ' })).toBeFocused();
+}
+
+test('walks the keyboard path from the guide into official scenarios and manages focus', async ({ page }) => {
+  await page.getByRole('button', { name: 'ガイド' }).first().click();
+  // The learning path stage-5 link is now live, not a dead label.
+  await page.getByRole('button', { name: 'シナリオ判断' }).click();
+  await expect(page.getByRole('heading', { name: '公式シナリオで設計判断を学ぶ' })).toBeFocused();
+  await expect(page.locator('.official-card')).toHaveCount(6);
+  await expect(page.locator('.official-badge--official').first()).toBeVisible();
+  // Guide stays the current nav item while inside the sub-area.
+  await expect(page.getByRole('navigation', { name: 'メインナビゲーション' }).first().getByRole('button', { name: 'ガイド' })).toHaveAttribute('aria-current', 'page');
+
+  await page.getByRole('button', { name: 'カスタマーサポート解決エージェント' }).click();
+  await expect(page.getByRole('heading', { name: 'カスタマーサポート解決エージェント' })).toBeFocused();
+  // Official vs practice distinction is explicit in the detail.
+  await expect(page.locator('.official-badge--official').first()).toBeVisible();
+  await expect(page.getByText('練習ケース（当アプリ独自）')).toBeVisible();
+
+  await page.getByRole('button', { name: '公式シナリオ一覧に戻る' }).click();
+  await expect(page.getByRole('heading', { name: '公式シナリオで設計判断を学ぶ' })).toBeFocused();
+});
+
+test('navigates from an official scenario to the exact related card, question, hands-on guide, and practice case', async ({ page }) => {
+  const openDetail = async () => {
+    await openOfficialScenarios(page);
+    await page.getByRole('button', { name: 'カスタマーサポート解決エージェント' }).click();
+    await expect(page.getByRole('heading', { name: 'カスタマーサポート解決エージェント' })).toBeFocused();
+  };
+
+  // Exact related card -> practice target, focused.
+  await openDetail();
+  await page.locator('.official-view').getByRole('button', { name: /d1-loop-stop/ }).click();
+  await expect(page.locator('.practice-target p')).toBeFocused();
+
+  // Exact related question -> quiz target, single question.
+  await openDetail();
+  await page.locator('.official-view').getByRole('button', { name: /q-d1-fanout/ }).click();
+  await expect(page.locator('.quiz-target')).toBeFocused();
+  await expect(page.locator('.quiz-question')).toHaveCount(1);
+
+  // Exact related hands-on guide -> that guide's DETAIL (not the list), focused.
+  await openDetail();
+  await page.getByRole('button', { name: '複数ツールと人へのエスカレーションを持つエージェント' }).click();
+  await expect(page.getByRole('heading', { name: '複数ツールと人へのエスカレーションを持つエージェント' })).toBeFocused();
+
+  // Exact related practice case -> that case's background, heading focused.
+  await openDetail();
+  await page.getByRole('button', { name: 'ECカスタマーサポートのエージェント構成選定' }).click();
+  await expect(page.getByRole('heading', { name: 'ECカスタマーサポートのエージェント構成選定' })).toBeFocused();
+});
+
+test('recovers from an official scenarios chunk failure and then loads the list', async ({ page }) => {
+  let failedOnce = false;
+  await page.route('**/OfficialScenariosView.*.js', async (route) => {
+    if (!failedOnce) {
+      failedOnce = true;
+      await route.abort();
+    } else {
+      await route.continue();
+    }
+  });
+  await page.getByRole('button', { name: 'ガイド' }).first().click();
+  await page.getByRole('button', { name: '公式シナリオ一覧へ' }).click();
+  await expect(page.locator('.guide-load-error')).toBeFocused();
+  const loaded = page.waitForEvent('load');
+  await page.getByRole('button', { name: 'ページを再読み込み' }).click();
+  await loaded;
+  await expect(page.getByRole('heading', { name: /思い出してから/ })).toBeVisible();
+  // The retried import now succeeds.
+  await page.getByRole('button', { name: 'ガイド' }).first().click();
+  await page.getByRole('button', { name: '公式シナリオ一覧へ' }).click();
+  await expect(page.getByRole('heading', { name: '公式シナリオで設計判断を学ぶ' })).toBeFocused();
+  await expect(page.locator('.official-card')).toHaveCount(6);
+});
+
+test('renders the official scenarios in English', async ({ page }) => {
+  await page.goto('/en/');
+  await page.getByRole('button', { name: 'Guide' }).first().click();
+  await page.getByRole('button', { name: 'Go to the official scenarios' }).click();
+  await expect(page.getByRole('heading', { name: 'Learn design judgment from the official scenarios' })).toBeFocused();
+  await expect(page.locator('.official-card')).toHaveCount(6);
+  await expect(page.locator('.official-badge--official').first()).toHaveText('Official scenario');
+  await page.getByRole('button', { name: 'Customer Support Resolution Agent' }).click();
+  await expect(page.getByText('Practice case (this app’s own)')).toBeVisible();
+});
+
+test('viewing official scenarios never writes storage and preserves unknown or future records', async ({ page }) => {
+  const initial = {
+    version: 2,
+    reviews: {},
+    quizStats: { 'q-d1-fanout': { attempts: 3, correct: 2, lastAnsweredAt: '2026-07-01T00:00:00.000Z', lastCorrect: true } },
+    studyGuideProgress: { 'sg-future-section': { revision: 9, status: 'completed', updatedAt: '2026-07-01T00:00:00.000Z', completedAt: '2026-07-01T00:00:00.000Z' } },
+    handsOnProgress: { 'ho-future-guide': { revision: 9, status: 'in_progress', completedStepIds: [], updatedAt: '2026-07-01T00:00:00.000Z' } },
+  };
+  await page.evaluate(([key, value]) => localStorage.setItem(key, value), [STORAGE_KEY, JSON.stringify(initial)]);
+  await page.reload();
+
+  await openOfficialScenarios(page);
+  await page.getByRole('button', { name: 'カスタマーサポート解決エージェント' }).click();
+  await page.getByRole('button', { name: '公式シナリオ一覧に戻る' }).click();
+
+  const after = await page.evaluate((key) => localStorage.getItem(key), STORAGE_KEY);
+  expect(JSON.parse(after ?? '{}')).toEqual(initial);
+});
+
+for (const width of [360, 768, 1440]) {
+  test(`official scenarios list and detail do not overflow horizontally at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 900 });
+    await openOfficialScenarios(page);
+    let dimensions = await page.evaluate(() => ({ viewport: document.documentElement.clientWidth, document: document.documentElement.scrollWidth, body: document.body.scrollWidth }));
+    expect(dimensions.document).toBe(dimensions.viewport);
+    expect(dimensions.body).toBe(dimensions.viewport);
+
+    await page.getByRole('button', { name: 'カスタマーサポート解決エージェント' }).click();
+    dimensions = await page.evaluate(() => ({ viewport: document.documentElement.clientWidth, document: document.documentElement.scrollWidth, body: document.body.scrollWidth }));
+    expect(dimensions.document).toBe(dimensions.viewport);
+    expect(dimensions.body).toBe(dimensions.viewport);
+  });
+}
+
+test('official scenarios list and detail have no serious or critical accessibility violations', async ({ page }) => {
+  await openOfficialScenarios(page);
+  let axe = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa']).analyze();
+  expect(axe.violations.filter((v) => v.impact === 'serious' || v.impact === 'critical')).toEqual([]);
+
+  await page.getByRole('button', { name: 'カスタマーサポート解決エージェント' }).click();
+  axe = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa']).analyze();
+  expect(axe.violations.filter((v) => v.impact === 'serious' || v.impact === 'critical')).toEqual([]);
+});

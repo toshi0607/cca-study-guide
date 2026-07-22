@@ -26,13 +26,25 @@ type Props = {
   onReconfirm: (guideId: string, revision: number) => boolean;
   onOpenCard: (cardId: string) => void;
   onOpenQuestion: (questionId: string) => void;
+  targetGuideId: string | null;
+  onTargetOpened: () => void;
 };
 
-export function HandsOnView({ locale, copy, records, onStart, onToggleStep, onComplete, onReconfirm, onOpenCard, onOpenQuestion }: Props) {
+export function HandsOnView({ locale, copy, records, onStart, onToggleStep, onComplete, onReconfirm, onOpenCard, onOpenQuestion, targetGuideId, onTargetOpened }: Props) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const listHeadingRef = useRef<HTMLHeadingElement>(null);
   const detailHeadingRef = useRef<HTMLHeadingElement>(null);
   const c = copy.handsOn;
+
+  // Exact-target entry from the official scenarios view: open the requested
+  // guide's detail directly, then clear the target so a later manual return to
+  // the list is not overridden. Focus lands on the detail heading via the effect
+  // below, which the back button then returns to the list heading.
+  useEffect(() => {
+    if (!targetGuideId) return;
+    if (handsOnGuides.some((guide) => guide.id === targetGuideId)) setSelectedId(targetGuideId);
+    onTargetOpened();
+  }, [targetGuideId]);
 
   const selected = selectedId ? handsOnGuides.find((guide) => guide.id === selectedId) ?? null : null;
 

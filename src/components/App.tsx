@@ -12,6 +12,7 @@ import { formatDate } from './app/format';
 import type { View } from './app/types';
 import { GuideEntry } from './GuideEntry';
 import { HandsOnEntry } from './HandsOnEntry';
+import { OfficialScenariosEntry } from './OfficialScenariosEntry';
 import { PracticeView, type StateFilter } from './views/PracticeView';
 import { ProgressView } from './views/ProgressView';
 import { QuizView } from './views/QuizView';
@@ -39,6 +40,8 @@ function App({ locale, analyticsEnabled = false }: { locale: Locale; analyticsEn
   const [notice, setNotice] = useState('');
   const [practiceTargetCardId, setPracticeTargetCardId] = useState<string | null>(null);
   const [quizTargetQuestionId, setQuizTargetQuestionId] = useState<string | null>(null);
+  const [quizTargetScenarioId, setQuizTargetScenarioId] = useState<string | null>(null);
+  const [handsOnTargetGuideId, setHandsOnTargetGuideId] = useState<string | null>(null);
   const noticeRef = useRef<HTMLParagraphElement>(null);
   const dataRef = useRef<StudyData>(createEmptyStudyData());
   // Serializes imports: a second file picked while one is still being read
@@ -184,6 +187,11 @@ function App({ locale, analyticsEnabled = false }: { locale: Locale; analyticsEn
     setQuery(''); setDomainFilter('all'); setStateFilter('all'); setPracticeTargetCardId(cardId); navigate('practice');
   };
   const openGuideQuestion = (questionId: string) => { setQuizTargetQuestionId(questionId); navigate('quiz'); };
+  // Exact-target navigation out of the official scenarios view. Each sets a typed
+  // target the destination view consumes and clears, so the learner lands on the
+  // specific case, guide, or question rather than the destination's list.
+  const openPracticeScenario = (scenarioId: string) => { setQuizTargetScenarioId(scenarioId); navigate('quiz'); };
+  const openHandsOnGuide = (guideId: string) => { setHandsOnTargetGuideId(guideId); navigate('hands-on'); };
   const saveGuideProgress = (sectionId: string, revision: number, action: 'start' | 'complete' | 'reconfirm') => {
     const saved = commitData((current) => {
       const record = current.studyGuideProgress[sectionId];
@@ -266,9 +274,11 @@ function App({ locale, analyticsEnabled = false }: { locale: Locale; analyticsEn
         <p ref={noticeRef} class="notice" tabIndex={-1} aria-live="polite">{notice}</p>
         {view === 'today' && <TodayView locale={locale} copy={copy} now={now} ready={ready} reviews={data.reviews} dueCards={dueCards} onStartDueReview={startDueReview} onOpenWeakDomain={openWeakPractice}/>}
 
-        {view === 'guide' && <GuideEntry locale={locale} copy={copy} records={data.studyGuideProgress} onProgressAction={saveGuideProgress} onOpenCard={openGuideCard} onOpenQuestion={openGuideQuestion} onOpenHandsOn={() => navigate('hands-on')}/>}
+        {view === 'guide' && <GuideEntry locale={locale} copy={copy} records={data.studyGuideProgress} onProgressAction={saveGuideProgress} onOpenCard={openGuideCard} onOpenQuestion={openGuideQuestion} onOpenHandsOn={() => navigate('hands-on')} onOpenOfficialScenarios={() => navigate('official-scenarios')}/>}
 
-        {view === 'hands-on' && <HandsOnEntry locale={locale} copy={copy} records={data.handsOnProgress} onStart={saveHandsOnStart} onToggleStep={saveHandsOnStep} onComplete={saveHandsOnComplete} onReconfirm={saveHandsOnReconfirm} onOpenCard={openGuideCard} onOpenQuestion={openGuideQuestion}/>}
+        {view === 'hands-on' && <HandsOnEntry locale={locale} copy={copy} records={data.handsOnProgress} onStart={saveHandsOnStart} onToggleStep={saveHandsOnStep} onComplete={saveHandsOnComplete} onReconfirm={saveHandsOnReconfirm} onOpenCard={openGuideCard} onOpenQuestion={openGuideQuestion} targetGuideId={handsOnTargetGuideId} onTargetOpened={() => setHandsOnTargetGuideId(null)}/>}
+
+        {view === 'official-scenarios' && <OfficialScenariosEntry locale={locale} copy={copy} onOpenCard={openGuideCard} onOpenQuestion={openGuideQuestion} onOpenPracticeScenario={openPracticeScenario} onOpenHandsOnGuide={openHandsOnGuide}/>}
 
         {view === 'practice' && <PracticeView
           locale={locale} copy={copy} reviews={data.reviews} now={now} dueCount={dueCards.length}
@@ -281,7 +291,7 @@ function App({ locale, analyticsEnabled = false }: { locale: Locale; analyticsEn
           onRateInList={saveRating} onRateInSession={persistRating}
         />}
 
-        {view === 'quiz' && <QuizView locale={locale} copy={copy} quizStats={data.quizStats} onAnswer={recordQuizAnswer} targetQuestionId={quizTargetQuestionId} onTargetOpened={() => setQuizTargetQuestionId(null)}/>}
+        {view === 'quiz' && <QuizView locale={locale} copy={copy} quizStats={data.quizStats} onAnswer={recordQuizAnswer} targetQuestionId={quizTargetQuestionId} onTargetOpened={() => setQuizTargetQuestionId(null)} targetScenarioId={quizTargetScenarioId} onTargetScenarioOpened={() => setQuizTargetScenarioId(null)}/>}
 
         {view === 'progress' && <ProgressView locale={locale} copy={copy} reviews={data.reviews} analyticsEnabled={analyticsEnabled} onExport={exportData} onImportFile={importData} onReset={resetData}/>}
         <footer class="site-footer">
