@@ -1,69 +1,94 @@
-# Notes: CCA Study Guide
+# Notes: Task 4 Study Guide
 
-## Official sources
+## Verified Start State
 
-- Anthropic announcement (2026-03-12): https://www.anthropic.com/news/claude-partner-network
-  - Announces Anthropic's first technical certification for solution architects building production Claude applications.
-- Anthropic Academy certification page: https://anthropic-partners.skilljar.com/claude-certified-architect-foundations-certification
-  - Current page reports: Claude Certified Architect – Foundations; 60 questions; 120 minutes (~135-minute seat time); English; USD 125; validity 12 months; online proctored or Pearson test center.
-  - Domain weights: Agentic Architecture & Orchestration 27%; Tool Design & MCP Integration 18%; Claude Code Configuration & Workflows 20%; Prompt Engineering & Structured Output 20%; Context Management & Reliability 15%.
-- Current official Exam Guide v1.0 (effective July 2026; exam code CCAR-F): https://everpath-course-content.s3-accelerate.amazonaws.com/instructor%2F6nizmqk8tpzpfjvt6qmmav7rh%2Fpublic%2F1783542750%2FClaude+Certified+Architect+%E2%80%93+Foundations+Exam+Guide.pdf
-  - Downloaded as a 39-page PDF created 2026-07-09 and verified by text extraction plus rendered inspection of cover, task-statement, and document-control pages.
-  - Confirms 60 multiple-choice/multiple-response items, 4 randomly selected scenarios from a bank of 6, 120 minutes, scaled passing score 720/1,000, $125, and 12-month validity.
-  - Confirms all 30 task statements across the five domains. The guide is authoritative and subject to change; the app should link to it and publish original Japanese summaries rather than mirror/translate it wholesale.
-  - Exam-guide terminology explicitly uses the `Task` tool for subagents. Current public Agent SDK docs use the `Agent` tool. The app must preserve the tested term while visibly flagging the current-doc terminology drift.
-- Public official product-doc sources verified:
-  - Stop reasons: https://platform.claude.com/docs/en/build-with-claude/handling-stop-reasons
-  - Tool loop: https://platform.claude.com/docs/en/agents-and-tools/tool-use/how-tool-use-works
-  - Structured outputs: https://platform.claude.com/docs/en/build-with-claude/structured-outputs
-  - Hooks: https://code.claude.com/docs/en/hooks-guide
-  - Feature choice: https://code.claude.com/docs/en/features-overview
-  - Agent SDK features: https://code.claude.com/docs/en/agent-sdk/claude-code-features
-  - Agent SDK subagents: https://code.claude.com/docs/en/agent-sdk/subagents
-  - MCP tools (latest stable specification at review time): https://modelcontextprotocol.io/specification/2025-11-25/server/tools
-- Certification terms/policy review:
-  - Terms: https://everpath-course-content.s3-accelerate.amazonaws.com/instructor%2F34hhd92iyp94a0gtbr15cy5jk%2Fpublic%2F1782870634%2FCertification+Terms+and+Conditions.pdf
-  - Policy: https://everpath-course-content.s3-accelerate.amazonaws.com/instructor%2F34hhd92iyp94a0gtbr15cy5jk%2Fpublic%2F1782870704%2FAnthropic+Certification+Exam+Policy.pdf
-  - Policy prohibits distributing, copying, displaying, publishing, recording, downloading, transmitting, or posting exam tasks/questions/answers and treats exam content as confidential.
-  - Public app therefore uses short original Japanese objective summaries and independently written cards sourced from public docs. It does not include the guide's sample questions, live/recalled questions, or detailed copied knowledge/skills bullets.
+- Date: 2026-07-22 (Asia/Tokyo)
+- PR #29: merged at `1cadb1f645c513f0b264e1904b4a8079a01eeadf`
+- Initial HEAD and `origin/main`: `1cadb1f645c513f0b264e1904b4a8079a01eeadf`
+- Worktree: clean detached HEAD before branch creation
+- Branch: `codex/task-4-study-guide`, created directly from `origin/main`
+- Existing lesson reviewed: confirm UX/regulatory posture before choosing an interruptive privacy design; not directly applicable to this Study Guide change.
 
-## Learning UX
+## Scope and Evidence Log
 
-- The primary action is retrieval practice: think first, reveal second, then rate `もう一度 / 難しい / できた`.
-- MVP routes/views: 今日, ガイド, 練習, 進捗・設定; source traceability is available from every guide item/card.
-- Use browser-local progress, due dates, streak/lapse metadata, JSON export, and reset. No account/database is necessary.
-- Distinguish official paraphrase from author inference; never include live, recalled, reconstructed, or leaked exam questions.
-- Accessibility: semantic buttons, `aria-expanded`, keyboard operation, 44px targets, visible focus, reduced-motion support, Japanese document language.
+### Repository reconnaissance
 
-## Product and architecture
+- Current `GuideView` renders `domains` and 30 objective summaries directly; it does not consume the three existing `studyGuideSections` or expose section progress/actions.
+- Existing Study Guide model already contains revision, recommended order, bilingual prose, task statements, cards, questions, sources, and verification date.
+- Existing validator checks schema, orphan references, and duplicate fields, but not 30/30 coverage, 5/5 domains, or order contiguity.
+- App statically imports every view. A Guide dynamic import must ensure neither App nor another eager module imports `studyGuideSections`.
+- Exact Practice and Quiz targets need App-owned target state and narrow view props; direct source anchors can use existing `SourceLinks`/`sourceById`.
+- Existing quiz synchronous `answeredIdRef` guard must remain intact.
 
-- Static React + TypeScript app. Content is versioned TypeScript/JSON data; runtime progress is persisted in localStorage.
-- Two card modes: recall cards and independent scenario questions. MVP can start with recall/contrast cards and expand to full scenario sets after human content review.
-- Content entities: Domain, Topic, Card, Source, ReviewState, Attempt. All facts carry source IDs and a `verifiedAt` date.
-- Visual direction: an architect's field notebook / blueprint, without copying Anthropic branding. Signature element: a five-domain coverage map whose node size/label reflects official exam weight.
+### Local baseline (Node 26.5.0 / macOS; package declares Node 22.x)
 
-## Deployment
+- Initial `pnpm test` could not run because `node_modules` was absent; `pnpm install --frozen-lockfile` completed without lockfile changes.
+- `pnpm test`: 10 files / 173 tests passed.
+- `pnpm build`: Astro check 0 errors, 0 warnings, one existing Zod URL deprecation hint; 4 pages built.
+- `pnpm test:no-analytics`: passed.
+- `pnpm test:e2e`: 52/52 passed.
+- Client JS: App 225,946 raw / 78,951 gzip; aggregate 249,495 raw / about 88,945 gzip.
+- No rationale content or Zod validator implementation was found in the emitted client JS.
+- Preliminary baseline Lighthouse (3-run, current no-analytics `dist`): Performance 87, FCP 1,235ms, LCP 3,951ms, CLS 0. The budget script failed on Performance and LCP. Because CI builds with a test GA ID and local variance is known, this is diagnostic only; formal evidence must use matched main/branch builds with identical environment and build variables.
 
-- `github.com/toshi0607` and Vercel user `toshi0607` are authenticated locally. Wrangler is installed on demand but Cloudflare authentication is absent.
-- `toshi0607.com` uses Cloudflare nameservers (`cloe.ns.cloudflare.com`, `roan.ns.cloudflare.com`). `cca.toshi0607.com` is currently unassigned.
-- Recommended MVP hosting: Vercel Hobby, suitable for a personal/non-commercial static app. Attach the custom subdomain in Vercel, then add the requested CNAME in Cloudflare DNS.
-- Cloudflare Pages is also sufficient (500 builds/month, 20,000 files, 100 custom domains; static asset requests free/unlimited), but using it now would require a new interactive login. Vercel avoids that setup and remains portable because the app is a standard static build.
+### Official Exam Guide verification
 
-## Social metadata and analytics enhancement
+- Exact specified PDF downloaded successfully via direct `curl` to ignored `tmp/pdfs/`.
+- PDF metadata: 39 pages, created 2026-07-09, PDF 1.4, unencrypted.
+- Text extraction confirms task statement IDs 1.1-1.7, 2.1-2.5, 3.1-3.6, 4.1-4.6, and 5.1-5.6 (30 total).
+- Rendered page 5 visually confirms the detailed-objective layout and Domain 1 statement headings. Content work will remain independent summaries rather than copied knowledge/skills bullets.
 
-- Existing `index.astro` has only charset, viewport, description, theme color, and title. There are no canonical, Open Graph, Twitter Card, favicon, manifest, or analytics tags, and no `public/` assets.
-- The Open Graph protocol requires `og:title`, `og:type`, `og:image`, and `og:url`; it also recommends a concise description. Source: https://ogp.me/
-- Production site origin is `https://cca.toshi0607.com`. Set Astro's `site` value and emit absolute canonical/OG URLs in the statically rendered head.
-- Translate the established drafting-paper palette (`#f4f7f9`, `#173447`, `#087e9b`) and five-domain blueprint into deterministic SVG assets, then render committed PNG variants. Avoid generated illustration because exact wordmark typography and small-size legibility matter more than pictorial novelty.
-- Google recommends placing the Google tag in the head on every measured page, using the GA4 `G-...` measurement ID in both the loader URL and `gtag('config', ...)`. Source: https://developers.google.com/tag-platform/gtagjs
-- GA4's default implementation stores a first-party `_ga` client ID cookie and collects basic visit/session/device information. Source: https://support.google.com/analytics/answer/11593727
-- Superseded privacy design (2026-07-14): the original release delayed `gtag.js` until opt-in. Replaced by the user-selected immediate-load plus disclosure model on 2026-07-15. Advertising signals remain disabled, and card content, search terms, ratings, and local progress are still excluded from custom events.
-- No `G-...` ID exists in tracked files, local repo configuration, or Vercel project environment variables. The integration must be conditional and production activation requires an ID from a GA4 web data stream.
-# Analytics Disclosure Simplification — 2026-07-15
+### Implementation specification after independent pre-review
 
-- Consent-specific runtime logic is isolated to `src/components/GoogleAnalytics.astro`; it can be replaced by deterministic immediate initialization when a valid ID exists.
-- `App.tsx` only needs the existing `analyticsEnabled` prop for truthful conditional disclosure. The settings button and custom consent event can be deleted.
-- Keep `ad_storage`, `ad_user_data`, and `ad_personalization` denied. Set `allow_google_signals` and `allow_ad_personalization_signals` to false. No custom study events are emitted.
-- A dedicated `/privacy/` page best matches the requested replacement. Link it from an app-wide footer and keep the shorter Progress-panel summary.
-- No-ID builds must continue to omit the Google loader, ID, and analytics-specific disclosure.
-- Old `cca-analytics-consent:v1` localStorage values are inert and do not require migration code.
+- Eight sections, exact-once mapping: (1) `1.1,1.2,1.3,1.6`; (2) `1.4,1.5,1.7`; (3) `2.1-2.5`; (4) `3.1-3.3`; (5) `3.4-3.6,5.4`; (6) `4.1-4.5`; (7) `4.6,5.1`; (8) `5.2,5.3,5.5,5.6`.
+- Existing section IDs `sg-agentic-loop` and `sg-tool-and-mcp` have materially changed content/linkage and therefore advance to revision 2. Newly introduced section IDs begin at revision 1.
+- Preserve the third shipped ID `sg-context-and-handoff` on the closest successor (section 8: escalation/reliability) at revision 2. Objectives split into the new sections 2 and 7 start untouched; one historical completion is never cloned across the split.
+- Questions do not exist for `2.5`, `3.4`, `3.5`, `4.6`, or `5.4`; these remain truthfully card-only. No new questions are added in Task 4.
+- Validator will require exact taxonomy coverage, exact-once section coverage, contiguous order, statement/domain/link/source semantic alignment, at least one card per statement, and ja/en list-length parity.
+- UI boundary: manual dynamic import with accessible loading, focused retryable error, rejected-promise reset, and unmount cancellation.
+- Progress state: absent/current in-progress/current completed/stale/future. Only Start, Complete, and stale Reconfirm write; future is read-only. Stale completed reconfirm preserves its original `completedAt` and updates `revision`/`updatedAt` only. Unknown stored IDs are preserved but ignored in derived display.
+- All writes use a synchronous App data ref and save-first whole-document replacement. Storage schema/version/key/parser stay unchanged.
+- Related resources open exact existing Practice/Quiz targets; source links stay direct official anchors. Existing quiz answer guard remains the only answer path.
+- Diagnosis is in-memory, keyboard-native, and only recommends a starting section. Section order/timing/diagnosis/calendar pacing are labeled original study guidance.
+
+## Errors
+
+- 2026-07-22: the web fetcher received HTTP 403 for the specified Exam Guide PDF and certification access page. No content decision was based on the failed response.
+- 2026-07-22: system `pdftotext` was unavailable. Switched to the bundled PDF runtime (`pypdf` extraction plus Poppler rendering) and verified the downloaded document successfully.
+- 2026-07-22: direct Node 26 type-stripping import failed on extensionless TypeScript module resolution. No content decision depended on it.
+- 2026-07-22: pre-review initially proposed stamping a new `completedAt` on stale completed reconfirm. Orchestrator review identified the historical-data loss; contract and tests were changed to retain the original completion timestamp.
+- 2026-07-22: the first large content-test replacement patch did not match the current fixture block and was rejected atomically. The worker switched to bounded exact patches; no partial test edit occurred.
+- 2026-07-22: orchestrator UI review found one nonexistent diagnosis section ID, bare-ID related-material labels, and exact-target navigation lacking focus/announcement and an exit path. These are blocking and are being corrected with safe lookup, localized labels, explicit clear behavior, and E2E coverage.
+- 2026-07-22: the first stale-revision E2E attempted to intercept a source-module URL, which does not exist in the production build served by Playwright. Fixed the underlying content semantics by advancing materially changed existing sections to revision 2 and seeding revision 1 directly.
+- 2026-07-22: initial reorganization replaced shipped `sg-context-and-handoff` with a new ID, which would hide its record from displayed progress. Kept the ID on the closest semantic successor at revision 2 instead of fabricating completion records for every split destination.
+- 2026-07-22: final content review found diagnosis choices broader than their destination sections. Narrowed each ja/en option to exactly match agent loops/delegation, tool/MCP boundaries, or escalation/human review/provenance.
+- 2026-07-22: adversarial browser review reproduced cross-tab document loss, Quiz UI advancing after a failed write, a nonfunctional retry for a cached failed Guide chunk, and focus loss after leaving exact-card mode. Fixes use a fresh canonical read before mutation, save-first Quiz state, an actual page reload recovery, and explicit search focus.
+- 2026-07-22: two full E2E reruns cascaded with `ERR_CONNECTION_REFUSED` after 22-27 tests because two agents started Playwright web servers on the same fixed port 4325; the second runner's teardown killed the shared preview. Classified as test-infrastructure collision and scheduled an isolated rerun.
+
+## Final Local Verification
+
+- Isolated `pnpm test`: 11 files / 185 tests passed.
+- `pnpm build`: 70 files checked, 0 errors, 0 warnings, one existing `z.string().url()` deprecation hint; four static pages built.
+- `pnpm test:no-analytics`: passed.
+- Isolated `pnpm test:e2e`: 64/64 passed in about one minute. This confirms the earlier `ERR_CONNECTION_REFUSED` cascade was the fixed-port runner collision, not a product regression.
+- The E2E suite covers all three diagnosis destinations, memory-only diagnosis, keyboard section start/complete, reload, stale read-without-write and explicit reconfirm, preserved `completedAt`, future revision protection, unrelated v2 field preservation, localStorage failure with unchanged UI/focused notice, duplicate-action suppression, cross-tab fresh-document preservation, localized exact card/question/source transitions, Practice return/focus, Quiz target focus and scenario context, Guide chunk failure recovery, English flow, ja/en axe, and 360px overflow.
+- Final content review: 8 sections, exact-once 30 statements, 5 domains, ja/en/source alignment, original guidance labeling, truthful availability, and exam-dump guardrails; no blockers.
+- Final adversarial review: initial cross-tab, Quiz save failure, cached Guide retry, and Practice focus blockers were fixed and independently rechecked; no blockers remain. Residual localStorage read-modify-write behavior is not a strict cross-process transaction, but the reproduced stale-tab data-loss path is fixed by re-reading canonical storage immediately before every mutation.
+
+### Browser-observed JS graph
+
+Built both `origin/main` and the final branch with `PUBLIC_GA_MEASUREMENT_ID=G-TEST123456`, loaded each initial route in Chromium, captured first-party `.js` resource entries, opened Guide, then measured emitted files with gzip.
+
+- Main initial: App 225,946/78,935; client 2,716/1,394; hooks 2,590/1,139; preact 10,499/4,425; total **241,751 raw / 85,893 gzip**. Guide open adds 0 because Guide is eager.
+- Branch initial: App 36,310/10,763; questions 197,838/69,710; preload helper 11,833/5,018; client 1,407/808; hooks 2,591/1,140; total **249,979 raw / 87,439 gzip**.
+- Branch Guide open additionally requests only GuideView: **18,263 raw / 7,506 gzip**; cumulative after Guide is 268,242/94,945.
+- Comparing only App filenames would incorrectly claim a 189KB raw reduction. The real initial-route aggregate changes by **+8,228 raw / +1,546 gzip**. Large Study Guide prose is nevertheless absent from the initial graph and deferred to the Guide interaction.
+- All emitted JS aggregate: 275,982 raw / about 97,795 gzip. No `rationales.ts` or validator/Zod implementation is included in the client output.
+
+### Final matched Lighthouse A/B
+
+Three mobile Lighthouse runs per build were interleaved main/branch with identical build variables and served artifacts. Reports are in `/tmp/cca-task4-lighthouse-final-ab`.
+
+- Main runs: Performance 95/87/94; FCP 1,219/1,596/1,215ms; LCP 2,973/3,923/3,053ms; TBT 53/12/11ms; CLS 0/0/0. Median: Performance 94, FCP 1,219ms, LCP 3,053ms, CLS 0. Budget script fails only the already-observed local LCP threshold by 53ms.
+- Branch runs: Performance 97/95/89; FCP 990/1,290/1,302ms; LCP 2,593/2,893/3,754ms; TBT 51/13/11ms; CLS 0/0/0. Median: Performance 95, FCP 1,290ms, LCP 2,893ms, CLS 0. Budget script passes.
+- Classification: branch does not regress the matched local median and passes the local budget. GitHub's Node 22/Linux performance job remains a mandatory merge gate.

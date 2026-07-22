@@ -31,6 +31,226 @@ for (const route of [
   });
 }
 
+test('uses the keyboard diagnosis, saves only explicit guide progress, and opens exact related material', async ({ page }) => {
+  await page.getByRole('button', { name: 'ガイド' }).first().click();
+  await expect(page.getByRole('heading', { name: '学習ガイド', exact: true })).toBeVisible();
+
+  for (const option of ['エージェントループと委譲の基礎から始めたい', 'ツール契約とMCPの境界を整理したい', 'エスカレーション・人のレビュー・出典追跡を整理したい']) {
+    await page.getByLabel(option).press('Space');
+    await page.getByRole('button', { name: '開始セクションを提案する' }).press('Enter');
+    await expect(page.locator('.guide-recommendation')).toBeFocused();
+  }
+  expect(await page.evaluate((key) => JSON.parse(localStorage.getItem(key) ?? '{"studyGuideProgress":{}}').studyGuideProgress, STORAGE_KEY)).toEqual({});
+
+  const first = page.locator('.guide-section').first();
+  await first.locator('summary').press('Enter');
+  await expect(first.locator('.guide-domain-badges')).toContainText('D1');
+  await expect(first.locator('.guide-statement-ids')).toContainText('1.1');
+  await expect(first.locator('.guide-statement-ids')).toContainText('1.6');
+  await expect(first.locator('.source-links a').first()).toHaveAttribute('href', /anthropic|everpath/);
+  await first.getByRole('button', { name: 'このセクションを開始' }).press('Enter');
+  await first.getByRole('button', { name: '完了として記録' }).press('Enter');
+  await page.reload();
+  await page.getByRole('button', { name: 'ガイド' }).first().click();
+  await expect(page.locator('.guide-section').first().getByText('完了', { exact: true })).toBeVisible();
+
+  await page.locator('.guide-section').first().locator('summary').press('Enter');
+  const relatedCard = page.locator('.guide-section').first().locator('.guide-targets button').first();
+  await relatedCard.click();
+  await expect(page.locator('.practice-target p')).toBeFocused();
+  await page.getByRole('button', { name: 'カード一覧に戻る' }).click();
+  await expect(page.getByRole('searchbox', { name: 'カードを検索' })).toBeFocused();
+  await expect(page.locator('.practice-card')).toHaveCount(cards.length);
+
+  await page.getByRole('button', { name: 'ガイド' }).first().click();
+  await page.locator('.guide-section').first().locator('summary').press('Enter');
+  const relatedQuestion = page.locator('.guide-section').first().locator('.guide-targets').nth(1).getByRole('button').first();
+  await relatedQuestion.click();
+  await expect(page.locator('.quiz-target')).toBeFocused();
+  await expect(page.locator('.quiz-question')).toHaveCount(1);
+});
+
+test('does not write stale guide progress on read and reconfirms without replacing its original completion time', async ({ page }) => {
+  // This section is revision 2 after a material content update; revision 1 is
+  // a valid prior v2 record and therefore exercises the real stale path.
+  const originalCompletedAt = '2026-07-01T08:00:00.000Z';
+  const initial = {
+    version: 2, reviews: {}, quizStats: {}, handsOnProgress: {},
+    studyGuideProgress: { 'sg-agentic-loop': { revision: 1, status: 'completed', updatedAt: originalCompletedAt, completedAt: originalCompletedAt } },
+  };
+  await page.evaluate(([key, value]) => localStorage.setItem(key, value), [STORAGE_KEY, JSON.stringify(initial)]);
+  await page.reload();
+  const beforeRead = await page.evaluate((key) => localStorage.getItem(key), STORAGE_KEY);
+  await page.getByRole('button', { name: 'ガイド' }).first().click();
+  await expect(page.locator('.guide-section').first()).toContainText('更新内容の再確認が必要');
+  expect(await page.evaluate((key) => localStorage.getItem(key), STORAGE_KEY)).toBe(beforeRead);
+
+  await page.locator('.guide-section').first().locator('summary').press('Enter');
+  await expect(page.locator('.guide-section').first()).toContainText('以前の記録は「完了」として保持されています');
+  await page.getByRole('button', { name: '更新内容を再確認した' }).click();
+  const saved = await page.evaluate((key) => JSON.parse(localStorage.getItem(key) ?? '{}').studyGuideProgress['sg-agentic-loop'], STORAGE_KEY);
+  expect(saved.revision).toBe(2);
+  expect(saved.completedAt).toBe(originalCompletedAt);
+  expect(saved.updatedAt).not.toBe(originalCompletedAt);
+});
+
+test('keeps future and unrelated v2 records intact while another guide section is saved', async ({ page }) => {
+  const review = { cardId: 'd1-loop-stop', cardRevisionSeen: 1, dueAt: '2026-08-01T00:00:00.000Z', intervalDays: 3, streak: 1, lapses: 0, lastRating: 'good' };
+  const quizStat = { attempts: 1, correct: 1, lastAnsweredAt: '2026-07-20T00:00:00.000Z', lastCorrect: true };
+  const handsOn = { revision: 1, status: 'completed', completedStepIds: ['step-a'], updatedAt: '2026-07-20T00:00:00.000Z', completedAt: '2026-07-20T00:00:00.000Z' };
+  const future = { revision: 3, status: 'in_progress', updatedAt: '2026-07-20T00:00:00.000Z' };
+  await page.evaluate(([key, value]) => localStorage.setItem(key, value), [STORAGE_KEY, JSON.stringify({
+    version: 2, reviews: { 'd1-loop-stop': review }, quizStats: { 'q-d1-loop-continue': quizStat }, handsOnProgress: { 'hands-on-example': handsOn }, studyGuideProgress: { 'sg-agentic-loop': future },
+  })]);
+  await page.reload();
+  await page.getByRole('button', { name: 'ガイド' }).first().click();
+  await expect(page.locator('.guide-section').first()).toContainText('この端末では新しい版の記録');
+  await expect(page.locator('.guide-section').first().locator('summary')).toContainText('この端末では新しい版の記録');
+  await page.locator('.guide-section').first().locator('summary').press('Enter');
+  await expect(page.locator('.guide-section').first()).toContainText('以前の記録は「進行中」です');
+  await page.locator('.guide-section').nth(1).locator('summary').press('Enter');
+  await page.locator('.guide-section').nth(1).getByRole('button', { name: 'このセクションを開始' }).click();
+  const saved = await page.evaluate((key) => JSON.parse(localStorage.getItem(key) ?? '{}'), STORAGE_KEY);
+  expect(saved.studyGuideProgress['sg-agentic-loop']).toEqual(future);
+  expect(saved.reviews['d1-loop-stop']).toEqual(review);
+  expect(saved.quizStats['q-d1-loop-continue']).toEqual(quizStat);
+  expect(saved.handsOnProgress['hands-on-example']).toEqual(handsOn);
+});
+
+test('keeps the visible guide status unchanged and focuses the notice when saving fails', async ({ page }) => {
+  await page.addInitScript((studyKey) => {
+    const original = Storage.prototype.setItem;
+    Storage.prototype.setItem = function (key, value) {
+      if (key === studyKey) throw new DOMException('blocked', 'QuotaExceededError');
+      return original.call(this, key, value);
+    };
+  }, STORAGE_KEY);
+  await page.goto('/');
+  await page.getByRole('button', { name: 'ガイド' }).first().click();
+  const first = page.locator('.guide-section').first();
+  await first.locator('summary').press('Enter');
+  await first.getByRole('button', { name: 'このセクションを開始' }).click();
+  await expect(page.getByText('進捗を保存できませんでした。ブラウザのサイトデータ設定または空き容量を確認してください。')).toBeFocused();
+  await expect(first).toContainText('未着手');
+  expect(await page.evaluate((key) => localStorage.getItem(key), STORAGE_KEY)).toBeNull();
+});
+
+test('drops a synchronous duplicate guide action before it can write twice', async ({ page }) => {
+  await page.addInitScript((studyKey) => {
+    const original = Storage.prototype.setItem;
+    const state = window as Window & { guideWrites?: number };
+    state.guideWrites = 0;
+    Storage.prototype.setItem = function (key, value) {
+      if (key === studyKey) state.guideWrites = (state.guideWrites ?? 0) + 1;
+      return original.call(this, key, value);
+    };
+  }, STORAGE_KEY);
+  await page.goto('/');
+  await page.getByRole('button', { name: 'ガイド' }).first().click();
+  const first = page.locator('.guide-section').first();
+  await first.locator('summary').press('Enter');
+  await page.evaluate(() => {
+    const action = document.querySelector('.guide-section .guide-actions button') as HTMLButtonElement;
+    action.click(); action.click();
+  });
+  await expect(first).toContainText('進行中');
+  expect(await page.evaluate(() => (window as Window & { guideWrites?: number }).guideWrites)).toBe(1);
+});
+
+test('merges a Guide write with a review saved by another already-open tab', async ({ page, context }) => {
+  const guidePage = await context.newPage();
+  await guidePage.goto('/');
+
+  // Tab A writes after tab B has already loaded its empty in-memory document.
+  await page.getByRole('button', { name: '練習' }).first().click();
+  await page.locator('.reveal-button').first().click();
+  await page.getByRole('button', { name: /できた/ }).first().click();
+  await expect.poll(() => page.evaluate((key) => Object.keys(JSON.parse(localStorage.getItem(key) ?? '{}').reviews ?? {}).length, STORAGE_KEY)).toBe(1);
+
+  // Tab B must re-read canonical storage before adding its Guide record.
+  await guidePage.getByRole('button', { name: 'ガイド' }).first().click();
+  const first = guidePage.locator('.guide-section').first();
+  await first.locator('summary').press('Enter');
+  await first.getByRole('button', { name: 'このセクションを開始' }).click();
+  const saved = await guidePage.evaluate((key) => JSON.parse(localStorage.getItem(key) ?? '{}'), STORAGE_KEY);
+  expect(Object.keys(saved.reviews)).toHaveLength(1);
+  expect(saved.studyGuideProgress['sg-agentic-loop']?.status).toBe('in_progress');
+  await guidePage.close();
+});
+
+test('leaves an exact-target quiz question answerable when its stat cannot be saved', async ({ page }) => {
+  await page.addInitScript((studyKey) => {
+    const original = Storage.prototype.setItem;
+    Storage.prototype.setItem = function (key, value) {
+      if (key === studyKey) throw new DOMException('blocked', 'QuotaExceededError');
+      return original.call(this, key, value);
+    };
+  }, STORAGE_KEY);
+  await page.goto('/');
+  await page.getByRole('button', { name: 'ガイド' }).first().click();
+  const first = page.locator('.guide-section').first();
+  await first.locator('summary').press('Enter');
+  await first.locator('.guide-targets').nth(1).getByRole('button').first().click();
+  const choice = page.locator('.choice-button').first();
+  await choice.click();
+  await expect(page.getByText('進捗を保存できませんでした。ブラウザのサイトデータ設定または空き容量を確認してください。')).toBeFocused();
+  await expect(page.locator('.quiz-feedback')).toHaveCount(0);
+  await expect(choice).toBeEnabled();
+  expect(await page.evaluate((key) => localStorage.getItem(key), STORAGE_KEY)).toBeNull();
+});
+
+test('reloads the page after a Guide chunk failure instead of retrying a cached import', async ({ page }) => {
+  let failedOnce = false;
+  await page.route('**/GuideView.*.js', async (route) => {
+    if (!failedOnce) {
+      failedOnce = true;
+      await route.abort();
+    } else {
+      await route.continue();
+    }
+  });
+  await page.reload();
+  await page.getByRole('button', { name: 'ガイド' }).first().click();
+  await expect(page.locator('.guide-load-error')).toBeFocused();
+  const loaded = page.waitForEvent('load');
+  await page.getByRole('button', { name: 'ページを再読み込み' }).click();
+  await loaded;
+  await expect(page.getByRole('heading', { name: /思い出してから/ })).toBeVisible();
+});
+
+for (const guideRoute of [
+  { path: '/', nav: 'ガイド', start: 'このセクションを開始' },
+  { path: '/en/', nav: 'Guide', start: 'Start this section', saved: 'Section start recorded.', inProgress: 'In progress' },
+]) {
+  test(`${guideRoute.path} guide has no serious or critical axe violations`, async ({ page }) => {
+    await page.goto(guideRoute.path);
+    await page.evaluate(() => localStorage.clear());
+    await page.reload();
+    await page.getByRole('button', { name: guideRoute.nav }).first().click();
+    await page.locator('.guide-section').first().locator('summary').press('Enter');
+    await expect(page.getByRole('button', { name: guideRoute.start })).toBeVisible();
+    const axe = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa']).analyze();
+    expect(axe.violations.filter((violation) => violation.impact === 'serious' || violation.impact === 'critical')).toEqual([]);
+    if ('saved' in guideRoute && guideRoute.saved && guideRoute.inProgress) {
+      await page.getByRole('button', { name: guideRoute.start }).click();
+      await expect(page.getByText(guideRoute.saved)).toBeFocused();
+      await page.reload();
+      await page.getByRole('button', { name: guideRoute.nav }).first().click();
+      await expect(page.locator('.guide-section').first()).toContainText(guideRoute.inProgress);
+    }
+  });
+}
+
+for (const guideRoute of [{ path: '/', nav: 'ガイド' }, { path: '/en/', nav: 'Guide' }]) {
+  test(`${guideRoute.path} guide has no horizontal overflow at 360px`, async ({ page }) => {
+    await page.setViewportSize({ width: 360, height: 900 });
+    await page.goto(guideRoute.path);
+    await page.getByRole('button', { name: guideRoute.nav }).first().click();
+    await expect(page.locator('.guide-view')).toBeVisible();
+    expect(await page.evaluate(() => ({ viewport: document.documentElement.clientWidth, document: document.documentElement.scrollWidth, body: document.body.scrollWidth }))).toEqual({ viewport: 360, document: 360, body: 360 });
+  });
+}
+
 test('refreshes due cards while a tab remains open', async ({ page }) => {
   await page.clock.install({ time: new Date('2026-07-15T00:00:00.000Z') });
   await page.evaluate((key) => localStorage.setItem(key, JSON.stringify({
