@@ -23,6 +23,12 @@ const workers = process.env.PW_WORKERS ? Number(process.env.PW_WORKERS) : 1;
 
 export default defineConfig({
   testDir: './tests',
+  // The live-production smoke suite lives under tests/production and is run ONLY
+  // by playwright.production.config.ts (against the deployed site, no webServer).
+  // Exclude it here so this default gate — the PR merge gate (e2e.yml) — never
+  // sweeps it in: it must stay at its committed test count and never hit live
+  // production from PR CI.
+  testIgnore: '**/production/**',
   fullyParallel: true,
   workers,
   forbidOnly: !!process.env.CI,

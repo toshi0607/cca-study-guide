@@ -1,0 +1,121 @@
+name: Production smoke
+
+# Manual release verification only — never wired to push/pull_request/schedule
+# so it adds zero load to PR CI. Run by hand (or from a release runbook) after
+# a production deploy to confirm Vercel served the intended commit and the
+# live site's critical flows still work.
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: production-smoke
+  cancel-in-progress: true
+
+jobs:
+  verify-deployment:
+    runs-on: ubuntu-latest
+    outputs:
+      audited-sha: ${{ steps.sha.outputs.audited }}
+    steps:
+      # Always audit `main` — never the arbitrary ref a workflow_dispatch was
+      # started from. This workflow proves "production serves main", so it must
+      # not be tricked into passing by dispatching a feature branch whose build
+      # happens to match production.
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      # Record the ACTUAL checked-out commit; the identity check compares this
+      # to the commit baked into production's build manifest, and the summary
+      # reports it (not github.sha, which for workflow_dispatch is the ref the
+      # workflow file lives on, not necessarily what we audited).
+      - id: sha
+        run: echo "audited=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # Build WITH a GA measurement id so the analytics snippet is structurally
+      # present, exactly as production's build has it. The identity check hashes
+      # HTML after normalizing the GA id and the per-build astro-island uid, so
+      # the specific value here is irrelevant — but the snippet must exist or the
+      # HTML would differ from production by a whole block. The manifest compares
+      # the full dist output (all JS/CSS/HTML/assets), not just the island bundles.
+      - run: pnpm build
+        env:
+          PUBLIC_GA_MEASUREMENT_ID: G-TEST123456
+      - run: mkdir -p tmp
+      # `--` lets pnpm forward the flags; `--commit` records the audited main SHA.
+      - run: pnpm verify:production -- --json tmp/production-deployment-report.json --commit "${{ steps.sha.outputs.audited }}"
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: production-deployment-report
+          path: tmp/production-deployment-report.json
+          retention-days: 7
+          # The report is written even on failure, so it should always exist.
+          if-no-files-found: warn
+
+  production-smoke:
+    needs: verify-deployment
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # Only Chromium is exercised (see playwright.production.config.ts projects).
+      - run: pnpm exec playwright install --with-deps chromium
+      # Runs against live production (https://cca.toshi0607.com by default);
+      # does not build or serve locally.
+      - run: pnpm test:e2e:production
+      # Pull the identity report from verify-deployment's job so the summary
+      # step below (this job runs on a separate, fresh runner) can read it.
+      - uses: actions/download-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: production-deployment-report
+          path: tmp
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: production-playwright-report
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7
+          if-no-files-found: ignore
+      - name: Write summary
+        if: ${{ !cancelled() }}
+        run: |
+          {
+            echo "## Production smoke summary"
+            echo ""
+            echo "- Audited commit (main HEAD): \`${{ needs.verify-deployment.outputs.audited-sha }}\`"
+            echo ""
+            if [ -f tmp/production-deployment-report.json ]; then
+              echo "### Deployment identity"
+              echo '```json'
+              cat tmp/production-deployment-report.json
+              echo '```'
+            else
+              echo "_No deployment identity report found (tmp/production-deployment-report.json missing)._"
+            fi
+            echo ""
+            if [ -f playwright-report/index.html ] || [ -d test-results ]; then
+              echo "### Playwright report"
+              echo "See the \`production-playwright-report\` artifact for full results (HTML report, traces, screenshots, videos)."
+            fi
+            echo ""
+            if [ "${{ job.status }}" = "success" ]; then
+              echo "**Verdict: PASS**"
+            else
+              echo "**Verdict: FAIL**"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
