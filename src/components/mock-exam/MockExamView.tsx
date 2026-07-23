@@ -42,6 +42,11 @@ export type MockExamViewProps = MockExamStorageBridge & {
   session: MockExamSession | null;
   attempts: readonly MockExamAttempt[];
   storageAvailable: boolean;
+  // Which screen to show first when the view mounts. Today/Progress/learning-path
+  // "open analysis" CTAs pass 'analysis' to land directly on the learning
+  // analysis; the default is the start screen. Mount-time session reconciliation
+  // (auto-expire / incompatible) can still override it.
+  initialPhase?: 'landing' | 'analysis';
   // Opens the Practice view (optionally preselecting a domain) for a learning-
   // analysis "next action". Supplied by App; reuses existing navigation.
   onOpenPractice: (domainId?: string) => void;
@@ -60,10 +65,12 @@ function createExamId(): string {
 // through the bridge, calls the pure engine/controller, and writes back. It holds
 // only the screen phase and the graded result being shown. All completion funnels
 // through `finalize`, guarded so submit and auto-expiry never double-grade.
-export function MockExamView({ locale, copy, session, attempts, storageAvailable, readData, writeData, onOpenPractice }: MockExamViewProps) {
+export function MockExamView({ locale, copy, session, attempts, storageAvailable, initialPhase = 'landing', readData, writeData, onOpenPractice }: MockExamViewProps) {
   const questionById = useMemo(() => new Map(questions.map((question) => [question.id, question])), []);
   const choiceIds = useMemo(() => new Map(questions.map((question) => [question.id, question.choices.map((choice) => choice.id)])), []);
-  const [phase, setPhase] = useState<Phase>('landing');
+  // The learning analysis is only meaningful with at least one saved attempt; an
+  // 'analysis' intent with no history falls back to the start screen.
+  const [phase, setPhase] = useState<Phase>(initialPhase === 'analysis' && attempts.length > 0 ? 'analysis' : 'landing');
   const [active, setActive] = useState<ActiveResult | null>(null);
   const [reviewing, setReviewing] = useState(false);
   const [submitting, setSubmitting] = useState(false);

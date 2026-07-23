@@ -101,7 +101,7 @@ test('runs a full mock exam: start, answer, flag, move, resume after reload, sub
   // Raw accuracy is the only score-shaped output; the disclaimer states plainly
   // that no official scaled score or pass/fail is reproduced. No pass/fail verdict
   // ("合格" / "不合格") is rendered as a result.
-  await expect(page.locator('.mock-exam-result')).toContainText('raw正答率');
+  await expect(page.locator('.mock-exam-result')).toContainText('単純正答率');
   await expect(page.locator('.mock-exam-disclaimer')).toContainText('scaled scoreや合否を再現するものではありません');
   await expect(page.locator('.mock-exam-result')).not.toContainText('合格圏');
   await expect(page.locator('.mock-exam-result')).not.toContainText('不合格');

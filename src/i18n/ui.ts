@@ -1,4 +1,5 @@
 import type { LocalizedText, QuestionDifficulty } from '../content/types';
+import type { LearningStageId } from '../content/learning-path';
 import type { EvidenceLevel, LearningStability } from '../lib/mock-exam-analysis';
 import type { Locale } from './locales';
 
@@ -70,7 +71,6 @@ export type UiCopy = {
     started: string;
     notStarted: string;
     coverage: string;
-    objectives: (count: number) => string;
   };
   guide: {
     eyebrow: string;
@@ -104,12 +104,17 @@ export type UiCopy = {
     diagnosisResult: (title: string) => string;
     serviceTitle: string;
     serviceBody: string;
+    availableFeatures: string;
+    diagnosisOpenSection: (title: string) => string;
     pathTitle: string;
-    path: ReadonlyArray<{ label: string; available: boolean; target?: View }>;
-    availabilityNow: string;
-    availabilityLater: string;
-    calendarTitle: string;
-    calendarBody: string;
+    pathNote: string;
+    // Analysis-stage CTA shown when no attempt exists yet: names the precondition
+    // instead of promising an analysis screen the learner cannot reach.
+    analysisCtaNoAttempt: string;
+    // Display text only. Stage identity, order, and target live in the
+    // locale-independent typed data (`src/content/learning-path.ts`); this map is
+    // keyed by that data's stage id so ja/en can never disagree on structure.
+    stages: Record<LearningStageId, { title: string; description: string; cta: string }>;
   };
   handsOn: {
     eyebrow: string;
@@ -328,6 +333,43 @@ export type UiCopy = {
     title: string;
     introduction: string;
     byDomain: string;
+    // Service-wide overview cards. Every value is derived from existing StudyData;
+    // no pass/fail, scaled score, or readiness is computed anywhere here.
+    overview: {
+      title: string;
+      loading: string;
+      loadError: string;
+      retry: string;
+      guideTitle: string;
+      guideCompleted: (completed: number, total: number) => string;
+      guideInProgress: (count: number) => string;
+      guideStale: (count: number) => string;
+      openGuide: string;
+      handsOnTitle: string;
+      handsOnCompleted: (completed: number, total: number) => string;
+      handsOnInProgress: (count: number) => string;
+      handsOnSteps: (completed: number, total: number) => string;
+      openHandsOn: string;
+      practiceTitle: string;
+      practiceReviewed: (reviewed: number, total: number) => string;
+      practiceWeak: (count: number) => string;
+      practiceDue: (count: number) => string;
+      openPractice: string;
+      quizTitle: string;
+      quizAnswered: (count: number) => string;
+      quizAttempts: (count: number) => string;
+      quizCorrect: (count: number) => string;
+      openQuiz: string;
+      mockExamTitle: string;
+      mockExamCompleted: (count: number) => string;
+      mockExamActive: string;
+      mockExamNoActive: string;
+      mockExamLatest: (correct: number, total: number) => string;
+      mockExamLatestAccuracy: (percent: number) => string;
+      mockExamEmpty: string;
+      openMockExam: string;
+      openMockExamAnalysis: string;
+    };
     localData: string;
     localDataDescription: string;
     analyticsDisclosure: string;
@@ -366,6 +408,10 @@ export type UiCopy = {
     resumeButton: string;
     resumeHeading: string;
     newExamButton: string;
+    // Today launch CTA when an attempt exists but no session is active.
+    todayOpenResults: string;
+    // Today auxiliary link to the mock-exam learning analysis (shown once an attempt exists).
+    todayAnalysisLink: string;
     discardConfirm: string;
     createFailed: string;
     // Runner header / timer
@@ -593,9 +639,9 @@ export const ui = {
       started: (percent) => `${percent}% 着手`,
     },
     weakAreas: {
-      eyebrow: 'WEAK AREAS',
-      title: '苦手エリア',
-      note: '「もう一度」「難しい」評価や、つまずき2回以上のカードを集計',
+      eyebrow: 'CARD PRACTICE',
+      title: 'カード練習でつまずいた領域',
+      note: 'Practiceカードの「もう一度」「難しい」評価や、つまずき2回以上のカードから集計します。模試結果の分析とは別物です。',
       cardCount: (count) => `${count}枚`,
       emptyBeforeStartTitle: '記録はまだありません。',
       emptyBeforeStartDescription: '練習でカードを評価すると、つまずいた領域がここに表示されます。',
@@ -603,12 +649,11 @@ export const ui = {
       emptyAllClearDescription: 'この調子で復習を続けましょう。',
     },
     status: {
-      eyebrow: 'LOCAL PROGRESS',
-      title: 'この端末の進捗',
-      started: '着手',
-      notStarted: '未着手',
-      coverage: '収録範囲',
-      objectives: (count) => `${count}項目`,
+      eyebrow: 'CARD PRACTICE PROGRESS',
+      title: 'カード練習の進捗',
+      started: '評価済み',
+      notStarted: '未評価',
+      coverage: '収録カード',
     },
     guide: {
       eyebrow: 'PUBLIC BLUEPRINT / 30 OBJECTIVES',
@@ -633,12 +678,23 @@ export const ui = {
       diagnosisLegend: '最初に取り組む場所を選ぶ', diagnosisQuestion: '今いちばん必要な学習を1つ選んでください。',
       diagnosisOptions: ['エージェントループと委譲の基礎から始めたい', 'ツール契約とMCPの境界を整理したい', 'エスカレーション・人のレビュー・出典追跡を整理したい'],
       diagnosisSubmit: '開始セクションを提案する', diagnosisResult: (title) => `まずは「${title}」から始めることを提案します。これはこの端末に保存されません。`,
-      serviceTitle: 'このサービスでできること／できないこと',
-      serviceBody: '公開資料に基づく独自のガイド、カード、選択式演習を提供します。非公式であり、実試験問題やexam dumpは使用せず、合格を保証しません。Claude Code、API、MCP、CIの実システム経験は、ご自身の環境で別途行ってください。',
-      pathTitle: '8段階の学習パス（独自の学習上の提案）',
-      path: [{ label: '初回診断', available: true }, { label: 'D1/D2/D5 基礎', available: true }, { label: 'D3/D4 実装・運用', available: true }, { label: 'Hands-on', available: true, target: 'hands-on' }, { label: 'シナリオ判断', available: true, target: 'official-scenarios' }, { label: '模試', available: false }, { label: '誤答修正', available: false }, { label: '本番直前チェック', available: false }],
-      availabilityNow: '現在利用可能: Guide、Hands-on、公式シナリオ、Practice、Quiz', availabilityLater: 'この段階の詳細機能は今後の学習計画です。実環境での作業はこのサービス外で行ってください。',
-      calendarTitle: '8月末までの進め方', calendarBody: '残り期間では、先にガイドで範囲を確認し、カードで想起し、選択式演習で判断を言語化する順に繰り返してください。遅れた場合は未完了セクションを優先し、固定の日数や合格可能性は前提にしません。',
+      serviceTitle: 'このサービスの使い方',
+      serviceBody: '公開資料に基づく独自のガイド、カード、選択式演習、模試を提供します。非公式であり、実試験問題やexam dumpは使用せず、合格を保証しません。まず開始地点を選び、下の「推奨学習サイクル」に沿って、自分のペースで進めてください。Claude Code、API、MCP、CIの実システム経験は、ご自身の環境で別途行ってください。',
+      availableFeatures: '現在このサービスで利用できます: Study Guide、Hands-on、公式シナリオ、Practiceカード、選択式Quiz、シナリオQuiz、60問の模試、模試履歴、結果の復習、学習分析。',
+      diagnosisOpenSection: (title) => `「${title}」を開く`,
+      pathTitle: '推奨学習サイクル',
+      pathNote: 'これはこのサービス独自の学習上の提案で、公式の推奨順序ではありません。合格や準備完了を示すものではなく、すべての段階が今すぐ利用できます。自分のペースで繰り返してください。',
+      analysisCtaNoAttempt: '模試を受けて分析を利用する',
+      stages: {
+        start: { title: '学習開始地点を選ぶ', description: 'まず下の「学習開始地点を選ぶ」で、最初に確認したいテーマを決めます。', cta: '開始地点を選ぶ' },
+        guide: { title: 'Study Guideで基礎を確認する', description: '5領域・30タスクの独自要約で、対象範囲の全体像と要点を押さえます。', cta: 'Study Guideを開く' },
+        'hands-on': { title: 'Hands-onで実際に試す', description: '手順つきのハンズオンで、学んだ内容を自分の環境で動かして確かめます。', cta: 'Hands-onを開く' },
+        practice: { title: 'Practiceカードで想起する', description: '想起カードで要点を思い出す練習をし、評価に応じて復習間隔を調整します。', cta: 'Practiceを開く' },
+        quiz: { title: 'Quizとシナリオで判断を練習する', description: '選択式のQuizと公式シナリオで、設計判断を言語化して練習します。', cta: 'Quizを開く' },
+        'mock-exam': { title: '60問の模試を受ける', description: '120分・60問の模試を通しで受け、時間配分と持久力を試します。', cta: '模試を開く' },
+        analysis: { title: '結果・復習・学習分析で誤答を確認する', description: '模試結果と復習、学習分析で、どの領域を優先して復習すべきかを確認します。', cta: '模試結果の分析を開く' },
+        repeat: { title: '復習優先候補に戻って繰り返す', description: '分析で見えた弱点をPracticeで復習し、このサイクルを自分のペースで繰り返します。', cta: 'Practiceで復習する' },
+      },
     },
     handsOn: {
       eyebrow: 'HANDS-ON / BUILD IN YOUR OWN ENVIRONMENT',
@@ -851,6 +907,41 @@ export const ui = {
       title: '進捗と資料',
       introduction: '学習データはこのブラウザのlocalStorageだけに保存され、サーバーへ送信されません。',
       byDomain: '領域別の着手',
+      overview: {
+        title: 'サービス全体の学習状況',
+        loading: '学習状況を読み込んでいます…',
+        loadError: '学習状況を読み込めませんでした。',
+        retry: '再読み込み',
+        guideTitle: 'Study Guide',
+        guideCompleted: (completed, total) => `完了セクション ${completed} / ${total}`,
+        guideInProgress: (count) => `進行中 ${count}`,
+        guideStale: (count) => `再確認が必要 ${count}`,
+        openGuide: 'Study Guideを開く',
+        handsOnTitle: 'Hands-on',
+        handsOnCompleted: (completed, total) => `完了ガイド ${completed} / ${total}`,
+        handsOnInProgress: (count) => `進行中 ${count}`,
+        handsOnSteps: (completed, total) => `完了ステップ ${completed} / ${total}`,
+        openHandsOn: 'Hands-onを開く',
+        practiceTitle: 'Practiceカード',
+        practiceReviewed: (reviewed, total) => `評価済み ${reviewed} / ${total}`,
+        practiceWeak: (count) => `つまずいたカード ${count}`,
+        practiceDue: (count) => `復習予定 ${count}`,
+        openPractice: 'Practiceを開く',
+        quizTitle: 'Quiz',
+        quizAnswered: (count) => `回答した問題 ${count}`,
+        quizAttempts: (count) => `回答回数 ${count}`,
+        quizCorrect: (count) => `正解回数 ${count}`,
+        openQuiz: 'Quizを開く',
+        mockExamTitle: '模試',
+        mockExamCompleted: (count) => `完了した模試 ${count}`,
+        mockExamActive: '進行中の模試があります',
+        mockExamNoActive: '進行中の模試はありません',
+        mockExamLatest: (correct, total) => `最新結果 ${total}問中${correct}問正解`,
+        mockExamLatestAccuracy: (percent) => `単純正答率 ${percent}%`,
+        mockExamEmpty: 'まだ完了した模試はありません。',
+        openMockExam: '模試を開く',
+        openMockExamAnalysis: '学習分析を開く',
+      },
       localData: 'ローカルデータ',
       localDataDescription: '端末間の同期はありません。ブラウザデータを消す前にJSONを書き出してください。',
       analyticsDisclosure: 'Google Analyticsで基本的なページ閲覧情報を収集します。学習カード、検索語、評価、進捗データは独自イベントとして送信しません。',
@@ -880,11 +971,13 @@ export const ui = {
       specDuration: (minutes) => `${minutes}分`,
       specDomainBased: '公式のドメイン配分（16 / 11 / 12 / 12 / 9）を再現した出題です。',
       disclaimerNot4of6: '公式試験の「6つの応用文脈から4つ」という構成は再現していません。',
-      disclaimerRawOnly: '当アプリ独自問題の正答数（raw正答率）のみを表示します。',
+      disclaimerRawOnly: '当アプリ独自問題の正答数（単純正答率）のみを表示します。',
       disclaimerNoScaled: '公式のscaled scoreや合否は算出・判定しません。',
       disclaimerResumable: '進捗は端末内に保存され、ページを閉じても再開できます。',
       startButton: '模試を開始',
       resumeButton: '模試を再開',
+      todayOpenResults: '模試と結果を開く',
+      todayAnalysisLink: '模試の学習分析を開く',
       resumeHeading: '進行中の模試があります',
       newExamButton: '新しい模試を開始',
       discardConfirm: '進行中の模試を破棄して新しく始めますか？現在の回答は失われます。',
@@ -932,7 +1025,7 @@ export const ui = {
       outcomeSubmitted: '提出済み',
       outcomeExpired: '時間切れ',
       resultDisclaimer: 'これは当アプリ独自問題の正答数です。公式試験のscaled scoreや合否を再現するものではありません。',
-      rawAccuracyLabel: 'raw正答率',
+      rawAccuracyLabel: '単純正答率',
       rawAccuracyValue: (percent) => `${percent}%`,
       totalQuestionsLabel: '総問題数',
       answeredLabel: '回答済み',
@@ -999,9 +1092,9 @@ export const ui = {
         rangeAllTime: '全期間',
         rangeRecent3: '直近3回',
         rangeSummary: (attempts, total) => `対象 ${attempts} / 全 ${total} 回`,
-        compatibleAnswers: (count) => `compatible回答：${count}`,
-        staleExcluded: (count) => `staleのため軸別分析から除外した回答：${count}`,
-        staleNote: 'stale回答（問題が削除された、または内容が更新された回答）は現在の問題で再採点せず、ドメイン・難易度・スキル別の集計から除外しています。全体のraw正答率と推移には保存済みの正誤として残します。',
+        compatibleAnswers: (count) => `現在の問題と対応する回答：${count}`,
+        staleExcluded: (count) => `内容更新のため分析から除外した回答：${count}`,
+        staleNote: '内容更新のため除外した回答（問題が削除された、または内容が更新された回答）は現在の問題で再採点せず、ドメイン・難易度・スキル別の集計から除外しています。全体の単純正答率と推移には保存済みの正誤として残します。',
         evidenceLegend: 'データ量の目安',
         evidenceExplanation: '各領域の回答数に応じて、断定を避けた表現を用います。回答数が少ない領域は「弱点」「得意」とは表示しません。',
         evidence: { insufficient: 'データ不足', limited: '参考値', sufficient: '傾向を確認可能' },
@@ -1014,7 +1107,7 @@ export const ui = {
         colAnswered: '回答',
         colCorrect: '正答',
         colIncorrect: '不正解',
-        colAccuracy: 'raw正答率',
+        colAccuracy: '単純正答率',
         colEvidence: 'データ量',
         accuracyValue: (percent) => `${percent}%`,
         countValue: (correct, total) => `${correct} / ${total}`,
@@ -1029,12 +1122,12 @@ export const ui = {
         stability: {
           insufficient_data: { label: 'データ不足', description: '安定状況を判断するには、完了した模試が3回以上かつ十分な回答数が必要です。' },
           building_evidence: { label: 'データを蓄積中', description: '複数回の結果はありますが、まだ一定の範囲に収まっているとは言えません。' },
-          stable_practice: { label: '結果が一定範囲に収まっています', description: '直近の複数回の結果がraw正答率で近い範囲に収まっています。これは成績の高さや合格可能性を示すものではありません。' },
+          stable_practice: { label: '結果が一定範囲に収まっています', description: '直近の複数回の結果が単純正答率で近い範囲に収まっています。これは成績の高さや合格可能性を示すものではありません。' },
         },
         stabilityDisclaimers: [
           'これは公式試験の合否予測ではありません。',
           'scaled scoreや720点への換算でもありません。',
-          '同じ問題を繰り返すと、反復exposureによりraw正答率が上がることがあります。',
+          '同じ問題を繰り返すと、同じ問題への繰り返し接触により単純正答率が上がることがあります。',
           '同じ60問バンクの繰り返しのため、本番の性能を直接表すものではありません。',
         ],
         trendHeading: '模試の推移',
@@ -1042,9 +1135,9 @@ export const ui = {
         trendColDate: '完了日時',
         trendColOutcome: '結果',
         trendColScore: '正答 / 総数',
-        trendColAccuracy: 'raw正答率',
+        trendColAccuracy: '単純正答率',
         trendColAnswered: '回答 / 未回答',
-        trendColStale: 'stale回答',
+        trendColStale: '内容更新のため除外した回答',
         trendEmpty: 'まだ完了した模試はありません。',
         nextActionsHeading: '次の学習アクション',
         actionReviewDomain: (name) => `${name}を練習で復習する`,
@@ -1108,9 +1201,9 @@ export const ui = {
       started: (percent) => `${percent}% started`,
     },
     weakAreas: {
-      eyebrow: 'WEAK AREAS',
-      title: 'Struggling areas',
-      note: 'Counts cards rated Again or Hard, or lapsed twice or more',
+      eyebrow: 'CARD PRACTICE',
+      title: 'Areas that need review in card practice',
+      note: 'Counts practice cards rated Again or Hard, or lapsed twice or more. This is separate from the mock-exam analysis.',
       cardCount: (count) => `${count} ${count === 1 ? 'card' : 'cards'}`,
       emptyBeforeStartTitle: 'Nothing recorded yet.',
       emptyBeforeStartDescription: 'Rate cards in practice and the domains you struggle with will appear here.',
@@ -1118,12 +1211,11 @@ export const ui = {
       emptyAllClearDescription: 'Nice work — keep reviewing at this pace.',
     },
     status: {
-      eyebrow: 'LOCAL PROGRESS',
-      title: 'Progress on this device',
-      started: 'Started',
-      notStarted: 'Not started',
-      coverage: 'Coverage',
-      objectives: (count) => `${count} objectives`,
+      eyebrow: 'CARD PRACTICE PROGRESS',
+      title: 'Card-practice progress',
+      started: 'Reviewed',
+      notStarted: 'Not reviewed',
+      coverage: 'Cards included',
     },
     guide: {
       eyebrow: 'PUBLIC BLUEPRINT / 30 OBJECTIVES',
@@ -1148,12 +1240,23 @@ export const ui = {
       diagnosisLegend: 'Choose where to begin', diagnosisQuestion: 'Choose the one learning need that matters most right now.',
       diagnosisOptions: ['I want to start with agent loops and delegation', 'I need to organize tool contracts and MCP boundaries', 'I need to organize escalation, human review, and provenance'],
       diagnosisSubmit: 'Recommend a starting section', diagnosisResult: (title) => `Start with “${title}.” This suggestion is not saved on this device.`,
-      serviceTitle: 'What this service provides — and does not',
-      serviceBody: 'It provides independently written guides, cards, and choice practice grounded in public sources. It is unofficial, uses no live exam questions or exam dumps, and offers no pass guarantee. Gain real Claude Code, API, MCP, and CI experience separately in your own environment.',
-      pathTitle: 'Eight-stage learning path (independent study guidance)',
-      path: [{ label: 'Initial orientation', available: true }, { label: 'D1/D2/D5 foundations', available: true }, { label: 'D3/D4 implementation and operations', available: true }, { label: 'Hands-on work', available: true, target: 'hands-on' }, { label: 'Scenario judgment', available: true, target: 'official-scenarios' }, { label: 'Mock exam', available: false }, { label: 'Incorrect-answer repair', available: false }, { label: 'Final check', available: false }],
-      availabilityNow: 'Available now: Guide, Hands-on, Official scenarios, Practice, and Quiz', availabilityLater: 'Detailed tooling for this stage is a future study-plan step. Do real-environment work outside this service.',
-      calendarTitle: 'How to use the time through the end of August', calendarBody: 'Use the remaining time in cycles: map the scope in the guide, retrieve it with cards, then articulate decisions in choice practice. If time gets tight, prioritize unfinished sections; this plan does not assume fixed days or predict an outcome.',
+      serviceTitle: 'How to use this service',
+      serviceBody: 'It provides independently written guides, cards, choice practice, and a mock exam grounded in public sources. It is unofficial, uses no live exam questions or exam dumps, and offers no pass guarantee. Pick a starting point first, then follow the recommended study cycle below at your own pace. Gain real Claude Code, API, MCP, and CI experience separately in your own environment.',
+      availableFeatures: 'Available now: Study Guide, Hands-on, Official scenarios, Practice cards, Choice quiz, Scenario quiz, the 60-question mock exam, mock-exam history, result review, and Learning analysis.',
+      diagnosisOpenSection: (title) => `Open “${title}”`,
+      pathTitle: 'Recommended study cycle',
+      pathNote: 'This is this service’s own study guidance, not an official recommended order. It does not indicate passing or readiness, and every stage is available right now. Repeat the cycle at your own pace.',
+      analysisCtaNoAttempt: 'Take a mock exam to use learning analysis',
+      stages: {
+        start: { title: 'Choose where to start', description: 'Start by picking the theme you want to review first in “Choose where to start” below.', cta: 'Choose a starting point' },
+        guide: { title: 'Confirm the fundamentals in the Study Guide', description: 'Use the independent summaries of 5 domains and 30 tasks to grasp the scope and key points.', cta: 'Open the Study Guide' },
+        'hands-on': { title: 'Try it hands-on', description: 'Follow the step-by-step hands-on guides to run what you learned in your own environment.', cta: 'Open Hands-on' },
+        practice: { title: 'Recall with practice cards', description: 'Practice retrieving key points with cards; your ratings adjust each card’s review interval.', cta: 'Open Practice' },
+        quiz: { title: 'Practice judgment with quizzes and scenarios', description: 'Use choice quizzes and official scenarios to put design decisions into words.', cta: 'Open the Quiz' },
+        'mock-exam': { title: 'Take the 60-question mock exam', description: 'Sit a 120-minute, 60-question mock exam in one pass to test pacing and stamina.', cta: 'Open the Mock Exam' },
+        analysis: { title: 'Review mistakes with result, review, and learning analysis', description: 'Use the result, review, and learning analysis to see which areas to review first.', cta: 'Open mock-exam learning analysis' },
+        repeat: { title: 'Return to review priorities and repeat', description: 'Review the weak areas the analysis surfaced with Practice, and repeat the cycle at your own pace.', cta: 'Review in Practice' },
+      },
     },
     handsOn: {
       eyebrow: 'HANDS-ON / BUILD IN YOUR OWN ENVIRONMENT',
@@ -1366,6 +1469,41 @@ export const ui = {
       title: 'Progress and sources',
       introduction: 'Study data is stored only in this browser’s localStorage and is never sent to a server.',
       byDomain: 'Started by domain',
+      overview: {
+        title: 'Whole-service study status',
+        loading: 'Loading study status…',
+        loadError: 'Could not load the study status.',
+        retry: 'Reload',
+        guideTitle: 'Study Guide',
+        guideCompleted: (completed, total) => `Completed sections ${completed} / ${total}`,
+        guideInProgress: (count) => `In progress ${count}`,
+        guideStale: (count) => `Needs reconfirmation ${count}`,
+        openGuide: 'Open the Study Guide',
+        handsOnTitle: 'Hands-on',
+        handsOnCompleted: (completed, total) => `Completed guides ${completed} / ${total}`,
+        handsOnInProgress: (count) => `In progress ${count}`,
+        handsOnSteps: (completed, total) => `Completed steps ${completed} / ${total}`,
+        openHandsOn: 'Open Hands-on',
+        practiceTitle: 'Practice cards',
+        practiceReviewed: (reviewed, total) => `Reviewed ${reviewed} / ${total}`,
+        practiceWeak: (count) => `Struggling cards ${count}`,
+        practiceDue: (count) => `Due for review ${count}`,
+        openPractice: 'Open Practice',
+        quizTitle: 'Quiz',
+        quizAnswered: (count) => `Questions answered ${count}`,
+        quizAttempts: (count) => `Answer attempts ${count}`,
+        quizCorrect: (count) => `Correct attempts ${count}`,
+        openQuiz: 'Open the Quiz',
+        mockExamTitle: 'Mock exam',
+        mockExamCompleted: (count) => `Completed exams ${count}`,
+        mockExamActive: 'A mock exam is in progress',
+        mockExamNoActive: 'No mock exam in progress',
+        mockExamLatest: (correct, total) => `Latest result ${correct} of ${total} correct`,
+        mockExamLatestAccuracy: (percent) => `Raw accuracy ${percent}%`,
+        mockExamEmpty: 'No completed mock exams yet.',
+        openMockExam: 'Open the Mock Exam',
+        openMockExamAnalysis: 'Open Learning analysis',
+      },
       localData: 'Local data',
       localDataDescription: 'Progress does not sync across devices. Export the JSON before clearing browser data.',
       analyticsDisclosure: 'Google Analytics collects basic page-view information. Study cards, search terms, ratings, and progress are not sent as custom events.',
@@ -1400,6 +1538,8 @@ export const ui = {
       disclaimerResumable: 'Progress is saved on this device, so you can close the page and resume.',
       startButton: 'Start the mock exam',
       resumeButton: 'Resume the mock exam',
+      todayOpenResults: 'Open the mock exam and results',
+      todayAnalysisLink: 'Open mock-exam learning analysis',
       resumeHeading: 'You have an exam in progress',
       newExamButton: 'Start a new mock exam',
       discardConfirm: 'Discard the exam in progress and start a new one? Your current answers will be lost.',

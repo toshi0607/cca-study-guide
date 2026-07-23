@@ -38,7 +38,7 @@ export const supportStepIds = ['step-tool-contracts', 'step-loop', 'step-failure
 // heading. Shared by hands-on, accessibility, and responsive specs.
 export async function openHandsOnList(page: Page): Promise<void> {
   await page.getByRole('button', { name: 'ガイド' }).first().click();
-  await page.getByRole('button', { name: 'ハンズオン一覧へ' }).click();
+  await page.getByRole('button', { name: 'Hands-onを開く' }).click();
   await expect(page.getByRole('heading', { name: 'ハンズオン', exact: true })).toBeFocused();
 }
 

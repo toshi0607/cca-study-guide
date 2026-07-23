@@ -187,7 +187,7 @@ test('surfaces a struggling card in the weak filter and navigates from the today
   await expect(page.locator('.practice-card')).toHaveCount(1);
 
   await page.getByRole('button', { name: '今日' }).first().click();
-  await expect(page.getByRole('heading', { name: '苦手エリア' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'カード練習でつまずいた領域' })).toBeVisible();
   await expect(page.getByText('記録はまだありません。')).toHaveCount(0);
   const weakRow = page.locator('.weak-row');
   await expect(weakRow).toHaveCount(1);

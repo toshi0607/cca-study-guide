@@ -7,19 +7,32 @@ import type { Card } from '../../content/types';
 import type { Locale } from '../../i18n/locales';
 import { localize, type UiCopy } from '../../i18n/ui';
 import type { ReviewState } from '../../lib/scheduler';
+import type { MockExamAttempt, MockExamSession } from '../../lib/mock-exam';
 import { isWeak } from '../../lib/weakness';
 
-export function TodayView({ locale, copy, now, ready, reviews, dueCards, onStartDueReview, onOpenWeakDomain, onOpenMockExam }: {
+export function TodayView({ locale, copy, now, ready, reviews, dueCards, session, attempts, onStartDueReview, onOpenWeakDomain, onOpenMockExam, onOpenMockExamAnalysis }: {
   locale: Locale;
   copy: UiCopy;
   now: Date | null;
   ready: boolean;
   reviews: Record<string, ReviewState>;
   dueCards: Card[];
+  session: MockExamSession | null;
+  attempts: readonly MockExamAttempt[];
   onStartDueReview: () => void;
   onOpenWeakDomain: (domainId: string) => void;
   onOpenMockExam: () => void;
+  onOpenMockExamAnalysis: () => void;
 }) {
+  // CTA reflects the exam state: resume a running session, reopen results when an
+  // attempt exists, otherwise start fresh. Opening the analysis is a separate
+  // auxiliary link surfaced only once there is an attempt to analyze.
+  const hasAttempt = attempts.length > 0;
+  const mockExamCtaLabel = session
+    ? copy.mockExam.resumeButton
+    : hasAttempt
+      ? copy.mockExam.todayOpenResults
+      : copy.mockExam.startButton;
   const reviewedCount = Object.keys(reviews).filter((id) => cards.some((card) => card.id === id)).length;
   const weakByDomain = useMemo(() => domains
     .map((domain) => ({ domain, count: cards.filter((card) => card.domainId === domain.id && isWeak(reviews[card.id])).length }))
@@ -47,7 +60,10 @@ export function TodayView({ locale, copy, now, ready, reviews, dueCards, onStart
           <div><p class="eyebrow">{copy.mockExam.eyebrow}</p><h2 id="mock-exam-launch-title">{copy.mockExam.title}</h2></div>
           <p>{copy.mockExam.introduction}</p>
         </div>
-        <button type="button" class="mock-exam-launch-button" disabled={!ready} onClick={onOpenMockExam}>{copy.mockExam.startButton} <span aria-hidden="true">→</span></button>
+        <div class="mock-exam-launch-actions">
+          <button type="button" class="mock-exam-launch-button" disabled={!ready} onClick={onOpenMockExam}>{mockExamCtaLabel} <span aria-hidden="true">→</span></button>
+          {ready && hasAttempt && <button type="button" class="mock-exam-launch-analysis" onClick={onOpenMockExamAnalysis}>{copy.mockExam.todayAnalysisLink} <span aria-hidden="true">→</span></button>}
+        </div>
       </section>
       <section class="weak-areas" aria-labelledby="weak-areas-title">
         <div class="section-heading">
@@ -69,9 +85,9 @@ export function TodayView({ locale, copy, now, ready, reviews, dueCards, onStart
       <section class="status-strip" aria-labelledby="status-title">
         <div><p class="eyebrow">{copy.status.eyebrow}</p><h2 id="status-title">{copy.status.title}</h2></div>
         <dl>
-          <div><dt>{copy.status.started}</dt><dd>{ready ? `${formatNumber(reviewedCount, locale)} / ${formatNumber(cards.length, locale)}` : '—'}</dd></div>
+          <div><dt>{copy.status.started}</dt><dd>{ready ? formatNumber(reviewedCount, locale) : '—'}</dd></div>
           <div><dt>{copy.status.notStarted}</dt><dd>{ready ? formatNumber(cards.length - reviewedCount, locale) : '—'}</dd></div>
-          <div><dt>{copy.status.coverage}</dt><dd>{copy.status.objectives(30)}</dd></div>
+          <div><dt>{copy.status.coverage}</dt><dd>{formatNumber(cards.length, locale)}</dd></div>
         </dl>
       </section>
     </div>

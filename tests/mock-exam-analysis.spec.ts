@@ -109,8 +109,8 @@ test('excludes stale answers from the axis analysis but keeps them in the count'
   await seedAttempts(page, [fullAttempt('a1', BASE, { correct: () => true, staleIds })]);
   await openAnalysis(page);
 
-  await expect(page.getByText('staleのため軸別分析から除外した回答：10')).toBeVisible();
-  await expect(page.getByText('compatible回答：50')).toBeVisible();
+  await expect(page.getByText('内容更新のため分析から除外した回答：10')).toBeVisible();
+  await expect(page.getByText('現在の問題と対応する回答：50')).toBeVisible();
   // The stale-content disclaimer is present (no re-grading against current questions).
   await expect(page.getByText('現在の問題で再採点せず')).toBeVisible();
 });
@@ -131,11 +131,11 @@ test('derives the same analysis from storage after a reload', async ({ page }) =
   const staleIds = new Set(questions.slice(0, 4).map((question) => question.id));
   await seedAttempts(page, [fullAttempt('a1', BASE, { correct: () => true, staleIds })]);
   await openAnalysis(page);
-  await expect(page.getByText('compatible回答：56')).toBeVisible();
+  await expect(page.getByText('現在の問題と対応する回答：56')).toBeVisible();
 
   await page.reload();
   await openAnalysis(page);
-  await expect(page.getByText('compatible回答：56')).toBeVisible();
+  await expect(page.getByText('現在の問題と対応する回答：56')).toBeVisible();
 });
 
 test('renders in English', async ({ page }) => {
