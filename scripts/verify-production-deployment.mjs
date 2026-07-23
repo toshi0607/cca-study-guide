@@ -1,37 +1,41 @@
-// Verifies that the live Production deployment serves the SAME built app-island
-// assets as a local `dist/` build. This is a fast smoke check for the deploy
-// pipeline: it does NOT poll or wait for a deploy to finish — a single bounded
-// fetch per resource. Failing fast on a deploy race (production still on an
-// older build) is intentional and preferred over hiding it behind retries.
+// Verifies that the live Production deployment serves the SAME build as a local
+// `dist/` build — the WHOLE deployable output, identified two ways:
+//   1. the source `commit` recorded in the build manifest, and
+//   2. the sha256 of EVERY served file (JS, CSS, HTML, fonts, icons, …).
+// This is intentionally broader than diffing App.*.js / client.*.js alone: a
+// CSS-only, HTML-metadata-only, locale-page-only, or static-asset-only change
+// is still detected. See scripts/deployment-manifest.mjs for how the manifest
+// is generated (at build time, and served by Vercel at /deployment-manifest.json).
 //
-// What it checks:
-//   1. Local `dist/index.html` (ja) references an App island + astro client
-//      runtime under `/_astro/` (content-hashed filenames).
-//   2. Local `dist/en/index.html` references the SAME two assets.
-//   3. Production `/` (200, no redirect off the allowed host) references some
-//      App + client assets, and Production `/en/` references the same App asset
-//      (same-deploy consistency across locales).
-//   4. Production asset FILENAMES match local (hash-in-name), AND the fetched
-//      Production asset BYTES match the local `dist/_astro/...` bytes by sha256
-//      and length. Filename match is necessary; byte/hash match is authoritative.
+// It also cross-checks that Production's served App island asset actually hashes
+// to what Production's own manifest claims — so a stale-but-present manifest
+// cannot mask a mismatched deploy.
+//
+// This is a fast smoke check: a single bounded fetch per resource, NO polling.
+// Failing fast on a deploy race (Production still on an older build, or the new
+// manifest not yet served) is intentional and preferred over hiding it.
 //
 // CLI / env convention (all optional):
 //   --dist <dir>   | env DEPLOY_DIST      local build dir      (default: dist)
 //   --base <url>   | env DEPLOY_BASE_URL  production base URL   (default: https://cca.toshi0607.com)
 //                                         must be https: and host on the allowlist
+//   --commit <sha> | env DEPLOY_COMMIT    the audited commit (e.g. the workflow's
+//                                         checked-out main HEAD); recorded as
+//                                         `testedCommit` and compared to production
 //   --json <path>  | env DEPLOY_JSON      write a machine-readable JSON report
+//                                         (ALWAYS written on failure too)
 //
-// Exit codes: 0 only when everything matches. Non-zero on: missing local build,
-// HTTP failure / redirect off the allowed host, 404 on an asset, HTML parse
-// failure (no App/client asset), any filename/byte/hash mismatch, disallowed
-// host, or ja/en (local or production) divergence.
+// Exit codes: 0 only when Production serves this exact build (files + commit).
+// Non-zero on: missing/invalid local manifest, HTTP failure / redirect off the
+// allowed host, missing/invalid production manifest, served-asset mismatch, any
+// file hash difference, a differing commit, or a disallowed host.
 //
 // Node 22+ (global fetch, node:crypto, node:fs/promises, AbortSignal.timeout).
 
-import { createHash } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { MANIFEST_FILENAME, MANIFEST_VERSION, sha256Hex } from './deployment-manifest.mjs';
 
 /** Default production host and the host allowlist for `--base` overrides. */
 export const DEFAULT_BASE_URL = 'https://cca.toshi0607.com';
@@ -40,51 +44,28 @@ export const DEFAULT_ALLOWED_HOSTS = ['cca.toshi0607.com'];
 /** Bounded per-resource fetch timeout. No retries — a single fetch each. */
 export const FETCH_TIMEOUT_MS = 20000;
 
-/** Exact phrase required when production is valid but serves an older build. */
+/** Exact phrase required when Production is valid but serves an older build. */
 export const NOT_YET_SERVED_MESSAGE = 'Production does not yet serve this main build';
 
 /**
- * @typedef {{ file: string, path: string }} AssetRef
- * @typedef {{ app: AssetRef, client: AssetRef }} AssetRefs
- * @typedef {{ file: string, sha256: string, bytes: number }} AssetDigest
- * @typedef {{ app: AssetDigest, client: AssetDigest }} DeploymentDigest
- */
-
-/**
- * Extract the App island and astro client runtime asset paths from page HTML.
- * The App island is referenced as `component-url="/_astro/App.<hash>.js"`; the
- * client runtime appears as a bare `/_astro/client.<hash>.js` reference.
+ * Extract the App island asset path from page HTML. The App island is
+ * referenced as `component-url="/_astro/App.<hash>.js"`.
  * @param {string} html
- * @returns {AssetRefs}
- * @throws if either asset cannot be found.
+ * @returns {string} the `/_astro/App.<hash>.js` path
+ * @throws if it cannot be found.
  */
-export function extractAppAssets(html) {
+export function extractAppAsset(html) {
   if (typeof html !== 'string' || html.length === 0) {
-    throw new Error('extractAppAssets: HTML input is empty');
+    throw new Error('extractAppAsset: HTML input is empty');
   }
-  const appMatch = html.match(/\/_astro\/App\.[A-Za-z0-9_-]+\.js/);
-  const clientMatch = html.match(/\/_astro\/client\.[A-Za-z0-9_-]+\.js/);
-  if (!appMatch) {
-    throw new Error('extractAppAssets: no App island asset (/_astro/App.<hash>.js) found in HTML');
-  }
-  if (!clientMatch) {
-    throw new Error('extractAppAssets: no astro client asset (/_astro/client.<hash>.js) found in HTML');
-  }
-  return {
-    app: { file: assetFilename(appMatch[0]), path: appMatch[0] },
-    client: { file: assetFilename(clientMatch[0]), path: clientMatch[0] },
-  };
+  const match = html.match(/\/_astro\/App\.[A-Za-z0-9_-]+\.js/);
+  if (!match) throw new Error('extractAppAsset: no App island asset (/_astro/App.<hash>.js) found in HTML');
+  return match[0];
 }
 
-/**
- * Basename of an `/_astro/...` asset path.
- * @param {string} assetPath
- * @returns {string}
- */
-export function assetFilename(assetPath) {
-  const clean = assetPath.split('?')[0].split('#')[0];
-  const idx = clean.lastIndexOf('/');
-  return idx === -1 ? clean : clean.slice(idx + 1);
+/** The manifest key (dist-relative POSIX path) for an `/_astro/...` served path. */
+export function manifestKeyForPath(assetPath) {
+  return assetPath.replace(/^\/+/, '');
 }
 
 /**
@@ -93,7 +74,6 @@ export function assetFilename(assetPath) {
  * @param {string} rawBase
  * @param {string[]} [allowedHosts]
  * @returns {URL}
- * @throws if the scheme is not https: or the host is not allowlisted.
  */
 export function parseBaseUrl(rawBase, allowedHosts = DEFAULT_ALLOWED_HOSTS) {
   let url;
@@ -106,97 +86,55 @@ export function parseBaseUrl(rawBase, allowedHosts = DEFAULT_ALLOWED_HOSTS) {
     throw new Error(`parseBaseUrl: base URL must use https: (got ${url.protocol}) — ${rawBase}`);
   }
   if (!allowedHosts.includes(url.host)) {
-    throw new Error(
-      `parseBaseUrl: host "${url.host}" is not allowed. Allowed hosts: ${allowedHosts.join(', ')}`,
-    );
+    throw new Error(`parseBaseUrl: host "${url.host}" is not allowed. Allowed hosts: ${allowedHosts.join(', ')}`);
   }
   return url;
 }
 
 /**
- * sha256 hex digest of a buffer/Uint8Array.
- * @param {Uint8Array | Buffer} data
- * @returns {string}
+ * Validate a parsed manifest object shape.
+ * @param {unknown} value
+ * @returns {value is { version: number, commit: string | null, files: Record<string,string> }}
  */
-export function sha256Hex(data) {
-  return createHash('sha256').update(data).digest('hex');
+export function isValidManifest(value) {
+  if (value === null || typeof value !== 'object') return false;
+  const m = /** @type {Record<string, unknown>} */ (value);
+  if (m.version !== MANIFEST_VERSION) return false;
+  if (!(typeof m.commit === 'string' || m.commit === null)) return false;
+  if (m.files === null || typeof m.files !== 'object') return false;
+  return Object.values(/** @type {Record<string, unknown>} */ (m.files)).every((h) => typeof h === 'string');
 }
 
 /**
- * Digest a raw asset buffer into { file, sha256, bytes }.
- * @param {string} file
- * @param {Uint8Array | Buffer} data
- * @returns {AssetDigest}
+ * Compare two build manifests. Pure — no I/O. `auditedCommit`, when given (the
+ * workflow's checked-out main HEAD), is the authoritative "tested" commit and is
+ * compared to Production's; otherwise the local manifest's commit is used.
+ * @param {{ local: { commit: string|null, files: Record<string,string> }, production: { commit: string|null, files: Record<string,string> }, auditedCommit?: string|null }} args
+ * @returns {{ ok: boolean, notYetServed: boolean, mismatches: string[], testedCommit: string|null, productionCommit: string|null }}
  */
-export function digestAsset(file, data) {
-  return { file, sha256: sha256Hex(data), bytes: data.byteLength ?? data.length };
-}
-
-/**
- * Compare local vs production deployment digests. Pure — no I/O.
- * `production` app/client may carry sha256/bytes = null when only the filename
- * is known (older-deploy fast path, byte fetch skipped).
- * @param {{ local: DeploymentDigest, production: { app: AssetDigest, client: {file:string, sha256?: string|null, bytes?: number|null} } }} args
- * @returns {{ ok: boolean, notYetServed: boolean, mismatches: string[] }}
- */
-export function compareDeployment({ local, production }) {
+export function compareManifests({ local, production, auditedCommit = null }) {
   const mismatches = [];
-  let filenameMismatch = false;
+  const lf = local.files;
+  const pf = production.files;
 
-  for (const key of /** @type {const} */ (['app', 'client'])) {
-    const l = local[key];
-    const p = production[key];
-    if (l.file !== p.file) {
-      filenameMismatch = true;
-      mismatches.push(`${key}: filename mismatch (local ${l.file} vs production ${p.file})`);
-      continue;
-    }
-    // Filenames match — the authoritative check is bytes/hash, when available.
-    if (p.sha256 != null && l.sha256 !== p.sha256) {
-      mismatches.push(`${key}: sha256 mismatch for ${l.file} (local ${l.sha256} vs production ${p.sha256})`);
-    }
-    if (p.bytes != null && l.bytes !== p.bytes) {
-      mismatches.push(`${key}: byte-length mismatch for ${l.file} (local ${l.bytes} vs production ${p.bytes})`);
-    }
+  for (const key of Object.keys(lf).sort()) {
+    if (!(key in pf)) mismatches.push(`missing on production: ${key}`);
+    else if (lf[key] !== pf[key]) mismatches.push(`content differs: ${key} (local ${lf[key].slice(0, 12)}… vs production ${pf[key].slice(0, 12)}…)`);
+  }
+  for (const key of Object.keys(pf).sort()) {
+    if (!(key in lf)) mismatches.push(`extra on production: ${key}`);
+  }
+  const filesMatch = mismatches.length === 0;
+
+  const testedCommit = auditedCommit ?? local.commit ?? null;
+  const productionCommit = production.commit ?? null;
+  let commitMismatch = false;
+  if (testedCommit && productionCommit && testedCommit !== productionCommit) {
+    commitMismatch = true;
+    mismatches.push(`commit differs (tested ${testedCommit} vs production ${productionCommit})`);
   }
 
-  return { ok: mismatches.length === 0, notYetServed: filenameMismatch, mismatches };
-}
-
-/**
- * Fetch a URL with a bounded timeout. One shot, no retry.
- * @param {typeof fetch} fetchImpl
- * @param {string} url
- * @param {number} timeoutMs
- * @returns {Promise<Response>}
- */
-async function fetchWithTimeout(fetchImpl, url, timeoutMs) {
-  try {
-    return await fetchImpl(url, { redirect: 'follow', signal: AbortSignal.timeout(timeoutMs) });
-  } catch (err) {
-    const reason = err && err.name === 'TimeoutError' ? `timed out after ${timeoutMs}ms` : String(err?.message ?? err);
-    throw new Error(`fetch failed for ${url}: ${reason}`);
-  }
-}
-
-/**
- * Fetch page HTML from production, asserting 200 and that the final URL host
- * stays on the allowlist (a redirect off-host is a failure).
- * @param {typeof fetch} fetchImpl
- * @param {URL} pageUrl
- * @param {string[]} allowedHosts
- * @returns {Promise<string>}
- */
-async function fetchProductionHtml(fetchImpl, pageUrl, allowedHosts) {
-  const res = await fetchWithTimeout(fetchImpl, pageUrl.toString(), FETCH_TIMEOUT_MS);
-  const finalHost = safeHost(res.url) ?? pageUrl.host;
-  if (!allowedHosts.includes(finalHost)) {
-    throw new Error(`production HTML ${pageUrl} redirected off allowed host to ${finalHost}`);
-  }
-  if (res.status !== 200) {
-    throw new Error(`production HTML ${pageUrl} returned HTTP ${res.status}`);
-  }
-  return await res.text();
+  return { ok: filesMatch && !commitMismatch, notYetServed: !filesMatch || commitMismatch, mismatches, testedCommit, productionCommit };
 }
 
 /** Host of a URL string, or null if unparseable/empty. */
@@ -209,209 +147,167 @@ function safeHost(urlStr) {
   }
 }
 
-/**
- * Fetch a production asset's bytes, asserting 200 (404 → error).
- * @param {typeof fetch} fetchImpl
- * @param {URL} base
- * @param {string} assetPath e.g. "/_astro/App.<hash>.js"
- * @param {string[]} allowedHosts
- * @returns {Promise<Buffer>}
- */
-async function fetchProductionAsset(fetchImpl, base, assetPath, allowedHosts) {
-  const url = new URL(assetPath, base);
+/** Fetch a URL with a bounded timeout. One shot, no retry. */
+async function fetchWithTimeout(fetchImpl, url, timeoutMs) {
+  try {
+    return await fetchImpl(url, { redirect: 'follow', signal: AbortSignal.timeout(timeoutMs) });
+  } catch (err) {
+    const reason = err && err.name === 'TimeoutError' ? `timed out after ${timeoutMs}ms` : String(err?.message ?? err);
+    throw new Error(`fetch failed for ${url}: ${reason}`);
+  }
+}
+
+/** GET a production resource, asserting the final host stays on the allowlist. */
+async function fetchProduction(fetchImpl, url, allowedHosts) {
   const res = await fetchWithTimeout(fetchImpl, url.toString(), FETCH_TIMEOUT_MS);
-  // Defense-in-depth: an asset that redirects off the allowed host is rejected
-  // even though the byte/sha256 check below would already catch mismatched
-  // content — we never trust bytes fetched from an unexpected origin.
   const finalHost = safeHost(res.url) ?? url.host;
   if (!allowedHosts.includes(finalHost)) {
-    throw new Error(`production asset ${url} redirected off allowed host to ${finalHost}`);
+    throw new Error(`${url} redirected off allowed host to ${finalHost}`);
   }
-  if (res.status !== 200) {
-    throw new Error(`production asset ${url} returned HTTP ${res.status}`);
-  }
-  const buf = Buffer.from(await res.arrayBuffer());
-  return buf;
+  return res;
 }
 
 /**
  * Core verification. All I/O is injected so this is unit-testable offline.
  * @param {Object} args
  * @param {string} args.distDir
- * @param {string} args.baseUrl raw base URL string (validated here)
+ * @param {string} args.baseUrl
  * @param {string[]} [args.allowedHosts]
+ * @param {string | null} [args.auditedCommit]
  * @param {typeof fetch} args.fetchImpl
- * @param {(relPath: string) => Promise<Buffer|Uint8Array>} args.readLocalFile reads a path relative to distDir
+ * @param {(relPath: string) => Promise<Buffer|Uint8Array|string>} args.readLocalFile reads a path relative to distDir
  * @param {() => Date} [args.now]
- * @returns {Promise<{ ok: boolean, exitCode: number, summaryLines: string[], report: object|null, error: string|null }>}
+ * @returns {Promise<{ ok: boolean, exitCode: number, summaryLines: string[], report: object, error: string|null }>}
  */
 export async function runVerification({
   distDir,
   baseUrl,
   allowedHosts = DEFAULT_ALLOWED_HOSTS,
+  auditedCommit = null,
   fetchImpl,
   readLocalFile,
   now = () => new Date(),
 }) {
   const lines = [];
-  /** @param {string} msg @param {object|null} [report] */
-  const fail = (msg, report = null) => ({ ok: false, exitCode: 1, summaryLines: lines, report, error: msg });
+  const checkedAt = now().toISOString();
+  let host = baseUrl;
 
+  /**
+   * @param {string} stage @param {string} msg
+   * @param {{ testedCommit?: string|null, productionCommit?: string|null, mismatches?: string[] }} [extra]
+   */
+  const fail = (stage, msg, extra = {}) => {
+    const report = buildReport({
+      ok: false,
+      stage,
+      host,
+      testedCommit: auditedCommit ?? extra.testedCommit ?? null,
+      productionCommit: extra.productionCommit ?? null,
+      mismatches: extra.mismatches ?? [],
+      error: msg,
+      checkedAt,
+    });
+    return { ok: false, exitCode: 1, summaryLines: lines, report, error: msg };
+  };
+
+  // 0. base URL
   let base;
   try {
     base = parseBaseUrl(baseUrl, allowedHosts);
+    host = base.origin;
   } catch (err) {
-    return fail(String(err.message ?? err));
+    return fail('parse-base-url', String(err.message ?? err));
   }
-  lines.push(`Tested host: ${base.origin}`);
+  lines.push(`Tested host: ${host}`);
 
-  // 1. Local ja HTML must exist.
-  let jaHtml;
+  // 1. local manifest (built by astro:build:done)
+  let localManifest;
   try {
-    jaHtml = decode(await readLocalFile('index.html'));
+    const raw = decode(await readLocalFile(MANIFEST_FILENAME));
+    localManifest = JSON.parse(raw);
   } catch {
-    return fail(`local build not found: could not read ${join(distDir, 'index.html')}. Run \`pnpm build\` first.`);
+    return fail('read-local-manifest', `local build manifest not found or invalid: ${join(distDir, MANIFEST_FILENAME)}. Run \`pnpm build\` first.`);
   }
+  if (!isValidManifest(localManifest)) {
+    return fail('read-local-manifest', `local manifest has an unexpected shape (expected version ${MANIFEST_VERSION}).`);
+  }
+  const testedCommit = auditedCommit ?? localManifest.commit ?? null;
+  lines.push(`Tested commit: ${testedCommit ?? '(unknown)'} — ${Object.keys(localManifest.files).length} files`);
 
-  // 2. Extract local ja assets; assert local en references the same two.
-  let localRefs;
+  // 2. production manifest
+  let productionManifest;
   try {
-    localRefs = extractAppAssets(jaHtml);
-  } catch (err) {
-    return fail(`local ja HTML: ${err.message}`);
-  }
-  try {
-    const enHtml = decode(await readLocalFile('en/index.html'));
-    const localEnRefs = extractAppAssets(enHtml);
-    if (localEnRefs.app.file !== localRefs.app.file || localEnRefs.client.file !== localRefs.client.file) {
-      return fail(
-        `local /en/ references different assets than / (en app ${localEnRefs.app.file} / client ${localEnRefs.client.file} vs ${localRefs.app.file} / ${localRefs.client.file})`,
-      );
+    const res = await fetchProduction(fetchImpl, new URL(`/${MANIFEST_FILENAME}`, base), allowedHosts);
+    if (res.status === 404) {
+      lines.push(NOT_YET_SERVED_MESSAGE, `(production does not serve /${MANIFEST_FILENAME})`);
+      return fail('fetch-production-manifest', NOT_YET_SERVED_MESSAGE, { testedCommit });
     }
-  } catch (err) {
-    return fail(`local en HTML: ${err.message}`);
-  }
-
-  // Local asset digests (authoritative baseline).
-  /** @type {DeploymentDigest} */
-  let localDigest;
-  try {
-    const appBuf = await readLocalFile(join('_astro', localRefs.app.file));
-    const clientBuf = await readLocalFile(join('_astro', localRefs.client.file));
-    localDigest = {
-      app: digestAsset(localRefs.app.file, appBuf),
-      client: digestAsset(localRefs.client.file, clientBuf),
-    };
-  } catch (err) {
-    return fail(`local asset bytes: ${err.message}`);
-  }
-  lines.push(
-    `Local    App: ${localDigest.app.file} sha256=${localDigest.app.sha256} bytes=${localDigest.app.bytes}`,
-    `Local client: ${localDigest.client.file} sha256=${localDigest.client.sha256} bytes=${localDigest.client.bytes}`,
-  );
-
-  // 3. Production `/` HTML.
-  let prodRefs;
-  try {
-    const prodHtml = await fetchProductionHtml(fetchImpl, new URL('/', base), allowedHosts);
-    prodRefs = extractAppAssets(prodHtml);
-  } catch (err) {
-    return fail(String(err.message ?? err));
-  }
-
-  // 5. Production `/en/` must reference the same App asset as `/` (same deploy).
-  try {
-    const prodEnHtml = await fetchProductionHtml(fetchImpl, new URL('/en/', base), allowedHosts);
-    const prodEnRefs = extractAppAssets(prodEnHtml);
-    if (prodEnRefs.app.file !== prodRefs.app.file) {
-      return fail(
-        `production /en/ references a different App asset than / (en ${prodEnRefs.app.file} vs ${prodRefs.app.file}) — inconsistent deploy`,
-      );
+    if (res.status !== 200) {
+      return fail('fetch-production-manifest', `production /${MANIFEST_FILENAME} returned HTTP ${res.status}`, { testedCommit });
     }
+    productionManifest = JSON.parse(await res.text());
   } catch (err) {
-    return fail(String(err.message ?? err));
+    return fail('fetch-production-manifest', String(err.message ?? err), { testedCommit });
+  }
+  if (!isValidManifest(productionManifest)) {
+    return fail('fetch-production-manifest', `production manifest has an unexpected shape (expected version ${MANIFEST_VERSION}).`, { testedCommit });
+  }
+  const productionCommit = productionManifest.commit ?? null;
+  lines.push(`Production commit: ${productionCommit ?? '(unknown)'} — ${Object.keys(productionManifest.files).length} files`);
+
+  // 3. anti-staleness cross-check: the App island asset Production actually
+  //    serves must hash to what Production's own manifest claims.
+  try {
+    const htmlRes = await fetchProduction(fetchImpl, new URL('/', base), allowedHosts);
+    if (htmlRes.status !== 200) throw new Error(`production / returned HTTP ${htmlRes.status}`);
+    const appPath = extractAppAsset(await htmlRes.text());
+    const key = manifestKeyForPath(appPath);
+    const claimed = productionManifest.files[key];
+    if (!claimed) {
+      return fail('verify-served-asset', `production serves ${appPath} but its manifest has no entry for ${key}`, { testedCommit, productionCommit });
+    }
+    const assetRes = await fetchProduction(fetchImpl, new URL(appPath, base), allowedHosts);
+    if (assetRes.status !== 200) throw new Error(`production asset ${appPath} returned HTTP ${assetRes.status}`);
+    const served = sha256Hex(Buffer.from(await assetRes.arrayBuffer()));
+    if (served !== claimed) {
+      return fail('verify-served-asset', `production manifest is stale: served ${appPath} sha256 ${served.slice(0, 12)}… != manifest ${claimed.slice(0, 12)}…`, { testedCommit, productionCommit });
+    }
+    lines.push(`Served-asset cross-check: ${appPath} matches production manifest`);
+  } catch (err) {
+    return fail('verify-served-asset', String(err.message ?? err), { testedCommit, productionCommit });
   }
 
-  const checkedAt = now().toISOString();
-
-  // 4a. Filename comparison. A mismatch means production is on an older build.
-  const filenameVerdict = compareDeployment({
-    local: localDigest,
-    production: {
-      app: { file: prodRefs.app.file, sha256: null, bytes: null },
-      client: { file: prodRefs.client.file, sha256: null, bytes: null },
-    },
-  });
-  if (filenameVerdict.notYetServed) {
-    lines.push(
-      `Prod     App: ${prodRefs.app.file} (filename mismatch)`,
-      `Prod  client: ${prodRefs.client.file} (filename mismatch)`,
-      `Verdict App:    MISMATCH`,
-      `Verdict client: ${prodRefs.client.file === localDigest.client.file ? 'match (filename)' : 'MISMATCH'}`,
-      NOT_YET_SERVED_MESSAGE,
-    );
+  // 4. full manifest comparison (files + commit)
+  const verdict = compareManifests({ local: localManifest, production: productionManifest, auditedCommit });
+  if (!verdict.ok) {
+    lines.push(`Mismatches (${verdict.mismatches.length}):`);
+    for (const m of verdict.mismatches.slice(0, 20)) lines.push(`  - ${m}`);
+    if (verdict.mismatches.length > 20) lines.push(`  … and ${verdict.mismatches.length - 20} more`);
+    if (verdict.notYetServed) lines.push(NOT_YET_SERVED_MESSAGE);
     const report = buildReport({
-      host: base.origin,
-      ok: false,
-      local: localDigest,
-      production: {
-        app: { file: prodRefs.app.file, sha256: null, bytes: null },
-        client: { file: prodRefs.client.file, sha256: null, bytes: null },
-      },
-      mismatches: filenameVerdict.mismatches,
-      checkedAt,
+      ok: false, stage: 'compare-manifests', host,
+      testedCommit: verdict.testedCommit, productionCommit: verdict.productionCommit,
+      mismatches: verdict.mismatches, error: verdict.mismatches.join('; '), checkedAt,
     });
     return { ok: false, exitCode: 1, summaryLines: lines, report, error: NOT_YET_SERVED_MESSAGE };
   }
 
-  // 4b. Filenames match — authoritative byte/hash check.
-  /** @type {DeploymentDigest} */
-  let prodDigest;
-  try {
-    const appBuf = await fetchProductionAsset(fetchImpl, base, prodRefs.app.path, allowedHosts);
-    const clientBuf = await fetchProductionAsset(fetchImpl, base, prodRefs.client.path, allowedHosts);
-    prodDigest = {
-      app: digestAsset(prodRefs.app.file, appBuf),
-      client: digestAsset(prodRefs.client.file, clientBuf),
-    };
-  } catch (err) {
-    return fail(String(err.message ?? err));
-  }
-  lines.push(
-    `Prod     App: ${prodDigest.app.file} sha256=${prodDigest.app.sha256} bytes=${prodDigest.app.bytes}`,
-    `Prod  client: ${prodDigest.client.file} sha256=${prodDigest.client.sha256} bytes=${prodDigest.client.bytes}`,
-  );
-
-  const verdict = compareDeployment({ local: localDigest, production: prodDigest });
-  const appOk = !verdict.mismatches.some((m) => m.startsWith('app:'));
-  const clientOk = !verdict.mismatches.some((m) => m.startsWith('client:'));
-  lines.push(
-    `Verdict App:    ${appOk ? 'match' : 'MISMATCH'}`,
-    `Verdict client: ${clientOk ? 'match' : 'MISMATCH'}`,
-    `Overall: ${verdict.ok ? 'MATCH — production serves this build' : 'MISMATCH'}`,
-  );
-
+  lines.push(`Overall: MATCH — production serves this build (${Object.keys(localManifest.files).length} files, commit ${verdict.testedCommit ?? '(unknown)'})`);
   const report = buildReport({
-    host: base.origin,
-    ok: verdict.ok,
-    local: localDigest,
-    production: prodDigest,
-    mismatches: verdict.mismatches,
-    checkedAt,
+    ok: true, stage: 'complete', host,
+    testedCommit: verdict.testedCommit, productionCommit: verdict.productionCommit,
+    mismatches: [], error: null, checkedAt,
   });
-
-  if (!verdict.ok) {
-    return { ok: false, exitCode: 1, summaryLines: lines, report, error: verdict.mismatches.join('; ') };
-  }
   return { ok: true, exitCode: 0, summaryLines: lines, report, error: null };
 }
 
 /**
- * Assemble the JSON report object.
- * @param {{ host: string, ok: boolean, local: DeploymentDigest, production: object, mismatches: string[], checkedAt: string }} args
+ * Assemble the JSON report object. Always returned (never null), even on early
+ * failures, so the workflow artifact always explains what happened.
+ * @param {{ ok: boolean, stage: string, host: string, testedCommit: string|null, productionCommit: string|null, mismatches: string[], error: string|null, checkedAt: string }} args
  */
-export function buildReport({ host, ok, local, production, mismatches, checkedAt }) {
-  return { host, ok, local, production, mismatches, checkedAt };
+export function buildReport({ ok, stage, host, testedCommit, productionCommit, mismatches, error, checkedAt }) {
+  return { ok, stage, host, testedCommit, productionCommit, mismatches, error, checkedAt };
 }
 
 /** Decode a Buffer/Uint8Array/string to string (utf8). */
@@ -423,13 +319,14 @@ function decode(data) {
 /**
  * Parse argv (flags) with env fallbacks.
  * @param {string[]} argv
- * @returns {{ distDir: string, baseUrl: string, jsonPath: string|null }}
+ * @returns {{ distDir: string, baseUrl: string, jsonPath: string|null, commit: string|null }}
  */
 export function parseCliArgs(argv) {
   const out = {
     distDir: process.env.DEPLOY_DIST || 'dist',
     baseUrl: process.env.DEPLOY_BASE_URL || DEFAULT_BASE_URL,
     jsonPath: process.env.DEPLOY_JSON || null,
+    commit: process.env.DEPLOY_COMMIT || null,
   };
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
@@ -440,15 +337,17 @@ export function parseCliArgs(argv) {
       return v;
     };
     // A bare `--` is the args separator that `pnpm run <script> -- <args>`
-    // forwards verbatim; skip it so the workflow's `pnpm verify:production --
-    // --json <path>` reaches this parser cleanly.
+    // forwards verbatim; skip it so `pnpm verify:production -- --json <path>`
+    // reaches this parser cleanly.
     if (arg === '--') continue;
     else if (arg === '--dist') out.distDir = next();
     else if (arg === '--base') out.baseUrl = next();
     else if (arg === '--json') out.jsonPath = next();
+    else if (arg === '--commit') out.commit = next();
     else if (arg.startsWith('--dist=')) out.distDir = arg.slice('--dist='.length);
     else if (arg.startsWith('--base=')) out.baseUrl = arg.slice('--base='.length);
     else if (arg.startsWith('--json=')) out.jsonPath = arg.slice('--json='.length);
+    else if (arg.startsWith('--commit=')) out.commit = arg.slice('--commit='.length);
     else throw new Error(`unknown argument: ${arg}`);
   }
   return out;
@@ -464,18 +363,19 @@ async function main() {
     process.exit(2);
   }
 
-  const readLocalFile = (relPath) => readFile(join(cli.distDir, relPath));
-
   const result = await runVerification({
     distDir: cli.distDir,
     baseUrl: cli.baseUrl,
+    auditedCommit: cli.commit,
     fetchImpl: fetch,
-    readLocalFile,
+    readLocalFile: (relPath) => readFile(join(cli.distDir, relPath)),
   });
 
   for (const line of result.summaryLines) console.log(line);
 
-  if (cli.jsonPath && result.report) {
+  // The report is ALWAYS written when a path is given — including on failure —
+  // so the CI artifact alone explains what happened.
+  if (cli.jsonPath) {
     try {
       const { writeFile, mkdir } = await import('node:fs/promises');
       const { dirname } = await import('node:path');
@@ -492,7 +392,6 @@ async function main() {
   process.exit(result.exitCode);
 }
 
-// Run main() only when executed directly as a script (not when imported by tests).
 const invokedUrl = process.argv[1] ? pathToFileURL(process.argv[1]).href : '';
 if (import.meta.url === invokedUrl) {
   main().catch((err) => {

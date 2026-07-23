@@ -41,11 +41,26 @@ pnpm test:e2e:production
 ```
 
 `pnpm verify:production` runs `scripts/verify-production-deployment.mjs`. It
-compares the local `dist/` app-island assets (`/_astro/App.*.js`,
-`/_astro/client.*.js`) to what Production currently serves — byte-for-byte
-and by sha256, plus filename — and confirms `/en/` matches too. It exits
-non-zero on any mismatch. Pass `--json <path>` to also write a machine
-report.
+proves Production serves the **whole** local `dist/` build, not just its two
+JS island bundles, via a **deployment manifest**:
+
+- Every build (local and Vercel) generates `dist/deployment-manifest.json`
+  through an `astro:build:done` hook (`scripts/deployment-manifest.mjs`). It
+  records the source `commit` plus the sha256 of **every** served file — JS,
+  CSS, HTML, fonts, icons, images. HTML is hashed after normalizing the only
+  two per-build/per-env tokens (the GA measurement id and the random
+  `astro-island uid`), so a real metadata change still changes the hash.
+- Vercel serves that manifest at `/deployment-manifest.json`. The check fetches
+  it, compares the full file-hash map and the `commit` against the local build,
+  and cross-checks that the App island asset Production actually serves hashes
+  to what its own manifest claims (so a stale manifest can't mask a mismatch).
+- This catches CSS-only, HTML/SEO-metadata-only, locale-page-only, and
+  static-asset-only changes — cases two-bundle diffing would miss.
+
+Pass `--commit <sha>` to record/compare the audited commit (the workflow passes
+`main`'s checked-out HEAD) and `--json <path>` to write a machine report (always
+written, even on failure, with the failing `stage`). It exits non-zero on any
+mismatch, a missing/older Production manifest, or an off-allowlist host.
 
 `pnpm test:e2e:production` runs the Production Playwright suite
 (`playwright.production.config.ts`, tests under `tests/production/`) against
@@ -72,7 +87,7 @@ for a test run to corrupt. Concretely:
 
 | Artifact | From job | Contains |
 |---|---|---|
-| `production-deployment-report` | `verify-deployment` | JSON identity report (local vs. Production asset hashes/filenames, `/en/` check) |
+| `production-deployment-report` | `verify-deployment` | JSON identity report (`ok`, audited/production `commit`, `stage`, per-file `mismatches`) — written even on failure |
 | `production-playwright-report` | `production-smoke` | Playwright HTML report with traces, screenshots, and videos for any failing test |
 
 Download artifacts from the workflow run page (`gh run view <run-id>` /
@@ -98,9 +113,11 @@ Not every red run is a real regression:
 
 ## Deployment mismatch ("Production does not yet serve this main build")
 
-`pnpm verify:production` prints this when Production's assets don't match
-the local `main` build. This is almost always a **deploy race**, not a
-regression: Vercel hasn't finished deploying the latest `main` commit yet.
+`pnpm verify:production` prints this when Production's manifest is absent or
+does not match the local `main` build (a differing file hash or `commit`). This
+is almost always a **deploy race**, not a regression: Vercel hasn't finished
+deploying the latest `main` commit yet, so it is still serving the previous
+build's manifest (or none for a brand-new file).
 
 What to do:
 

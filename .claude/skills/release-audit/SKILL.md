@@ -52,11 +52,14 @@ Steps:
      ```
 3. **Check deployment identity.** Read the result of `pnpm verify:production`
    (or download the `production-deployment-report` artifact from the
-   `verify-deployment` job). It compares local `dist/` app-island assets
-   (`/_astro/App.*.js`, `/_astro/client.*.js`) byte/sha256 + filename against
-   what Production serves, and checks `/en/`. A non-zero exit, or the message
-   `Production does not yet serve this main build`, means identity FAILED —
-   this stops the smoke job in CI and should stop the audit too (see
+   `verify-deployment` job). It compares Production's `/deployment-manifest.json`
+   (the source `commit` plus the sha256 of **every** served file — JS, CSS,
+   HTML, fonts, icons) against a local `main` build, so a CSS-only or
+   metadata-only change is still detected, and cross-checks the served App
+   asset against the manifest. The workflow always audits `main` (checks out
+   `ref: main`, passes the checked-out SHA as `--commit`). A non-zero exit, or
+   the message `Production does not yet serve this main build`, means identity
+   FAILED — this stops the smoke job in CI and should stop the audit too (see
    `docs/PRODUCTION_SMOKE.md` for the deploy-race triage before calling it a
    regression).
 4. **Check Production Playwright result.** Read the result of

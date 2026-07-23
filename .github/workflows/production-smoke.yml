@@ -14,33 +14,47 @@ concurrency:
 jobs:
   verify-deployment:
     runs-on: ubuntu-latest
+    outputs:
+      audited-sha: ${{ steps.sha.outputs.audited }}
     steps:
+      # Always audit `main` — never the arbitrary ref a workflow_dispatch was
+      # started from. This workflow proves "production serves main", so it must
+      # not be tricked into passing by dispatching a feature branch whose build
+      # happens to match production.
       - uses: actions/checkout@v4
+        with:
+          ref: main
+      # Record the ACTUAL checked-out commit; the identity check compares this
+      # to the commit baked into production's build manifest, and the summary
+      # reports it (not github.sha, which for workflow_dispatch is the ref the
+      # workflow file lives on, not necessarily what we audited).
+      - id: sha
+        run: echo "audited=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      # Intentionally NOT setting PUBLIC_GA_MEASUREMENT_ID here (unlike e2e.yml
-      # / perf.yml, which use a test id for PR builds). This build's asset
-      # bytes are compared against what Vercel actually served in production,
-      # and Vercel builds with the real GA id. The GA id only affects an
-      # inline snippet, not the hashed /_astro/App.*.js or client.*.js island
-      # bundles that scripts/verify-production-deployment.mjs diffs — so the
-      # identity check is robust either way, but building without a forced
-      # test id keeps this closer to the real production build.
+      # Build WITH a GA measurement id so the analytics snippet is structurally
+      # present, exactly as production's build has it. The identity check hashes
+      # HTML after normalizing the GA id and the per-build astro-island uid, so
+      # the specific value here is irrelevant — but the snippet must exist or the
+      # HTML would differ from production by a whole block. The manifest compares
+      # the full dist output (all JS/CSS/HTML/assets), not just the island bundles.
       - run: pnpm build
+        env:
+          PUBLIC_GA_MEASUREMENT_ID: G-TEST123456
       - run: mkdir -p tmp
-      # Exact JSON-output flag is owned by scripts/verify-production-deployment.mjs;
-      # adjust `--json <path>` here if that script's CLI surface changes.
-      - run: pnpm verify:production -- --json tmp/production-deployment-report.json
+      # `--` lets pnpm forward the flags; `--commit` records the audited main SHA.
+      - run: pnpm verify:production -- --json tmp/production-deployment-report.json --commit "${{ steps.sha.outputs.audited }}"
       - uses: actions/upload-artifact@v4
         if: ${{ !cancelled() }}
         with:
           name: production-deployment-report
           path: tmp/production-deployment-report.json
           retention-days: 7
+          # The report is written even on failure, so it should always exist.
           if-no-files-found: warn
 
   production-smoke:
@@ -48,6 +62,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: main
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
@@ -81,7 +97,7 @@ jobs:
           {
             echo "## Production smoke summary"
             echo ""
-            echo "- Tested commit: \`${{ github.sha }}\`"
+            echo "- Audited commit (main HEAD): \`${{ needs.verify-deployment.outputs.audited-sha }}\`"
             echo ""
             if [ -f tmp/production-deployment-report.json ]; then
               echo "### Deployment identity"

@@ -60,7 +60,7 @@ manual fallback if the automation is unavailable.
 
 | # | Check | How | Pass condition | Automated by |
 |---|-------|-----|----------------|---------------|
-| 1 | Deployment SHA | compare Production `App.*.js` hash to a local `main` build's hash, or Vercel dashboard | Production serves the merged `main` | **Automated** — Layer 2 (`pnpm verify:production`, `production-deployment-report`) |
+| 1 | Deployment SHA | `pnpm verify:production` compares Production's `/deployment-manifest.json` (source `commit` + sha256 of every served file) to a local `main` build | Production serves the merged `main` (commit + full file set match) | **Automated** — Layer 2 (`pnpm verify:production`, `production-deployment-report`) |
 | 2 | `/` and `/en/` load | open both | 200, render, correct locale | **Automated** — Layer 2 (prod smoke test 1: shell load) |
 | 3 | Today | open each locale | due count sane (not unnatural), state-appropriate CTAs | Partial — Layer 2 confirms the view loads (test 2); due-count sanity is data-dependent → Layer 4 / Layer 3 |
 | 4 | Guide | open a section | expands + focuses; start/complete works and persists | Partial — Layer 2 confirms the view loads (test 2); expand/persist behavior → Layer 4 / Layer 3 |

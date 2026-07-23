@@ -92,10 +92,12 @@ test('exports, resets, and re-imports the full study document on production', as
 // locales in one body: the persistent warning must show, Export and Reset must
 // be disabled (no false-empty backup, no destructive wipe of recoverable bytes),
 // Import must stay available, and the raw bytes must survive untouched.
+const futureVersion = (v: number) => JSON.stringify({ version: v, reviews: { 'd1-loop-stop': { cardId: 'd1-loop-stop', cardRevisionSeen: 1, dueAt: '2027-01-01T00:00:00.000Z', intervalDays: 1, streak: 1, lapses: 0, lastRating: 'good' } } });
 const unreadableCases = [
   { locale: 'ja', path: '/', payload: '{ this is not valid json', alert: '読み込めませんでした', nav: '進捗', exportName: '進捗をJSONで書き出す', importName: '進捗をJSONから読み込む', resetName: 'この端末の進捗を削除', exportedNotice: '進捗をJSONで書き出しました。' },
-  { locale: 'ja', path: '/', payload: JSON.stringify({ version: 99, reviews: { 'd1-loop-stop': { cardId: 'd1-loop-stop', cardRevisionSeen: 1, dueAt: '2027-01-01T00:00:00.000Z', intervalDays: 1, streak: 1, lapses: 0, lastRating: 'good' } } }), alert: '読み込めませんでした', nav: '進捗', exportName: '進捗をJSONで書き出す', importName: '進捗をJSONから読み込む', resetName: 'この端末の進捗を削除', exportedNotice: '進捗をJSONで書き出しました。' },
+  { locale: 'ja', path: '/', payload: futureVersion(99), alert: '読み込めませんでした', nav: '進捗', exportName: '進捗をJSONで書き出す', importName: '進捗をJSONから読み込む', resetName: 'この端末の進捗を削除', exportedNotice: '進捗をJSONで書き出しました。' },
   { locale: 'en', path: '/en/', payload: '{bad', alert: 'could not be read', nav: 'Progress', exportName: 'Export progress as JSON', importName: 'Import progress from JSON', resetName: 'Delete progress on this device', exportedNotice: 'Your progress was exported as JSON.' },
+  { locale: 'en', path: '/en/', payload: futureVersion(99), alert: 'could not be read', nav: 'Progress', exportName: 'Export progress as JSON', importName: 'Import progress from JSON', resetName: 'Delete progress on this device', exportedNotice: 'Your progress was exported as JSON.' },
 ] as const;
 
 test('keeps unreadable storage recoverable with export and reset disabled (ja + en, malformed + future)', async ({ page }) => {
@@ -115,9 +117,18 @@ test('keeps unreadable storage recoverable with export and reset disabled (ja + 
 
     // #then — export and reset are disabled, import stays available
     await page.getByRole('button', { name: unreadable.nav }).first().click();
-    await expect(page.getByRole('button', { name: unreadable.exportName })).toBeDisabled();
-    await expect(page.getByRole('button', { name: unreadable.resetName })).toBeDisabled();
+    const exportBtn = page.getByRole('button', { name: unreadable.exportName });
+    const resetBtn = page.getByRole('button', { name: unreadable.resetName });
+    await expect(exportBtn).toBeDisabled();
+    await expect(resetBtn).toBeDisabled();
     await expect(page.getByRole('button', { name: unreadable.importName })).toBeEnabled();
+
+    // #then — the disabled reason is programmatically associated (aria-describedby
+    // points at a present, non-empty explanation) so it is exposed accessibly
+    const describedBy = await exportBtn.getAttribute('aria-describedby');
+    expect(describedBy, 'export button aria-describedby').toBeTruthy();
+    expect(await resetBtn.getAttribute('aria-describedby')).toBe(describedBy);
+    await expect(page.locator(`#${describedBy}`)).toHaveText(/\S/);
 
     // #then — the raw bytes are preserved and no export ever succeeded
     expect(await page.evaluate((key) => localStorage.getItem(key), STORAGE_KEY)).toBe(unreadable.payload);

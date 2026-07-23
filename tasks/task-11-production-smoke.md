@@ -68,5 +68,16 @@ Fresh-context reviewer (opus): APPROVE, no Critical/High. 3 findings, all resolv
 
 Post-fix verification: script 20 unit tests green, verify:production exit 0 (byte match), tsc clean, prod smoke 9 passed 2× more (14.6s/15.2s). Reviewer constraints C1–C6 VERIFIED satisfied (e2e.yml/perf.yml untouched, workflow_dispatch-only, testIgnore=131, ≤10 tests/retries:0/no sleeps, identity exit semantics, no src changes).
 
+## Review round 2 (external PR review — Request changes) — RESOLVED
+
+- [Medium] Identity compared only App/client → couldn't detect CSS/HTML/metadata/static-asset changes; workflow trusted dispatched ref (feature branch could false-PASS). FIXED:
+  - New `scripts/deployment-manifest.mjs` + `astro:build:done` hook in astro.config.mjs → generates `dist/deployment-manifest.json` = `{ commit, files: sha256 of EVERY served file }`. HTML hashed after normalizing the ONLY 2 per-build/env tokens (GA id + astro-island `uid`) — empirically verified those are the only non-deterministic HTML tokens (local vs prod HTML identical after normalization; privacy pages already identical).
+  - `verify-production-deployment.mjs` rewritten: fetch prod `/deployment-manifest.json`, compare full file map + commit, cross-check served App asset vs manifest. Verdict = files identical AND commit equal.
+  - Workflow: checkout `ref: main` (both jobs), record `git rev-parse HEAD`, pass `--commit`, summary uses audited SHA. Build now sets a GA id so the analytics snippet is present (normalized away in the hash).
+- [Low] Unreadable-storage matrix only 3 cases (no en future). FIXED: added en future-version case (now 4) + aria-describedby association assertion (verified present in deployed ProgressView).
+- [Low] Early-failure returned report:null → no artifact. FIXED: runVerification always returns a report `{ ok, stage, host, testedCommit, productionCommit, mismatches, error, checkedAt }`; CLI writes it even on failure.
+
+Post-round-2 verification: script unit tests 22/22 (match + css-only/html-only/asset-only/commit/404/500/stale-asset/off-host/missing-manifest cases); `pnpm test` 445; build+manifest OK (45 files, commit stamped); bundle OK; no-analytics OK; full E2E 131; a11y 10; tsc clean; prod smoke 9× green twice (17.7s/17.0s). Live run vs current prod correctly reports NOT_YET_SERVED (prod is pre-merge #42) + writes failure report — will MATCH after this PR deploys.
+
 ## Full gate results (§9) — all green
 pnpm test 443 | build OK | test:no-analytics OK | test:bundle OK | test:e2e:fast 80 | test:e2e 131 | test:e2e:a11y 10 | verify:production exit0 byte-match | test:e2e:production 9× (4+ consecutive green @ 2 workers).
