@@ -440,7 +440,7 @@ main {
 .source-links { margin: 8px 0; padding: 0; list-style: none; font-size: .78rem; }
 .source-links li + li { margin-top: 5px; }
 
-.guide-loading, .guide-load-error, .guide-context, .guide-diagnosis, .guide-path, .guide-calendar, .guide-sections {
+.guide-loading, .guide-load-error, .guide-context, .guide-path, .guide-sections {
   margin-top: 24px;
   padding: clamp(22px, 4vw, 38px);
   border: 1px solid var(--grid-strong);
@@ -448,20 +448,30 @@ main {
 }
 .guide-loading, .guide-load-error { width: min(1180px, 100%); margin-inline: auto; }
 .guide-context { border-left: 6px solid var(--ink); }
-.guide-context h3, .guide-diagnosis h3, .guide-path h3, .guide-calendar h3, .guide-sections h3 { margin-top: 0; font: 700 1.55rem var(--display); }
-.guide-context p, .guide-calendar p { max-width: 800px; color: var(--ink-soft); }
+.guide-context h3, .guide-path h3, .guide-sections h3 { margin-top: 0; font: 700 1.55rem var(--display); }
+.guide-context p { max-width: 800px; color: var(--ink-soft); }
 .guide-availability { color: var(--cyan-dark) !important; font-weight: 700; }
+.guide-path-note { max-width: 800px; color: var(--ink-soft); }
+/* The learning-path diagnosis sits inside the study-cycle section as a distinct block. */
+.guide-diagnosis { margin: 18px 0 22px; padding: clamp(16px, 3vw, 22px); border: 1px solid var(--grid-strong); border-left: 6px solid var(--cyan-dark); background: var(--surface); }
+.guide-diagnosis h4 { margin-top: 0; font: 700 1.2rem var(--display); }
 .guide-diagnosis form { display: grid; gap: 16px; }
 .guide-diagnosis fieldset { display: grid; gap: 10px; padding: 14px; border: 1px solid var(--grid); }
 .guide-diagnosis legend { font-weight: 700; }
 .guide-diagnosis label { min-height: 44px; display: flex; align-items: center; gap: 10px; }
 .guide-diagnosis button, .guide-actions button { min-height: 44px; width: fit-content; padding: 0 15px; border: 1px solid var(--cyan-dark); background: var(--cyan-dark); color: #fff; cursor: pointer; font-weight: 700; }
 .guide-diagnosis button:disabled { opacity: .5; cursor: not-allowed; }
-.guide-recommendation { margin-bottom: 0; padding: 12px; border-left: 4px solid var(--green); background: #eef7f2; }
-.guide-path ol { display: grid; gap: 10px; margin: 0; padding-left: 1.4em; }
-.guide-path li { padding: 6px 0; }
-.guide-later { display: block; color: var(--ink-soft); font-size: .88rem; }
-.guide-now { display: block; color: var(--green); font-size: .88rem; }
+.guide-recommendation { margin: 14px 0 0; padding: 12px; border-left: 4px solid var(--green); background: #eef7f2; display: grid; gap: 10px; }
+.guide-recommendation p { margin: 0; }
+.guide-recommendation-open { min-height: 44px; width: fit-content; padding: 0 15px; border: 1px solid var(--green); background: var(--green); color: #fff; cursor: pointer; font-weight: 700; }
+/* Study-cycle list: the ordered-list native marker is the ONLY number source
+   (no manual "index + 1"), so the double "1. 1." can never return. */
+.guide-path-list { display: grid; gap: 14px; margin: 18px 0 0; padding-left: 1.6em; }
+.guide-path-list li { padding: 4px 0; }
+.guide-path-copy { display: grid; gap: 3px; margin-bottom: 8px; }
+.guide-path-copy strong { font-size: 1rem; }
+.guide-path-copy span { color: var(--ink-soft); font-size: .9rem; }
+.guide-path-aux { margin: 20px 0 0; color: var(--ink-soft); }
 .guide-section-heading { display: grid; grid-template-columns: minmax(0, 1fr) minmax(150px, .8fr); gap: 24px; align-items: center; margin-bottom: 16px; }
 .guide-section-heading .eyebrow { margin-bottom: 4px; }
 .guide-section-heading progress { width: 100%; height: 12px; }
@@ -487,12 +497,8 @@ main {
 .practice-target p, .quiz-target { margin: 0; }
 .practice-target button { min-height: 44px; padding: 0 12px; border: 1px solid var(--cyan-dark); background: var(--surface); color: var(--cyan-dark); cursor: pointer; font-weight: 700; }
 
-/* Hands-on: entry from the guide */
+/* Learning-path CTA links (study cycle + auxiliary official-scenarios link). */
 .guide-path-link { min-height: 34px; padding: 2px 4px; border: 0; background: transparent; color: var(--cyan-dark); font: inherit; font-weight: 700; text-decoration: underline; cursor: pointer; }
-.guide-handson-entry { margin-top: 24px; padding: clamp(22px, 4vw, 38px); border: 1px solid var(--grid-strong); border-left: 6px solid var(--cyan-dark); background: var(--surface); }
-.guide-handson-entry h3 { margin-top: 0; font: 700 1.55rem var(--display); }
-.guide-handson-entry p { max-width: 800px; color: var(--ink-soft); }
-.guide-handson-open { min-height: 44px; margin-top: 6px; padding: 0 16px; border: 1px solid var(--cyan-dark); background: var(--cyan-dark); color: #fff; cursor: pointer; font-weight: 700; }
 
 /* Hands-on: list and detail */
 .handson-view { width: min(1180px, 100%); margin-inline: auto; }
@@ -788,13 +794,24 @@ main {
 .session-summary-meta { margin: 16px 0 0; color: var(--ink-soft); font: .72rem var(--mono); }
 .session-summary-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 18px; margin-top: 22px; }
 
-.progress-panel, .data-panel, .sources-panel, .disclaimer {
+.progress-panel, .data-panel, .sources-panel, .disclaimer,
+.progress-overview, .progress-overview-loading, .progress-overview-error {
   margin-top: 24px;
   padding: clamp(24px, 4vw, 42px);
   border: 1px solid var(--grid-strong);
   background: var(--surface);
 }
-.progress-panel h3, .data-panel h3, .sources-panel h3, .disclaimer h3 { margin-top: 0; font: 700 1.65rem var(--display); }
+.progress-overview-error { border-color: var(--danger); }
+.progress-panel h3, .data-panel h3, .sources-panel h3, .disclaimer h3, .progress-overview > h3 { margin-top: 0; font: 700 1.65rem var(--display); }
+/* Service-wide overview: responsive card grid, each with its own facts + CTA. */
+.progress-overview .progress-panel { margin-top: 24px; padding: 0; border: 0; background: transparent; }
+.progress-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 16px; margin-top: 16px; }
+.progress-card { display: flex; flex-direction: column; gap: 10px; padding: 18px; border: 1px solid var(--grid-strong); background: var(--surface); }
+.progress-card h4 { margin: 0; font: 700 1.1rem var(--display); }
+.progress-card ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 5px; color: var(--ink-soft); font-size: .9rem; }
+.progress-card button { min-height: 44px; margin-top: auto; padding: 0 12px; display: inline-flex; align-items: center; gap: 8px; border: 1px solid var(--cyan-dark); background: var(--cyan-dark); color: #fff; cursor: pointer; font-weight: 700; }
+.progress-card-actions { margin-top: auto; display: flex; flex-wrap: wrap; gap: 8px; }
+.progress-card-secondary { background: var(--surface) !important; color: var(--cyan-dark) !important; }
 .progress-row { min-height: 58px; display: grid; grid-template-columns: minmax(200px, 1fr) minmax(140px, 2fr) 54px; gap: 16px; align-items: center; border-top: 1px solid var(--grid); }
 .progress-row progress { width: 100%; height: 11px; border: 0; border-radius: 0; background: var(--grid); }
 .progress-row progress::-webkit-progress-bar { background: var(--grid); }
@@ -1008,6 +1025,13 @@ main {
   border: 1px solid var(--ink); border-radius: 2px; background: var(--ink); color: #fff; cursor: pointer; font-weight: 700;
 }
 .mock-exam-launch-button:hover { background: var(--cyan-dark); border-color: var(--cyan-dark); }
+.mock-exam-launch-actions { margin-top: 20px; display: flex; flex-wrap: wrap; align-items: center; gap: 12px 20px; }
+.mock-exam-launch-button { margin-top: 0; }
+.mock-exam-launch-analysis {
+  min-height: 44px; padding: 0 12px; display: inline-flex; align-items: center; gap: 8px;
+  border: 1px solid var(--cyan-dark); background: var(--surface); color: var(--cyan-dark); cursor: pointer; font-weight: 700;
+}
+.mock-exam-launch-analysis:hover { background: var(--cyan-pale); }
 
 .mock-exam-view { display: grid; gap: 4px; }
 .mock-exam-notice { margin: 0 0 12px; padding: 12px 14px; border-left: 4px solid var(--amber); background: var(--amber-pale); font-size: .84rem; }

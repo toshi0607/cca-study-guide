@@ -3,6 +3,7 @@ import { studyGuideSections } from '../../content/study-guide';
 import { cards } from '../../content/cards';
 import { questions } from '../../content/questions';
 import { domains } from '../../content/domains';
+import { learningPath, diagnosisStartSectionIds, type LearningStageTarget } from '../../content/learning-path';
 import { localize, type UiCopy } from '../../i18n/ui';
 import {
   deriveStudyGuideProgress,
@@ -12,6 +13,9 @@ import type { StudyGuideProgress } from '../../lib/storage';
 import { SourceLinks } from '../app/SourceLinks';
 import type { Locale } from '../../i18n/locales';
 
+// View-bound stage targets (in-page anchors are handled locally, never delegated).
+export type LearningStageViewTarget = Exclude<LearningStageTarget, 'guide-diagnosis' | 'guide-sections'>;
+
 type Props = {
   locale: Locale;
   copy: UiCopy;
@@ -19,16 +23,28 @@ type Props = {
   onProgressAction: (sectionId: string, revision: number, action: 'start' | 'complete' | 'reconfirm') => boolean;
   onOpenCard: (cardId: string) => void;
   onOpenQuestion: (questionId: string) => void;
-  onOpenHandsOn: () => void;
+  onOpenStage: (target: LearningStageViewTarget) => void;
   onOpenOfficialScenarios: () => void;
 };
 
-const diagnosisStarts = ['sg-agentic-loop', 'sg-tool-and-mcp', 'sg-context-and-handoff'];
+const diagnosisStarts = diagnosisStartSectionIds;
 
-export function GuideView({ locale, copy, records, onProgressAction, onOpenCard, onOpenQuestion, onOpenHandsOn, onOpenOfficialScenarios }: Props) {
+// Moves the viewport and keyboard focus to an in-page target without changing
+// storage. Missing elements are ignored so a content change can never throw.
+function focusElement(el: HTMLElement | null) {
+  if (!el) return;
+  // preventScroll: the smooth scroll above owns positioning; a focus-driven jump
+  // would otherwise cancel the animation.
+  el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  el.focus({ preventScroll: true });
+}
+
+export function GuideView({ locale, copy, records, onProgressAction, onOpenCard, onOpenQuestion, onOpenStage, onOpenOfficialScenarios }: Props) {
   const [diagnosis, setDiagnosis] = useState('');
   const [recommendation, setRecommendation] = useState<string | null>(null);
-  const resultRef = useRef<HTMLParagraphElement>(null);
+  const resultRef = useRef<HTMLDivElement>(null);
+  const diagnosisHeadingRef = useRef<HTMLHeadingElement>(null);
+  const sectionsHeadingRef = useRef<HTMLHeadingElement>(null);
   const summary = deriveStudyGuideProgress(studyGuideSections, records);
 
   const recommend = (event: Event) => {
@@ -36,6 +52,27 @@ export function GuideView({ locale, copy, records, onProgressAction, onOpenCard,
     if (!diagnosis) return;
     setRecommendation(diagnosisStarts[Number(diagnosis)] ?? diagnosisStarts[0]);
     requestAnimationFrame(() => resultRef.current?.focus());
+  };
+
+  // Opens a specific Study Guide section: expands the details, scrolls it into
+  // view, and moves focus to its summary. Reading recommendation ID must not
+  // persist progress — only the explicit Start button does. A missing/unknown
+  // section id is a no-op rather than an exception.
+  const openSection = (sectionId: string) => {
+    const details = document.getElementById(`guide-section-${sectionId}`);
+    if (!(details instanceof HTMLDetailsElement)) return;
+    details.open = true;
+    details.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    const summaryEl = details.querySelector('summary');
+    if (summaryEl instanceof HTMLElement) summaryEl.focus({ preventScroll: true });
+  };
+
+  // Learning-path CTA dispatch. In-page anchors move focus to the matching
+  // heading here; every other target is delegated to App navigation.
+  const openStage = (target: LearningStageTarget) => {
+    if (target === 'guide-diagnosis') { focusElement(diagnosisHeadingRef.current); return; }
+    if (target === 'guide-sections') { focusElement(sectionsHeadingRef.current); return; }
+    onOpenStage(target);
   };
 
   return (
@@ -46,59 +83,51 @@ export function GuideView({ locale, copy, records, onProgressAction, onOpenCard,
 
       <section class="guide-context" aria-labelledby="guide-service-title">
         <h3 id="guide-service-title">{copy.guide.serviceTitle}</h3><p>{copy.guide.serviceBody}</p>
-        <p class="guide-availability">{copy.guide.availabilityNow}</p>
-      </section>
-
-      <section class="guide-diagnosis" aria-labelledby="guide-diagnosis-title">
-        <h3 id="guide-diagnosis-title">{copy.guide.diagnosisLegend}</h3>
-        <form onSubmit={recommend}>
-          <fieldset><legend>{copy.guide.diagnosisQuestion}</legend>
-            {copy.guide.diagnosisOptions.map((option, index) => <label key={option}><input type="radio" name="guide-diagnosis" value={String(index)} checked={diagnosis === String(index)} onChange={() => setDiagnosis(String(index))}/>{option}</label>)}
-          </fieldset>
-          <button type="submit" disabled={!diagnosis}>{copy.guide.diagnosisSubmit}</button>
-        </form>
-        {recommendation && (() => {
-          const section = studyGuideSections.find((candidate) => candidate.id === recommendation);
-          return section ? <p class="guide-recommendation" tabIndex={-1} ref={resultRef}>{copy.guide.diagnosisResult(localize(section.title, locale))}</p> : null;
-        })()}
+        <p class="guide-availability">{copy.guide.availableFeatures}</p>
       </section>
 
       <section class="guide-path" aria-labelledby="guide-path-title">
         <h3 id="guide-path-title">{copy.guide.pathTitle}</h3>
-        <ol>{copy.guide.path.map((stage, index) => (
-          <li key={stage.label}>
-            <strong>{index + 1}.</strong>{' '}
-            {stage.target === 'hands-on'
-              ? <button type="button" class="guide-path-link" onClick={onOpenHandsOn}>{stage.label}</button>
-              : stage.target === 'official-scenarios'
-                ? <button type="button" class="guide-path-link" onClick={onOpenOfficialScenarios}>{stage.label}</button>
-                : stage.label}
-            <span class={stage.available ? 'guide-now' : 'guide-later'}> — {stage.available ? copy.guide.availabilityNow : copy.guide.availabilityLater}</span>
-          </li>
-        ))}</ol>
+        <p class="guide-path-note">{copy.guide.pathNote}</p>
+
+        <div class="guide-diagnosis" aria-labelledby="guide-diagnosis-title">
+          <h4 id="guide-diagnosis-title" tabIndex={-1} ref={diagnosisHeadingRef}>{copy.guide.diagnosisLegend}</h4>
+          <form onSubmit={recommend}>
+            <fieldset><legend>{copy.guide.diagnosisQuestion}</legend>
+              {copy.guide.diagnosisOptions.map((option, index) => <label key={option}><input type="radio" name="guide-diagnosis" value={String(index)} checked={diagnosis === String(index)} onChange={() => setDiagnosis(String(index))}/>{option}</label>)}
+            </fieldset>
+            <button type="submit" disabled={!diagnosis}>{copy.guide.diagnosisSubmit}</button>
+          </form>
+          {recommendation && (() => {
+            const section = studyGuideSections.find((candidate) => candidate.id === recommendation);
+            if (!section) return null;
+            return <div class="guide-recommendation" tabIndex={-1} ref={resultRef}>
+              <p>{copy.guide.diagnosisResult(localize(section.title, locale))}</p>
+              <button type="button" class="guide-recommendation-open" onClick={() => openSection(section.id)}>{copy.guide.diagnosisOpenSection(localize(section.title, locale))}</button>
+            </div>;
+          })()}
+        </div>
+
+        <ol class="guide-path-list">{learningPath.map((stage) => {
+          const text = copy.guide.stages[stage.id];
+          return <li key={stage.id}>
+            <div class="guide-path-copy"><strong>{text.title}</strong><span>{text.description}</span></div>
+            <button type="button" class="guide-path-link" onClick={() => openStage(stage.target)}>{text.cta} <span aria-hidden="true">→</span></button>
+          </li>;
+        })}</ol>
+
+        <p class="guide-path-aux">{copy.officialScenarios.entryBody}{' '}
+          <button type="button" class="guide-path-link" onClick={onOpenOfficialScenarios}>{copy.officialScenarios.openList}</button>
+        </p>
       </section>
 
-      <section class="guide-handson-entry" aria-labelledby="guide-handson-title">
-        <h3 id="guide-handson-title">{copy.handsOn.entryTitle}</h3>
-        <p>{copy.handsOn.entryBody}</p>
-        <button type="button" class="guide-handson-open" onClick={onOpenHandsOn}>{copy.handsOn.openList}</button>
-      </section>
-
-      <section class="guide-handson-entry" aria-labelledby="guide-official-title">
-        <h3 id="guide-official-title">{copy.officialScenarios.entryTitle}</h3>
-        <p>{copy.officialScenarios.entryBody}</p>
-        <button type="button" class="guide-handson-open" onClick={onOpenOfficialScenarios}>{copy.officialScenarios.openList}</button>
-      </section>
-
-      <section class="guide-calendar" aria-labelledby="guide-calendar-title"><h3 id="guide-calendar-title">{copy.guide.calendarTitle}</h3><p>{copy.guide.calendarBody}</p></section>
-
-      <section class="guide-sections" aria-labelledby="guide-sections-title">
-        <div class="guide-section-heading"><div><p class="eyebrow">STUDY GUIDE</p><h3 id="guide-sections-title">{copy.guide.progress(summary.completed, summary.totalSections)}</h3></div><progress value={summary.completionRate} max="1">{Math.round(summary.completionRate * 100)}%</progress></div>
+      <section class="guide-sections" id="guide-sections" aria-labelledby="guide-sections-title">
+        <div class="guide-section-heading"><div><p class="eyebrow">STUDY GUIDE</p><h3 id="guide-sections-title" tabIndex={-1} ref={sectionsHeadingRef}>{copy.guide.progress(summary.completed, summary.totalSections)}</h3></div><progress value={summary.completionRate} max="1">{Math.round(summary.completionRate * 100)}%</progress></div>
         {studyGuideSections.map((section) => {
           const record = records[section.id];
           const status = getStudyGuideSectionStatus(record, section.revision);
           const title = localize(section.title, locale);
-          return <details class="guide-section" key={section.id}>
+          return <details class="guide-section" id={`guide-section-${section.id}`} key={section.id}>
             <summary><span><code>{section.recommendedOrder}</code> {title}</span><span class={`guide-status status-${status}`}>{copy.guide.status[status]}</span></summary>
             <div class="guide-section-body">
               <p>{localize(section.summary, locale)}</p>

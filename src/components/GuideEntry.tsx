@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'preact/hooks';
 import type { Locale } from '../i18n/locales';
 import type { UiCopy } from '../i18n/ui';
 import type { StudyGuideProgress } from '../lib/storage';
+import type { LearningStageViewTarget } from './views/GuideView';
 
 type GuideComponent = typeof import('./views/GuideView').GuideView;
 
@@ -12,7 +13,7 @@ export function GuideEntry(props: {
   onProgressAction: (sectionId: string, revision: number, action: 'start' | 'complete' | 'reconfirm') => boolean;
   onOpenCard: (cardId: string) => void;
   onOpenQuestion: (questionId: string) => void;
-  onOpenHandsOn: () => void;
+  onOpenStage: (target: LearningStageViewTarget) => void;
   onOpenOfficialScenarios: () => void;
 }) {
   const [Guide, setGuide] = useState<GuideComponent | null>(null);

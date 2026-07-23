@@ -11,6 +11,7 @@ import { AppBottomNav, AppHeader } from './app/AppNavigation';
 import { formatDate } from './app/format';
 import type { View } from './app/types';
 import { GuideEntry } from './GuideEntry';
+import type { LearningStageViewTarget } from './views/GuideView';
 import { HandsOnEntry } from './HandsOnEntry';
 import { MockExamEntry } from './MockExamEntry';
 import { OfficialScenariosEntry } from './OfficialScenariosEntry';
@@ -58,6 +59,9 @@ function App({ locale, analyticsEnabled = false }: { locale: Locale; analyticsEn
   const [quizTargetScenarioId, setQuizTargetScenarioId] = useState<string | null>(null);
   const [handsOnTargetGuideId, setHandsOnTargetGuideId] = useState<string | null>(null);
   const [storageAvailable, setStorageAvailable] = useState(true);
+  // Which Mock Exam screen to land on when the view opens: the start screen, or
+  // straight to the learning analysis (used by Today/Progress/learning-path CTAs).
+  const [mockExamIntent, setMockExamIntent] = useState<'landing' | 'analysis'>('landing');
   const noticeRef = useRef<HTMLParagraphElement>(null);
   const dataRef = useRef<StudyData>(createEmptyStudyData());
   // Serializes imports: a second file picked while one is still being read
@@ -284,7 +288,8 @@ function App({ locale, analyticsEnabled = false }: { locale: Locale; analyticsEn
     return true;
   };
 
-  const openMockExam = () => navigate('mock-exam');
+  const openMockExam = () => { setMockExamIntent('landing'); navigate('mock-exam'); };
+  const openMockExamAnalysis = () => { setMockExamIntent('analysis'); navigate('mock-exam'); };
 
   const openWeakPractice = (domainId: string) => {
     setQuery('');
@@ -304,6 +309,19 @@ function App({ locale, analyticsEnabled = false }: { locale: Locale; analyticsEn
     navigate('practice');
   };
 
+  // Learning-path stage dispatch (in-page Guide anchors are handled inside
+  // GuideView; only view-bound targets reach here). Reuses existing navigation —
+  // no new router or URL is introduced.
+  const openLearningStage = (target: LearningStageViewTarget) => {
+    switch (target) {
+      case 'hands-on': navigate('hands-on'); break;
+      case 'practice': openMockExamPractice(); break;
+      case 'quiz': navigate('quiz'); break;
+      case 'mock-exam': openMockExam(); break;
+      case 'mock-exam-analysis': openMockExamAnalysis(); break;
+    }
+  };
+
   const startDueReview = () => {
     setQuery('');
     setDomainFilter('all');
@@ -319,11 +337,11 @@ function App({ locale, analyticsEnabled = false }: { locale: Locale; analyticsEn
       <main id="main-content">
         <h1 class="sr-only">{copy.pageTitle}</h1>
         <p ref={noticeRef} class="notice" tabIndex={-1} aria-live="polite">{notice}</p>
-        {view === 'today' && <TodayView locale={locale} copy={copy} now={now} ready={ready} reviews={data.reviews} dueCards={dueCards} onStartDueReview={startDueReview} onOpenWeakDomain={openWeakPractice} onOpenMockExam={openMockExam}/>}
+        {view === 'today' && <TodayView locale={locale} copy={copy} now={now} ready={ready} reviews={data.reviews} dueCards={dueCards} session={data.activeMockExam} attempts={data.mockExamAttempts} onStartDueReview={startDueReview} onOpenWeakDomain={openWeakPractice} onOpenMockExam={openMockExam} onOpenMockExamAnalysis={openMockExamAnalysis}/>}
 
-        {view === 'mock-exam' && <MockExamEntry locale={locale} copy={copy} session={data.activeMockExam} attempts={data.mockExamAttempts} storageAvailable={storageAvailable} readData={readMockExamData} writeData={writeMockExamData} onOpenPractice={openMockExamPractice}/>}
+        {view === 'mock-exam' && <MockExamEntry locale={locale} copy={copy} session={data.activeMockExam} attempts={data.mockExamAttempts} storageAvailable={storageAvailable} initialPhase={mockExamIntent} readData={readMockExamData} writeData={writeMockExamData} onOpenPractice={openMockExamPractice}/>}
 
-        {view === 'guide' && <GuideEntry locale={locale} copy={copy} records={data.studyGuideProgress} onProgressAction={saveGuideProgress} onOpenCard={openGuideCard} onOpenQuestion={openGuideQuestion} onOpenHandsOn={() => navigate('hands-on')} onOpenOfficialScenarios={() => navigate('official-scenarios')}/>}
+        {view === 'guide' && <GuideEntry locale={locale} copy={copy} records={data.studyGuideProgress} onProgressAction={saveGuideProgress} onOpenCard={openGuideCard} onOpenQuestion={openGuideQuestion} onOpenStage={openLearningStage} onOpenOfficialScenarios={() => navigate('official-scenarios')}/>}
 
         {view === 'hands-on' && <HandsOnEntry locale={locale} copy={copy} records={data.handsOnProgress} onStart={saveHandsOnStart} onToggleStep={saveHandsOnStep} onComplete={saveHandsOnComplete} onReconfirm={saveHandsOnReconfirm} onOpenCard={openGuideCard} onOpenQuestion={openGuideQuestion} targetGuideId={handsOnTargetGuideId} onTargetOpened={() => setHandsOnTargetGuideId(null)}/>}
 
@@ -342,7 +360,15 @@ function App({ locale, analyticsEnabled = false }: { locale: Locale; analyticsEn
 
         {view === 'quiz' && <QuizView locale={locale} copy={copy} quizStats={data.quizStats} onAnswer={recordQuizAnswer} targetQuestionId={quizTargetQuestionId} onTargetOpened={() => setQuizTargetQuestionId(null)} targetScenarioId={quizTargetScenarioId} onTargetScenarioOpened={() => setQuizTargetScenarioId(null)}/>}
 
-        {view === 'progress' && <ProgressView locale={locale} copy={copy} reviews={data.reviews} analyticsEnabled={analyticsEnabled} onExport={exportData} onImportFile={importData} onReset={resetData}/>}
+        {view === 'progress' && <ProgressView
+          locale={locale} copy={copy}
+          reviews={data.reviews} studyGuideProgress={data.studyGuideProgress} handsOnProgress={data.handsOnProgress}
+          quizStats={data.quizStats} activeMockExam={data.activeMockExam} mockExamAttempts={data.mockExamAttempts} dueCount={dueCards.length}
+          analyticsEnabled={analyticsEnabled}
+          onExport={exportData} onImportFile={importData} onReset={resetData}
+          onOpenGuide={() => navigate('guide')} onOpenHandsOn={() => navigate('hands-on')} onOpenPractice={() => openMockExamPractice()}
+          onOpenQuiz={() => navigate('quiz')} onOpenMockExam={openMockExam} onOpenMockExamAnalysis={openMockExamAnalysis}
+        />}
         <footer class="site-footer">
           <span>{copy.brand.footer}</span>
           <nav aria-label={copy.aria.siteInformation}>

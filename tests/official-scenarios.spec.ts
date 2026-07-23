@@ -2,8 +2,9 @@ import { expect, openOfficialScenarios, test } from './fixtures/app';
 
 test('walks the keyboard path from the guide into official scenarios and manages focus', async ({ page }) => {
   await page.getByRole('button', { name: 'ガイド' }).first().click();
-  // The learning path stage-5 link is now live, not a dead label.
-  await page.getByRole('button', { name: 'シナリオ判断' }).click();
+  // Official scenarios are reached from the guide's auxiliary link (the study
+  // cycle covers quizzes/scenarios; the official sub-area is a concise side door).
+  await page.getByRole('button', { name: '公式シナリオ一覧へ' }).click();
   await expect(page.getByRole('heading', { name: '公式シナリオで設計判断を学ぶ' })).toBeFocused();
   await expect(page.locator('.official-card')).toHaveCount(6);
   await expect(page.locator('.official-badge--official').first()).toBeVisible();
