@@ -35,7 +35,7 @@ const question = (
   ja: QuestionCopy,
   en: QuestionCopy,
   sourceIds: string[],
-  extra?: { scenarioId: PracticeScenarioId; verifiedAt: string },
+  extra?: { scenarioId?: PracticeScenarioId; verifiedAt?: string },
 ): ChoiceQuestion => ({
   id,
   revision: 1,
@@ -50,8 +50,14 @@ const question = (
   explanation: localized(ja.explanation, en.explanation),
   sourceIds,
   verifiedAt: extra?.verifiedAt ?? VERIFIED_AT,
-  ...(extra ? { scenarioId: extra.scenarioId } : {}),
+  ...(extra?.scenarioId ? { scenarioId: extra.scenarioId } : {}),
 });
+
+// The 22 questions added in Task 8A.1 (bank expansion 38→60). Their claims were
+// re-verified against the official docs on this date; questions still resting on
+// pages last checked at VERIFIED_AT keep that earlier date rather than a blanket
+// bump. See tasks/task-8a1-question-bank-expansion.md.
+const EXPANSION_VERIFIED_AT = '2026-07-23';
 
 // All stems, choices, and explanations below were independently authored for
 // this app from public official documentation. Wrong choices encode common
@@ -1033,6 +1039,578 @@ export const questions: ChoiceQuestion[] = [
     },
     ['context-editing', 'structured'],
     { scenarioId: 'sc-extraction-pipeline', verifiedAt: SCENARIO_VERIFIED_AT },
+  ),
+
+  // --- Task 8A.1: bank expansion (+22) to reach the 60-question blueprint. ---
+  question(
+    'q-d1-loop-toolresult', 'd1', ['1.1'], 'single', ['b'],
+    { difficulty: 'application', skills: ['agent-loop'] },
+    {
+      stem: 'モデルが1回の応答で3つのツール呼び出し（tool_useブロック）を並列に要求しました。エージェントループを継続する際の結果の返し方として最も適切なのはどれですか？',
+      choices: [
+        'ツールを1つ実行するたびにtool_resultを個別のuserメッセージで返し、3往復に分ける',
+        '3つのツールを実行し、すべてのtool_resultブロックを1つのuserメッセージにまとめて返す',
+        '最初のツールだけ実行して結果を返し、残りは次のstop_reasonを待つ',
+        '3つの結果を結合した自然文の要約を1つのtextブロックとして返す',
+      ],
+      explanation: '並列に要求された各tool_useには対応するtool_resultが必要で、それらは次の1つのuserメッセージにまとめて返します。個別送信や一部のみの実行はブロックの対応が崩れ、自然文要約は構造化された結果にならずモデルが扱えません。',
+    },
+    {
+      stem: 'In a single response the model requested three tool calls (tool_use blocks) in parallel. What is the most appropriate way to return the results to continue the agentic loop?',
+      choices: [
+        'Return each tool_result in its own user message, splitting the turn into three round trips',
+        'Run all three tools and return every tool_result block together in one user message',
+        'Run only the first tool, return its result, and wait for the next stop_reason',
+        'Return one text block that summarizes the three results in prose',
+      ],
+      explanation: 'Each parallel tool_use needs a matching tool_result, and they are returned together in the next single user message. Splitting them or running only some breaks the block pairing, and a prose summary is not the structured result the model expects.',
+    },
+    ['tool-use'],
+    { verifiedAt: EXPANSION_VERIFIED_AT },
+  ),
+  question(
+    'q-d1-stop-max-tokens', 'd1', ['1.1'], 'single', ['b'],
+    { difficulty: 'foundation', skills: ['agent-loop'] },
+    {
+      stem: 'API応答の stop_reason が max_tokens で返りました。この応答の扱いとして最も適切なのはどれですか？',
+      choices: [
+        '応答は完結しているので、そのまま最終結果として採用する',
+        '応答は途中で打ち切られているため、max_tokensを上げるか続きを生成させる',
+        'モデルが停止を要求したので、ツールを実行してループを継続する',
+        '安全性による拒否なので、フォールバックモデルで再試行する',
+      ],
+      explanation: 'max_tokensは出力が上限に達して途中で打ち切られた状態を示します。完了扱いにすると欠けたまま使ってしまうため、上限を上げるか応答を継続します。ツール実行はtool_use、拒否はrefusalが示す別の停止理由です。',
+    },
+    {
+      stem: 'The API response returned with stop_reason max_tokens. What is the most appropriate way to handle this response?',
+      choices: [
+        'The response is complete, so use it as the final result as-is',
+        'The response was truncated at the limit, so raise max_tokens or continue generating',
+        'The model asked to stop, so run a tool and continue the loop',
+        'It is a safety refusal, so retry on a fallback model',
+      ],
+      explanation: 'max_tokens means the output hit the limit and was cut off. Treating it as complete uses a truncated result, so raise the limit or continue the response. Tool execution is signaled by tool_use and a refusal by refusal — different stop reasons.',
+    },
+    ['stop-reasons'],
+    { verifiedAt: EXPANSION_VERIFIED_AT },
+  ),
+  question(
+    'q-d1-single-vs-multi', 'd1', ['1.2', '1.6'], 'single', ['c'],
+    { difficulty: 'analysis', skills: ['orchestration'] },
+    {
+      stem: 'あるタスクは、密に依存し合う短い工程が数個連なるだけで、共有する文脈が多いです。構成の判断として最も適切なのはどれですか？',
+      choices: [
+        '工程ごとにサブエージェントへ分割し、それぞれ独立した文脈で並列実行する',
+        '工程数と同じ数のサブエージェントを常に用意し、将来の拡張に備える',
+        '単一のエージェントループで順に処理し、サブエージェントには分割しない',
+        '各工程を別々のサブエージェントにし、共有文脈は毎回全文を渡して同期する',
+      ],
+      explanation: 'サブエージェントは文脈が分離される代わりに、入力の受け渡しと結果統合のオーバーヘッドが生じます。依存が密で共有文脈が多く工程も小さい場合、そのオーバーヘッドが利得を上回るため単一ループが適切です。将来のためだけの分割や全文同期は無駄なコストを生みます。',
+    },
+    {
+      stem: 'A task is just a few short, tightly interdependent steps that share a lot of context. Which structuring decision is most appropriate?',
+      choices: [
+        'Split each step into a subagent and run them in parallel, each with its own isolated context',
+        'Always create as many subagents as there are steps to prepare for future growth',
+        'Handle them in order within a single agent loop and do not split into subagents',
+        'Make each step a separate subagent and sync the shared context by passing it in full every time',
+      ],
+      explanation: 'Subagents isolate context but add the overhead of passing input and integrating results. When steps are tightly coupled, share much context, and are small, that overhead outweighs the benefit, so a single loop fits. Splitting only for the future or syncing full context wastes cost.',
+    },
+    ['subagents'],
+    { verifiedAt: EXPANSION_VERIFIED_AT },
+  ),
+  question(
+    'q-d1-coordination', 'd1', ['1.2'], 'multiple', ['a', 'c'],
+    { difficulty: 'analysis', skills: ['orchestration'] },
+    {
+      stem: '中央のオーケストレーターを置くべき状況として適切なものを2つ選んでください。',
+      choices: [
+        '複数のサブタスクの結果を1つの成果物へ統合する明確な責任者が必要なとき',
+        '各サブタスクが独立して完結し、互いの結果を参照しないとき',
+        '全体の進行を1か所で監視し、失敗時の再割り当てを一元的に判断したいとき',
+        '処理が一方向のパイプラインで、各段が次段へそのまま引き継げるとき',
+      ],
+      explanation: '中央調整は、結果統合の所有者を明示したい場合と、進行監視・再割り当てを一元化したい場合に向きます。独立して完結するタスクや一方向パイプラインは、調整役を挟まず並列またはハンドオフで足ります。',
+    },
+    {
+      stem: 'Select the TWO situations that call for a central orchestrator rather than peer handoffs.',
+      choices: [
+        "A clear owner is needed to integrate several subtasks' results into one deliverable",
+        "Each subtask completes independently and never references another's result",
+        'You want to monitor overall progress in one place and decide reassignment on failure centrally',
+        'The work is a one-way pipeline where each stage hands straight off to the next',
+      ],
+      explanation: 'Central coordination fits when you need a named owner for integration and when progress monitoring and reassignment should be centralized. Independently completing tasks or a one-way pipeline need no coordinator — parallel or handoff suffices.',
+    },
+    ['subagents', 'sdk-features'],
+    { verifiedAt: EXPANSION_VERIFIED_AT },
+  ),
+  question(
+    'q-d1-subagent-scope', 'd1', ['1.3', '1.7'], 'single', ['d'],
+    { difficulty: 'application', skills: ['orchestration', 'context-management'] },
+    {
+      stem: '大量のファイルを読む調査をサブエージェントに委譲します。親エージェントへの返し方として最も適切なのはどれですか？',
+      choices: [
+        '読んだファイルと全ツール結果をそのまま親の会話履歴へ連結する',
+        '中間の思考と全文引用を省かず返し、親側で取捨選択させる',
+        '結論は返さず、参照したファイルのパス一覧だけを返す',
+        '判断に必要な結論と根拠だけを要約して返し、読んだ中間過程は親へ持ち込まない',
+      ],
+      explanation: 'サブエージェントの利点は中間過程を分離し、親には要約だけを返してコンテキストを節約することです。全文や全ツール結果の持ち込みはその利点を打ち消し、パスだけでは親が判断できません。',
+    },
+    {
+      stem: 'You delegate a research task that reads many files to a subagent. What is the most appropriate way to return to the parent agent?',
+      choices: [
+        "Concatenate every file read and all tool results straight into the parent's conversation history",
+        'Return the full intermediate reasoning and verbatim quotes and let the parent decide what to keep',
+        'Return no conclusion, just the list of file paths that were referenced',
+        'Return only the conclusion and the evidence needed to act, keeping the intermediate reading out of the parent',
+      ],
+      explanation: 'The point of a subagent is to isolate the intermediate work and return only a summary, saving the parent context. Carrying the full text or all tool results defeats that, and paths alone leave the parent unable to act.',
+    },
+    ['subagents'],
+    { verifiedAt: EXPANSION_VERIFIED_AT },
+  ),
+  question(
+    'q-d1-handoff-data', 'd1', ['1.4'], 'multiple', ['b', 'd'],
+    { difficulty: 'application', skills: ['workflow-enforcement', 'structured-output'] },
+    {
+      stem: 'あるエージェントが案件を次段へ引き継ぎます。会話任せにせず構造化した引き継ぎデータに含めるべきものを2つ選んでください。',
+      choices: [
+        'これまでの会話全文を添付し、必要な情報は次段が読み取ると仮定する',
+        '次段が判断に使う識別子や確定した決定事項を構造化フィールドとして明示する',
+        '口調を整えた自然文の依頼メッセージだけを渡し、項目は本文から推測させる',
+        '引き継ぎ理由と、次段が満たすべき前提条件・完了条件を構造化して渡す',
+      ],
+      explanation: '引き継ぎは、次段が確実に使う識別子・決定事項と、前提／完了条件を構造化して渡すのが要です。会話全文や自然文依頼は、必要項目が埋もれて取りこぼしや解釈ズレを生みます。',
+    },
+    {
+      stem: 'An agent hands a case to the next stage. Select the TWO items that belong in the structured handoff payload rather than being left to the conversation.',
+      choices: [
+        'The entire prior conversation, assuming the next stage will read out what it needs',
+        'The identifiers and settled decisions the next stage will use, as explicit structured fields',
+        'Only a polished prose request message, letting the next stage infer the fields from the text',
+        'The reason for the handoff plus the preconditions and completion conditions the next stage must meet, structured',
+      ],
+      explanation: 'A handoff should carry the identifiers and decisions the next stage relies on, plus preconditions and completion conditions, in structured form. A full transcript or prose request buries the required fields and invites dropped or misread data.',
+    },
+    ['sdk-features', 'hooks'],
+  ),
+  question(
+    'q-d1-hook-exitcode', 'd1', ['1.5'], 'single', ['a'],
+    { difficulty: 'foundation', skills: ['workflow-enforcement'] },
+    {
+      stem: '保護対象ファイルへの書き込みを、実行前フックで確実に止めたいです。フックがそのツール呼び出しを遮断する仕組みとして正しいのはどれですか？',
+      choices: [
+        'PreToolUseフックが終了コード2で終了すると、その呼び出しは遮断される',
+        'PostToolUseフックが警告を出力すると、直前の書き込みが巻き戻される',
+        'フックが終了コード0で正常終了すると、呼び出しは常に遮断される',
+        'フックが標準出力に文言を出すだけで、呼び出しは自動的に中止される',
+      ],
+      explanation: '実行前のPreToolUseフックは終了コード2（またはblock決定の返却）で呼び出しを遮断できます。事後フックでは書き込みは既に完了しており巻き戻せず、コード0は正常継続、単なる出力は遮断になりません。',
+    },
+    {
+      stem: 'You want a pre-execution hook to reliably stop writes to a protected file. Which mechanism correctly blocks the tool call?',
+      choices: [
+        'A PreToolUse hook that exits with code 2 blocks the call',
+        'A PostToolUse hook that prints a warning rolls back the write that just happened',
+        'A hook that exits with code 0 (success) always blocks the call',
+        'A hook that merely prints text to stdout automatically aborts the call',
+      ],
+      explanation: 'A PreToolUse hook blocks the call by exiting with code 2 (or returning a block decision). A post hook runs after the write already completed and cannot roll it back, exit code 0 means continue, and plain output does not block.',
+    },
+    ['hooks'],
+    { verifiedAt: EXPANSION_VERIFIED_AT },
+  ),
+  question(
+    'q-d1-fork-resume', 'd1', ['1.7'], 'single', ['c'],
+    { difficulty: 'application', skills: ['context-management', 'orchestration'] },
+    {
+      stem: '既存のセッションの続きから別案を試したいが、元のセッションの履歴は後で続けられるよう保ちたいです。適切な操作はどれですか？',
+      choices: [
+        '同じセッションをresumeし、その中で別案に切り替えて上書きしていく',
+        '新規セッションを空の状態で開始し、必要な文脈は手で貼り直す',
+        'セッションをforkし、元の履歴のコピーから分岐した新しいセッションで別案を進める',
+        '元のセッションを削除し、別案だけを新しいセッションで進める',
+      ],
+      explanation: 'forkは元履歴のコピーから分岐した別セッションを作り、元のセッションは変更されません。同一セッションのresumeは元スレッドを書き換え、空の新規開始は文脈を失い、削除は元案へ戻れなくします。',
+    },
+    {
+      stem: "You want to try an alternative from where an existing session left off, but keep the original session's history so you can continue it later. Which action fits?",
+      choices: [
+        'Resume the same session and overwrite it as you switch to the alternative',
+        'Start a fresh empty session and paste the needed context back in by hand',
+        'Fork the session and pursue the alternative in a new session branched from a copy of the original history',
+        'Delete the original session and pursue only the alternative in a new one',
+      ],
+      explanation: 'Fork creates a separate session branched from a copy of the original history, leaving the original unchanged. Resuming the same session overwrites the original thread, a blank start loses context, and deleting removes the way back to the original.',
+    },
+    ['sessions'],
+    { verifiedAt: EXPANSION_VERIFIED_AT },
+  ),
+  question(
+    'q-d2-builtin-tools', 'd2', ['2.5'], 'multiple', ['a', 'c'],
+    { difficulty: 'application', skills: ['claude-code-workflow'] },
+    {
+      stem: '組み込みの読取・検索・編集・コマンド実行ツールを安全に使う運用として、適切なものを2つ選んでください。',
+      choices: [
+        '探索は広範なファイル読取より先に、狭く絞った検索から始める',
+        '変更対象を読まずに編集を適用し、失敗したら後から差分で確認する',
+        '変更対象を編集前に読み、変更後に検証を実行して結果を確かめる',
+        '破壊的なコマンドは内容を検査せず、実行後のログだけで妥当性を判断する',
+      ],
+      explanation: '探索は狭い検索から広げるとコンテキストを浪費せず、編集は対象を読んでから行い変更後に検証するのが安全です。未読のまま編集する、実行後ログだけで破壊的操作を判断する運用は誤りを取り返しにくくします。',
+    },
+    {
+      stem: 'Select the TWO safe practices for using the built-in read, search, edit, and command-execution tools.',
+      choices: [
+        'Begin exploration with a narrow, targeted search before broad file reads',
+        'Apply an edit without reading the target, and check the diff only if it fails',
+        'Read the target before editing it, then run a verification after the change',
+        'For destructive commands, skip inspecting the command and judge validity from the post-run log alone',
+      ],
+      explanation: 'Exploration should widen from a narrow search to avoid wasting context, and edits are safest when you read the target first and verify afterward. Editing unread targets or judging destructive commands only from after-the-fact logs makes mistakes hard to undo.',
+    },
+    ['code-how', 'code-best-practices'],
+    { verifiedAt: EXPANSION_VERIFIED_AT },
+  ),
+  question(
+    'q-d2-tool-disambiguation', 'd2', ['2.1'], 'single', ['b'],
+    { difficulty: 'application', skills: ['tool-design'] },
+    {
+      stem: '説明文が似通った2つのツールがあり、モデルがしばしば意図と違う方を選びます。最も効果的な対処はどれですか？',
+      choices: [
+        '2つのツールを常に両方呼ばせ、結果を後で人が選別する',
+        '各ツールの説明に用途・非用途・入力の意味を具体的に書き分け、境界を明確にする',
+        'tool_choiceで常に一方を強制し、もう一方は事実上使わせない',
+        '2つのツール名を似た短い語に統一し、違いは実行時に判断させる',
+      ],
+      explanation: '誤選択の主因は説明の曖昧さなので、用途・非用途・入力の意味を具体化して境界を明確にするのが本質的な対処です。両方呼び出しは無駄で、常時強制は一方を殺し、名前を似せるのは区別をさらに困難にします。',
+    },
+    {
+      stem: 'Two tools have similar descriptions and the model often picks the wrong one for the intent. What is the most effective fix?',
+      choices: [
+        'Always call both tools and have a person sort out the results afterward',
+        'Rewrite each description to state its use, non-use, and input meaning concretely, making the boundary clear',
+        'Force one tool with tool_choice every time so the other is effectively never used',
+        'Rename both tools to similar short words and let the model decide the difference at run time',
+      ],
+      explanation: 'The root cause of misselection is ambiguous descriptions, so sharpening use, non-use, and input meaning to clarify the boundary is the real fix. Calling both is wasteful, always forcing one kills the other, and similar names make the distinction harder.',
+    },
+    ['tool-use', 'define-tools'],
+    { verifiedAt: EXPANSION_VERIFIED_AT },
+  ),
+  question(
+    'q-d3-plan-mode', 'd3', ['3.4'], 'single', ['a'],
+    { difficulty: 'application', skills: ['claude-code-workflow'] },
+    {
+      stem: '複数ファイルにまたがり、対象コードに不慣れな変更に着手します。進め方として最も適切なのはどれですか？',
+      choices: [
+        'plan modeで先に読取と設計を済ませ、範囲と検証方法を固めてから実装に移る',
+        'すぐに全ファイルを編集し、動かなければ都度修正して収束させる',
+        '変更の大小に関わらず、常にplan modeで詳細設計を書いてから着手する',
+        '設計は省き、テストも実装後にまとめて後回しにする',
+      ],
+      explanation: '範囲が広く不慣れな変更は、plan modeで探索と設計を実装から分離すると誤った問題を解く事故を防げます。ただしplan modeはオーバーヘッドがあるため些末な変更には過剰で、常時適用は非効率です。',
+    },
+    {
+      stem: 'You are starting a change that spans several files in code you are unfamiliar with. What is the most appropriate approach?',
+      choices: [
+        'Use plan mode to read and design first, settling scope and verification before implementing',
+        'Edit all the files immediately and converge by fixing whatever breaks',
+        'Always write a detailed design in plan mode before starting, regardless of change size',
+        'Skip design and defer all tests until after implementation',
+      ],
+      explanation: 'For a broad, unfamiliar change, plan mode separates exploration and design from implementation and avoids solving the wrong problem. But plan mode adds overhead, so applying it to trivial changes is excessive and inefficient.',
+    },
+    ['code-best-practices'],
+    { verifiedAt: EXPANSION_VERIFIED_AT },
+  ),
+  question(
+    'q-d3-iterative-eval', 'd3', ['3.5'], 'multiple', ['b', 'c'],
+    { difficulty: 'analysis', skills: ['claude-code-workflow', 'evaluation'] },
+    {
+      stem: '生成結果を反復的に改善するループを設計します。品質を安定して上げるために適切なものを2つ選んでください。',
+      choices: [
+        '基準は決めず、出力が「良くなった感触」になるまで修正を続ける',
+        '良し悪しの評価基準を反復を始める前に定義しておく',
+        '各修正ごとに、以前通っていた項目が壊れていないか回帰を確認する',
+        '一度に大量の変更をまとめて入れ、最後に一括で評価する',
+      ],
+      explanation: '反復改善は、評価基準を先に定めて進捗を客観的に測ることと、修正ごとに回帰を確認して後退を防ぐことが要です。感触頼みや一括変更は、何が効いたか切り分けられず品質が安定しません。',
+    },
+    {
+      stem: 'You are designing a loop that iteratively improves generated output. Select the TWO practices that reliably raise quality.',
+      choices: [
+        'Set no criteria and keep revising until the output "feels" better',
+        'Define the criteria for good vs bad before starting the iterations',
+        'After each revision, check for regressions in items that previously passed',
+        'Bundle many changes at once and evaluate them all only at the end',
+      ],
+      explanation: 'Iterative refinement relies on defining criteria first to measure progress objectively and checking regressions each revision to prevent backsliding. Relying on feel or batching changes makes it impossible to tell what helped and destabilizes quality.',
+    },
+    ['code-best-practices', 'evals'],
+    { verifiedAt: EXPANSION_VERIFIED_AT },
+  ),
+  question(
+    'q-d3-headless-perms', 'd3', ['3.6'], 'single', ['c'],
+    { difficulty: 'application', skills: ['claude-code-workflow', 'structured-output'] },
+    {
+      stem: 'CIの非対話実行にコーディングエージェントを組み込みます。安全で機械可読な構成として最も適切なのはどれですか？',
+      choices: [
+        'すべてのツールを許可し、人が後でログを目視して問題を拾う',
+        '出力は自然文のまま受け、正規表現で結果を抽出して合否を判断する',
+        'allowedToolsを必要最小限に絞り、出力をJSON形式にして終了コードで成否を判定する',
+        '権限確認の対話をCIでも有効にし、必要時に人の承認を待たせる',
+      ],
+      explanation: '非対話実行では、allowedToolsで最小権限にし、JSON出力と終了コードでCIが機械的に成否を判定できる形が適切です。全許可は危険、自然文の正規表現抽出は脆く、対話承認は人がいないCIで停止します。',
+    },
+    {
+      stem: 'You are embedding a coding agent into a non-interactive CI run. Which configuration is most appropriate for safety and machine-readability?',
+      choices: [
+        'Allow all tools and have a person eyeball the log afterward to catch problems',
+        'Take the output as prose and extract the result with a regex to decide pass/fail',
+        'Scope allowedTools to the minimum needed, emit JSON output, and judge success by exit code',
+        'Keep interactive permission prompts enabled in CI and wait for human approval when needed',
+      ],
+      explanation: 'A non-interactive run should use least-privilege allowedTools and let CI judge success mechanically from JSON output and the exit code. Allowing everything is unsafe, regex over prose is brittle, and interactive approval stalls a CI run with no human present.',
+    },
+    ['headless'],
+    { verifiedAt: EXPANSION_VERIFIED_AT },
+  ),
+  question(
+    'q-d3-command-vs-skill', 'd3', ['3.2'], 'single', ['d'],
+    { difficulty: 'foundation', skills: ['claude-code-configuration'] },
+    {
+      stem: '現在のClaude Codeで、チームが再利用する手順を用意します。副作用があり利用者が明示実行するworkflowと、Claudeが必要時に自動参照する背景知識の作り分けとして最も適切なのはどれですか？',
+      choices: [
+        'workflowは .claude/commands/ に、背景知識はSkillにし、両者をまったく別の仕組みとして設計する',
+        '両方をSkillにし、どちらもClaudeの自動判断だけに任せて明示起動はさせない',
+        '両方をCLAUDE.mdへ書き、起動を制御したい場合はその都度チャットで指示する',
+        '両方をSkillとして実装し、副作用のあるworkflowには disable-model-invocation: true、背景知識には user-invocable: false を設定する',
+      ],
+      explanation: '現在のClaude Codeではcustom commandはSkillへ統合され、.claude/commands/ のファイルとSkillは同じ /名前 を作ります。作り分けは別の仕組みではなくSkillのfrontmatterで行い、明示実行のみにしたいworkflowは disable-model-invocation: true、Claudeだけが参照する背景知識は user-invocable: false を設定します。既存の .claude/commands/ も互換で動きますが、新規設計で必須の別概念ではありません。',
+    },
+    {
+      stem: 'In current Claude Code, you are preparing reusable procedures for a team. What is the most appropriate way to distinguish a side-effect workflow the user invokes explicitly from background knowledge Claude references automatically when relevant?',
+      choices: [
+        'Put the workflow in .claude/commands/ and the knowledge in a Skill, designing them as entirely separate mechanisms',
+        "Make both Skills and leave both to Claude's automatic decision only, with no explicit invocation",
+        'Put both in CLAUDE.md and give any invocation control ad hoc in chat each time',
+        'Implement both as Skills, setting disable-model-invocation: true on the side-effect workflow and user-invocable: false on the background knowledge',
+      ],
+      explanation: 'In current Claude Code, custom commands are merged into Skills, and a .claude/commands/ file and a Skill both create the same /name. You distinguish them not as separate mechanisms but via Skill frontmatter: disable-model-invocation: true for an explicit-only workflow, and user-invocable: false for knowledge only Claude should reference. Existing .claude/commands/ files still work for compatibility but are not a required separate concept for new designs.',
+    },
+    ['skills', 'code-features', 'code-best-practices'],
+    { verifiedAt: EXPANSION_VERIFIED_AT },
+  ),
+  question(
+    'q-d4-fewshot', 'd4', ['4.2'], 'single', ['b'],
+    { difficulty: 'application', skills: ['prompt-design'] },
+    {
+      stem: '分類プロンプトが境界的な入力で判断を誤ります。few-shot例の使い方として最も効果的なのはどれですか？',
+      choices: [
+        '教科書的な典型例だけを大量に並べ、境界例は載せない',
+        '誤りやすい境界例を、望む入出力の対応として例に加え、指示と矛盾しないようにする',
+        '例と本文の指示がずれても、例の数を増やせば精度は上がると考える',
+        '正解ラベルを伏せた入力例だけを列挙し、規則はモデルに推測させる',
+      ],
+      explanation: 'few-shotは、曖昧さの残る境界例を入出力対応として示すと規則が具体化します。典型例だけでは境界が埋まらず、例と指示の矛盾は判断を乱し、ラベルの無い例は基準を伝えられません。',
+    },
+    {
+      stem: 'A classification prompt misjudges borderline inputs. What is the most effective use of few-shot examples?',
+      choices: [
+        'Pile up many textbook typical examples only and include no borderline cases',
+        'Add the error-prone borderline cases as input-output examples, keeping them consistent with the instructions',
+        'Assume that adding more examples raises accuracy even if the examples contradict the instructions',
+        'List input examples with the correct labels hidden and let the model infer the rule',
+      ],
+      explanation: 'Few-shot works by showing the ambiguous borderline cases as input-output pairs to make the rule concrete. Typical examples alone leave the boundary unfilled, examples that contradict the instructions confuse the decision, and unlabeled examples convey no criterion.',
+    },
+    ['prompting-best'],
+  ),
+  question(
+    'q-d4-multipass', 'd4', ['4.6'], 'multiple', ['a', 'd'],
+    { difficulty: 'analysis', skills: ['evaluation', 'prompt-design'] },
+    {
+      stem: '生成・評価・統合を1つの巨大プロンプトに詰め込まず、複数パスに分けます。分離する理由として適切なものを2つ選んでください。',
+      choices: [
+        '生成する役と評価する役を分けると、自分の出力を甘く採点する偏りを避けられる',
+        'パスを分けるほど1回のトークン数が必ず減り、コストが常に下がる',
+        'パスを分ければ、最終統合での全体整合の再確認は不要になる',
+        '各パスの役割が明確になり、局所評価と全体統合を独立して検証できる',
+      ],
+      explanation: '分離の利点は、生成と評価を別にして自己採点の偏りを避けられること、各パスの役割が明確になり独立に検証できることです。トークンが必ず減るわけではなく、統合時の全体整合の再確認はむしろ必要です。',
+    },
+    {
+      stem: 'Instead of packing generation, evaluation, and integration into one huge prompt, you split them into multiple passes. Select the TWO valid reasons to separate them.',
+      choices: [
+        "Separating the generator from the evaluator avoids the bias of grading one's own output leniently",
+        'Splitting passes always reduces per-call tokens and therefore always lowers cost',
+        'Splitting passes removes the need to recheck global consistency during final integration',
+        'Each pass has a clear role, so focused evaluation and final integration can be verified independently',
+      ],
+      explanation: 'The benefits are avoiding self-grading bias by separating generation from evaluation, and giving each pass a clear, independently verifiable role. Tokens do not necessarily drop, and rechecking global consistency at integration is still needed.',
+    },
+    ['evals', 'subagents'],
+    { verifiedAt: EXPANSION_VERIFIED_AT },
+  ),
+  question(
+    'q-d4-review-criteria', 'd4', ['4.1'], 'single', ['c'],
+    { difficulty: 'application', skills: ['evaluation', 'prompt-design'] },
+    {
+      stem: '出力の「高品質さ」を評価したいですが、判定がレビュアーごとにぶれます。最も効果的な対処はどれですか？',
+      choices: [
+        '経験豊富なレビュアー1人の主観に任せ、基準は明文化しない',
+        '出力が長く詳細であれば高品質とみなす単純な規則にする',
+        '「高品質」を観察可能な合否条件や尺度に分解し、評価前に定義しておく',
+        '評価は生成後に毎回その場で基準を決め、案件ごとに変える',
+      ],
+      explanation: '評価のぶれは基準の曖昧さが原因なので、「高品質」を観察可能な合否条件や尺度へ分解し評価前に定義するのが要です。個人の主観や長さ依存、都度決めの基準は再現性が無く比較できません。',
+    },
+    {
+      stem: 'You want to evaluate the "high quality" of outputs, but judgments vary between reviewers. What is the most effective fix?',
+      choices: [
+        "Rely on one experienced reviewer's judgment and leave the criteria unwritten",
+        'Adopt a simple rule that treats longer, more detailed output as higher quality',
+        'Break "high quality" into observable pass/fail conditions or a scale, defined before evaluating',
+        'Decide the criteria on the spot after each generation, varying them case by case',
+      ],
+      explanation: 'Variance comes from ambiguous criteria, so decomposing "high quality" into observable pass/fail conditions or a scale, defined up front, is the fix. Personal judgment, length-based rules, or ad hoc criteria are not reproducible and cannot be compared.',
+    },
+    ['evals'],
+    { verifiedAt: EXPANSION_VERIFIED_AT },
+  ),
+  question(
+    'q-d4-schema-design', 'd4', ['4.3'], 'multiple', ['a', 'b'],
+    { difficulty: 'analysis', skills: ['structured-output'] },
+    {
+      stem: '後段システムが使う抽出結果のJSON Schemaを設計します。適切な方針を2つ選んでください。',
+      choices: [
+        '後段が実際に使う項目に絞り、過度に複雑で深いネストのスキーマを避ける',
+        '追加プロパティを禁止する設定（additionalProperties: false）で、スキーマにない想定外のフィールドの混入を防ぐ',
+        '想定し得る全項目を最初から網羅し、深くネストするほど厳密で良いスキーマになる',
+        '業務ルールをすべてenumやパターンで表現すれば、アプリ側の値検証は不要になる',
+      ],
+      explanation: 'スキーマは後段が必要とする項目に絞って過度な複雑さを避け、additionalProperties: false で想定外フィールドの混入を防ぐのが保守的な設計です。全項目の網羅や過度なネスト、業務ルールの全表現は、脆さやアプリ側検証の欠落を招きます。',
+    },
+    {
+      stem: 'You are designing the JSON Schema for extraction results a downstream system consumes. Select the TWO appropriate practices.',
+      choices: [
+        'Limit the schema to the fields the downstream actually uses and avoid an overly complex, deeply nested schema',
+        'Set additionalProperties: false so unexpected fields not defined in the schema cannot slip in',
+        'Cover every conceivable field from the start; the deeper and more nested, the stricter and better the schema',
+        'Expressing all business rules as enums or patterns removes the need for application-side value validation',
+      ],
+      explanation: 'Keep the schema to the fields the downstream needs and avoid excess complexity, and set additionalProperties: false to block unexpected fields not in the schema. Covering every field, over-nesting, or encoding all business rules invites brittleness or a gap in application-side validation.',
+    },
+    ['structured'],
+    { verifiedAt: EXPANSION_VERIFIED_AT },
+  ),
+  question(
+    'q-d4-batch-tradeoff', 'd4', ['4.5'], 'single', ['a'],
+    { difficulty: 'application', skills: ['throughput-and-cost'] },
+    {
+      stem: '1つのサービスに、ユーザーが応答を待つ対話パスと、締切のない夜間の大量分類ジョブがあります。実行方式の振り分けとして最も適切なのはどれですか？',
+      choices: [
+        '対話パスは同期APIで即時応答し、夜間の大量分類は非同期のバッチにまとめる',
+        '両方を同期APIで処理し、夜間ジョブも1件ずつ即時応答を待つ',
+        '両方をバッチにまとめ、対話パスの応答もバッチ完了まで待たせる',
+        '対話パスをバッチ、夜間ジョブを同期にして、レイテンシ要件と逆に割り当てる',
+      ],
+      explanation: '即時応答が要る対話パスは同期、待ち時間を許容できる夜間の大量処理は低コストな非同期バッチが適します。両方を同じ方式に寄せる、あるいは要件と逆に割り当てるのは、レイテンシかコストのどちらかを損ないます。',
+    },
+    {
+      stem: 'A single service has an interactive path where users wait for a response and a nightly bulk classification job with no deadline. What is the most appropriate way to assign execution modes?',
+      choices: [
+        'Serve the interactive path synchronously for immediate responses, and batch the nightly bulk classification asynchronously',
+        'Handle both synchronously, waiting one at a time for an immediate response even for the nightly job',
+        'Batch both, making the interactive path wait until the batch completes',
+        'Batch the interactive path and run the nightly job synchronously, assigning modes opposite to the latency needs',
+      ],
+      explanation: 'The interactive path needs immediate responses (synchronous), while the nightly bulk work tolerates latency and fits a low-cost asynchronous batch. Forcing both into one mode, or assigning modes opposite to the requirements, sacrifices either latency or cost.',
+    },
+    ['batch'],
+    { verifiedAt: EXPANSION_VERIFIED_AT },
+  ),
+  question(
+    'q-d5-exploration', 'd5', ['5.4'], 'single', ['d'],
+    { difficulty: 'application', skills: ['context-management'] },
+    {
+      stem: '大規模で不慣れなコードベースを変更します。構造把握の進め方として最も適切なのはどれですか？',
+      choices: [
+        '関係しそうなディレクトリを端から全ファイル読み、全体を頭に入れてから始める',
+        'ファイル名検索も内容検索もせず、記憶にある一般的構造を前提に変更する',
+        'まず広範囲を書き換え、壊れた箇所から逆に構造を推定する',
+        '狭い仮説に基づく検索から始めて対象を絞り、変更前に実ファイルで前提を検証する',
+      ],
+      explanation: '探索は狭い検索から広げて対象を絞り、変更前に推測を実ファイルで検証するのがコンテキストを浪費せず安全です。全読みはコンテキストを消費し、記憶前提や先に書き換える手順は誤った構造理解のまま進みます。',
+    },
+    {
+      stem: 'You are changing a large, unfamiliar codebase. What is the most appropriate way to understand its structure?',
+      choices: [
+        'Read every file in each plausibly related directory to hold the whole thing in mind before starting',
+        'Do no filename or content search and change code assuming the general structure you remember',
+        'Rewrite a broad area first and infer the structure backward from what breaks',
+        'Start from a narrow hypothesis-driven search to focus, and verify assumptions against real files before changing',
+      ],
+      explanation: 'Exploration should widen from a narrow search to focus the target and verify assumptions against real files before changing — this avoids wasting context. Reading everything burns context, and assuming from memory or rewriting first proceeds on a wrong understanding of the structure.',
+    },
+    ['large-codebases'],
+    { verifiedAt: EXPANSION_VERIFIED_AT },
+  ),
+  question(
+    'q-d5-provenance-carry', 'd5', ['5.6'], 'single', ['a'],
+    { difficulty: 'analysis', skills: ['structured-output'] },
+    {
+      stem: '複数ソースから回答を生成中、信頼できる2つの出典が同じ論点で食い違う主張をしています。来歴を保つ扱いとして最も適切なのはどれですか？',
+      choices: [
+        '各主張にそれぞれの出典IDを紐づけたまま、対立を明示して両方の根拠を残す',
+        '読みやすさのため片方の主張だけを採用し、出典対応は1つにまとめる',
+        '両主張を1文に融合し、出典IDは代表として片方だけを付ける',
+        '対立部分は出典対応を外して中立的に要約し、必要なら後で人が付け直す',
+      ],
+      explanation: '来歴保持では、対立する主張もどちらかに丸めず、各主張に対応する出典IDを保ったまま提示し、後から検証できるようにします。片方採用や1文への融合、出典対応を外す扱いは、どの主張がどの根拠に基づくかを失わせます。',
+    },
+    {
+      stem: 'While generating an answer from multiple sources, two trustworthy sources make conflicting claims on the same point. What is the most appropriate way to preserve provenance?',
+      choices: [
+        'Keep each claim tied to its own source ID and present the conflict, retaining both pieces of evidence',
+        'Adopt only one claim for readability and collapse the source mapping into one',
+        'Merge both claims into one sentence and attach just one representative source ID',
+        'Drop the source mapping for the conflicting part, summarize it neutrally, and let a person re-attach it later if needed',
+      ],
+      explanation: 'Preserving provenance means not collapsing conflicting claims into one but keeping each claim tied to its source ID and presenting the conflict so it can be checked later. Adopting one side, merging into one sentence, or dropping the mapping loses which claim rests on which evidence.',
+    },
+    ['structured'],
+    { verifiedAt: EXPANSION_VERIFIED_AT },
+  ),
+  question(
+    'q-d5-error-propagation', 'd5', ['5.3'], 'multiple', ['a', 'd'],
+    { difficulty: 'analysis', skills: ['failure-handling', 'structured-output'] },
+    {
+      stem: '下流ツールが失敗しました。上流が次の行動を判断できるようにする返し方として適切なものを2つ選んでください。',
+      choices: [
+        '元の失敗原因を握りつぶさず、分類とともに構造化して上流へ返す',
+        '失敗は握りつぶして空の成功として返し、上流には気づかせない',
+        '内部のスタックトレースや秘密情報をそのまま全文添付して返す',
+        '再試行可能かどうかと、得られた部分結果があれば併せて返す',
+      ],
+      explanation: '上流が判断するには、元の原因を分類とともに保全し、再試行可否や部分結果を渡すことが要です。空の成功として隠すと復旧できず、秘密や内部詳細の全文添付は情報漏えいと文脈浪費を招きます。',
+    },
+    {
+      stem: 'A downstream tool failed. Select the TWO ways to return it so the caller can decide the next action.',
+      choices: [
+        'Preserve the original cause rather than swallowing it, returning it structured with a classification',
+        'Swallow the failure and return an empty success so the caller never notices',
+        'Attach the full internal stack trace and secrets verbatim in the response',
+        'Indicate whether it is retryable, and include any partial results obtained',
+      ],
+      explanation: 'For the caller to decide, preserve the original cause with a classification and pass retryability and any partial results. Hiding it as an empty success prevents recovery, and attaching secrets or internal detail verbatim leaks information and wastes context.',
+    },
+    ['tool-use', 'mcp-tools'],
+    { verifiedAt: EXPANSION_VERIFIED_AT },
   ),
 ];
 

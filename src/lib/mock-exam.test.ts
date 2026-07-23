@@ -102,16 +102,6 @@ describe('createMockExamSession — failure', () => {
     expect(result).toEqual({ ok: false, reason: 'insufficient-question-bank', shortages: { d1: 6, d5: 4 } });
   });
 
-  it('reports the real question bank as insufficient rather than starting a short exam', () => {
-    // #given — the shipped bank cannot yet supply 60 questions (see the audit)
-    const result = createMockExamSession({ questions, blueprint: defaultMockExamBlueprint, now: START, random: seededRandom(1), createId });
-
-    // #then
-    expect(result.ok).toBe(false);
-    if (result.ok) return;
-    expect(result.reason).toBe('insufficient-question-bank');
-  });
-
   it('fails with a typed invalid-blueprint result rather than throwing', () => {
     // #given — a distribution that sums to 59
     const result = createMockExamSession({
@@ -127,6 +117,64 @@ describe('createMockExamSession — failure', () => {
     if (result.ok) return;
     expect(result.reason).toBe('invalid-blueprint');
     if (result.reason === 'invalid-blueprint') expect(result.errors.length).toBeGreaterThan(0);
+  });
+});
+
+describe('createMockExamSession — production question bank', () => {
+  const domainById = new Map(questions.map((question) => [question.id, question.domainId]));
+  const revisionById = new Map(questions.map((question) => [question.id, question.revision]));
+
+  it('builds a full 60-question exam in the blueprint distribution from the shipped bank', () => {
+    // #given — the real, shipped question bank (see tasks/task-8a1-question-bank-expansion.md)
+    const result = createMockExamSession({ questions, blueprint: defaultMockExamBlueprint, now: START, random: seededRandom(1), createId });
+
+    // #then — no shortage; exactly 60 unique questions
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    const { questionRefs } = result.session;
+    expect(questionRefs).toHaveLength(60);
+    const ids = questionRefs.map((ref) => ref.questionId);
+    expect(new Set(ids).size).toBe(60);
+
+    // #then — distribution is exactly 16/11/12/12/9, keyed off each question's real domain
+    const byDomain = ids.reduce<Record<string, number>>((counts, id) => {
+      const domainId = domainById.get(id)!;
+      counts[domainId] = (counts[domainId] ?? 0) + 1;
+      return counts;
+    }, {});
+    expect(byDomain).toEqual({ d1: 16, d2: 11, d3: 12, d4: 12, d5: 9 });
+
+    // #then — each ref revision matches the bank's revision for that question
+    for (const ref of questionRefs) expect(ref.revision).toBe(revisionById.get(ref.questionId));
+  });
+
+  it('is reproducible for one seed and independent of the bank input order', () => {
+    // #given — the same seed over the shipped bank, and over its reverse
+    const forward = createMockExamSession({ questions, blueprint: defaultMockExamBlueprint, now: START, random: seededRandom(5), createId });
+    const same = createMockExamSession({ questions, blueprint: defaultMockExamBlueprint, now: START, random: seededRandom(5), createId });
+    const reversed = createMockExamSession({ questions: [...questions].reverse(), blueprint: defaultMockExamBlueprint, now: START, random: seededRandom(5), createId });
+
+    // #then — identical draw regardless of input order under the same seed
+    if (!forward.ok || !same.ok || !reversed.ok) throw new Error('expected sessions');
+    expect(same.session.questionRefs).toEqual(forward.session.questionRefs);
+    expect(reversed.session.questionRefs).toEqual(forward.session.questionRefs);
+  });
+
+  it('keeps the distribution invariant across different random inputs', () => {
+    // #given — two different seeds
+    const first = createMockExamSession({ questions, blueprint: defaultMockExamBlueprint, now: START, random: seededRandom(11), createId });
+    const second = createMockExamSession({ questions, blueprint: defaultMockExamBlueprint, now: START, random: seededRandom(22), createId });
+
+    // #then — different order, same 16/11/12/12/9 domain counts
+    if (!first.ok || !second.ok) throw new Error('expected sessions');
+    const distribution = (session: MockExamSession) =>
+      session.questionRefs.reduce<Record<string, number>>((counts, ref) => {
+        const domainId = domainById.get(ref.questionId)!;
+        counts[domainId] = (counts[domainId] ?? 0) + 1;
+        return counts;
+      }, {});
+    expect(distribution(first.session)).toEqual({ d1: 16, d2: 11, d3: 12, d4: 12, d5: 9 });
+    expect(distribution(second.session)).toEqual({ d1: 16, d2: 11, d3: 12, d4: 12, d5: 9 });
   });
 });
 
