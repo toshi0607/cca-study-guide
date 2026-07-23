@@ -468,7 +468,12 @@ export type UiCopy = {
     incompatibleDiscard: string;
     incompatibleDiscardConfirm: string;
     staleAttemptNotice: string;
+    staleBreakdownHidden: string;
+    reviewStaleQuestion: string;
     storageUnavailable: string;
+    saveErrorTitle: string;
+    saveErrorBody: string;
+    saveErrorRetry: string;
   };
   footer: {
     analytics: string;
@@ -916,7 +921,12 @@ export const ui = {
       incompatibleDiscard: 'この模試を破棄する',
       incompatibleDiscardConfirm: 'この模試を破棄しますか？回答は失われます。',
       staleAttemptNotice: '問題内容が更新されているため、この結果は現在の問題では再採点していません。',
+      staleBreakdownHidden: '問題内容が更新されているため、ドメイン・難易度・スキル別の内訳は表示しません。',
+      reviewStaleQuestion: 'この問題は内容が更新されたため、保存された回答のみを表示します。',
       storageUnavailable: 'この端末では進捗を保存できません。受験は続けられますが、再読み込み後には復元できません。',
+      saveErrorTitle: '結果を保存できませんでした',
+      saveErrorBody: '採点は完了しましたが、端末への保存に失敗したため、まだ提出は確定していません。この模試は進行中のままです。もう一度お試しください。',
+      saveErrorRetry: '保存をやり直す',
     },
     footer: { analytics: 'アクセス解析について', github: 'GitHub' },
   },
@@ -1357,7 +1367,12 @@ export const ui = {
       incompatibleDiscard: 'Discard this exam',
       incompatibleDiscardConfirm: 'Discard this exam? Your answers will be lost.',
       staleAttemptNotice: 'The question content has changed, so this result has not been re-graded against the current questions.',
+      staleBreakdownHidden: 'The question content has changed, so the by-domain, by-difficulty, and by-skill breakdowns are not shown.',
+      reviewStaleQuestion: 'This question’s content has changed, so only your saved answer is shown.',
       storageUnavailable: 'Progress cannot be saved on this device. You can keep taking the exam, but it cannot be restored after a reload.',
+      saveErrorTitle: 'Could not save the result',
+      saveErrorBody: 'Grading finished, but saving to this device failed, so your submission is not yet final. This exam is still in progress. Please try again.',
+      saveErrorRetry: 'Retry saving',
     },
     footer: { analytics: 'Analytics information', github: 'GitHub' },
   },

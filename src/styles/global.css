@@ -1109,9 +1109,9 @@ main {
 .mock-exam-history-meta { display: flex; align-items: baseline; gap: 8px 16px; flex-wrap: wrap; font: .82rem var(--mono); color: var(--ink-soft); }
 .mock-exam-history-meta strong { font-size: .92rem; color: var(--ink); }
 
-.mock-exam-incompatible { margin-top: 24px; padding: clamp(24px, 4vw, 42px); border: 1px solid var(--danger); background: #fdf1f0; }
-.mock-exam-incompatible h2 { margin: 0 0 12px; font-size: 1.4rem; }
-.mock-exam-incompatible p { margin: 0 0 18px; line-height: 1.8; }
+.mock-exam-incompatible, .mock-exam-save-error { margin-top: 24px; padding: clamp(24px, 4vw, 42px); border: 1px solid var(--danger); background: #fdf1f0; }
+.mock-exam-incompatible h2, .mock-exam-save-error h2 { margin: 0 0 12px; font-size: 1.4rem; }
+.mock-exam-incompatible p, .mock-exam-save-error p { margin: 0 0 18px; line-height: 1.8; }
 
 @media (max-width: 640px) {
   .mock-exam-runner-head { flex-direction: column; align-items: flex-start; gap: 8px; }

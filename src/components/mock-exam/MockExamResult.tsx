@@ -77,9 +77,17 @@ export function MockExamResult({ attempt, result, stale, headingRef, locale, cop
         <div><dt>{copy.mockExam.answeredLabel}</dt><dd>{result.answeredQuestions}</dd></div>
         <div><dt>{copy.mockExam.unansweredLabel}</dt><dd>{result.totalQuestions - result.answeredQuestions}</dd></div>
       </dl>
-      <TallyTable heading={copy.mockExam.byDomainHeading} rows={domainRows} copy={copy}/>
-      <TallyTable heading={copy.mockExam.byDifficultyHeading} rows={difficultyRows} copy={copy}/>
-      <TallyTable heading={copy.mockExam.bySkillHeading} rows={skillRows} note={copy.mockExam.skillMultiNote} copy={copy}/>
+      {/* Raw counts (accuracy/correct/total/answered) come from the attempt's own
+          stored correctness flags and stay valid. The by-axis breakdowns join to
+          the CURRENT questions, so for a stale attempt they would attribute old
+          verdicts to possibly-changed metadata — hide them rather than mislead. */}
+      {stale
+        ? <p class="mock-exam-tally-note">{copy.mockExam.staleBreakdownHidden}</p>
+        : <>
+            <TallyTable heading={copy.mockExam.byDomainHeading} rows={domainRows} copy={copy}/>
+            <TallyTable heading={copy.mockExam.byDifficultyHeading} rows={difficultyRows} copy={copy}/>
+            <TallyTable heading={copy.mockExam.bySkillHeading} rows={skillRows} note={copy.mockExam.skillMultiNote} copy={copy}/>
+          </>}
       <div class="mock-exam-result-actions">
         <button type="button" class="mock-exam-primary" onClick={onReview}>{copy.mockExam.reviewButton}</button>
         {onOpenHistory && <button type="button" class="mock-exam-secondary" onClick={onOpenHistory}>{copy.mockExam.historyButton}</button>}

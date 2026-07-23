@@ -43,7 +43,7 @@ export type MockExamViewProps = MockExamStorageBridge & {
   storageAvailable: boolean;
 };
 
-type Phase = 'landing' | 'running' | 'result' | 'incompatible' | 'history';
+type Phase = 'landing' | 'running' | 'result' | 'incompatible' | 'history' | 'save-error';
 type ActiveResult = { attempt: MockExamAttempt; result: MockExamResult; stale: boolean };
 
 function createExamId(): string {
@@ -64,10 +64,12 @@ export function MockExamView({ locale, copy, session, attempts, storageAvailable
   const [reviewing, setReviewing] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [createError, setCreateError] = useState(false);
+  const [pendingMode, setPendingMode] = useState<'submit' | 'expire' | null>(null);
   const resultHeadingRef = useRef<HTMLHeadingElement | null>(null);
   const reviewHeadingRef = useRef<HTMLHeadingElement | null>(null);
   const historyHeadingRef = useRef<HTMLHeadingElement | null>(null);
   const incompatibleRef = useRef<HTMLElement | null>(null);
+  const saveErrorRef = useRef<HTMLElement | null>(null);
   const finalizingRef = useRef(false);
 
   // Storage-first mutations: each reads canonical storage immediately before the
@@ -94,14 +96,14 @@ export function MockExamView({ locale, copy, session, attempts, storageAvailable
   const moveMockExam = (index: number): boolean =>
     changeSession((current) => moveMockExamCursor(current, index, new Date()));
 
-  const runFinalize = (mode: 'submit' | 'expire'): MockExamFinalizeOutcome => {
+  const runFinalize = (mode: 'submit' | 'expire'): { outcome: MockExamFinalizeOutcome; saved: boolean } => {
     const current = readData();
     const { data, outcome } = finalizeMockExam(current, { questions, mode, now: new Date() });
-    // writeData surfaces the save-failed notice itself; the graded outcome is
-    // still returned so the learner sees the result in memory even if the write
-    // was refused (the attempt is simply not persisted in that case).
-    if (data !== current) writeData(data);
-    return outcome;
+    // Only a real completion changes the document. If the write is refused
+    // (quota/blocked), `saved` is false — the caller must NOT claim submission,
+    // since the attempt was not persisted and the active session still stands.
+    const saved = data === current ? true : writeData(data);
+    return { outcome, saved };
   };
 
   const discardMockExam = (): boolean => {
@@ -115,12 +117,22 @@ export function MockExamView({ locale, copy, session, attempts, storageAvailable
     if (finalizingRef.current) return;
     finalizingRef.current = true;
     setSubmitting(true);
-    const outcome = runFinalize(mode);
+    const { outcome, saved } = runFinalize(mode);
     setSubmitting(false);
     if (outcome.ok) {
-      setActive({ attempt: outcome.attempt, result: outcome.result, stale: false });
-      setReviewing(false);
-      setPhase('result');
+      if (saved) {
+        setActive({ attempt: outcome.attempt, result: outcome.result, stale: false });
+        setReviewing(false);
+        setPendingMode(null);
+        setPhase('result');
+      } else {
+        // Graded but NOT persisted: never claim submission. Keep the active
+        // session, show a retry (writeData already surfaced the save-failed
+        // notice), and release the guard so the retry can run. Exam stays resumable.
+        setPendingMode(mode);
+        setPhase('save-error');
+        finalizingRef.current = false;
+      }
     } else if (outcome.reason === 'incompatible-content') {
       setPhase('incompatible');
     } else {
@@ -129,6 +141,8 @@ export function MockExamView({ locale, copy, session, attempts, storageAvailable
       finalizingRef.current = false;
     }
   };
+
+  const retryFinalize = () => { if (pendingMode) finalize(pendingMode); };
 
   // One-shot reconciliation from a persisted session: auto-expire if the deadline
   // already passed, or surface an incompatible-content mismatch. A compatible,
@@ -164,6 +178,9 @@ export function MockExamView({ locale, copy, session, attempts, storageAvailable
   }, [phase]);
   useEffect(() => {
     if (phase === 'incompatible') requestAnimationFrame(() => incompatibleRef.current?.focus());
+  }, [phase]);
+  useEffect(() => {
+    if (phase === 'save-error') requestAnimationFrame(() => saveErrorRef.current?.focus());
   }, [phase]);
 
   const beginExam = () => {
@@ -233,6 +250,15 @@ export function MockExamView({ locale, copy, session, attempts, storageAvailable
 
       {phase === 'running' && (!session || !currentQuestion) && incompatibleSection}
       {phase === 'incompatible' && incompatibleSection}
+
+      {phase === 'save-error' && <section class="mock-exam-save-error" aria-labelledby="mock-exam-save-error-title" tabIndex={-1} ref={saveErrorRef}>
+        <h2 id="mock-exam-save-error-title">{copy.mockExam.saveErrorTitle}</h2>
+        <p>{copy.mockExam.saveErrorBody}</p>
+        <div class="mock-exam-landing-actions">
+          <button type="button" class="mock-exam-primary" onClick={retryFinalize}>{copy.mockExam.saveErrorRetry}</button>
+          {pendingMode === 'submit' && <button type="button" class="mock-exam-secondary" onClick={() => { finalizingRef.current = false; setPhase('running'); }}>{copy.mockExam.resumeButton}</button>}
+        </div>
+      </section>}
 
       {phase === 'result' && active && !reviewing && <MockExamResultView
         attempt={active.attempt}

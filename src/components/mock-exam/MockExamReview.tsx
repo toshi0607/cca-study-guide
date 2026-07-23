@@ -72,13 +72,19 @@ export function MockExamReview({ attempt, questionById, headingRef, locale, copy
             {visible.map((row) => {
               const verdict = !row.answered ? copy.mockExam.verdictUnanswered : row.answer.correct ? copy.mockExam.verdictCorrect : copy.mockExam.verdictIncorrect;
               const verdictClass = !row.answered ? 'is-unanswered' : row.answer.correct ? 'is-correct' : 'is-incorrect';
+              // A row is stale when its question is gone or its revision changed
+              // under the stored attempt. For those, show ONLY what the attempt
+              // itself holds (selected choice ids, verdict) — never the current
+              // stem/choices/correct answer/rationale/source, which could contradict
+              // the old verdict. Fresh rows render the full review.
+              const rowStale = !row.question || row.question.revision !== row.answer.questionRevision;
               return (
                 <li key={row.answer.questionId} class="mock-exam-review-item">
                   <div class="mock-exam-review-item-head">
                     <code>{copy.mockExam.reviewQuestionMeta(row.index + 1)}</code>
                     <span class={`mock-exam-verdict ${verdictClass}`}>{verdict}</span>
                   </div>
-                  {row.question
+                  {!rowStale && row.question
                     ? <>
                         <QuestionMetadata question={row.question} locale={locale} copy={copy}/>
                         <div class="card-prompt"><h3>{localize(row.question.stem, locale)}</h3></div>
@@ -87,7 +93,10 @@ export function MockExamReview({ attempt, questionById, headingRef, locale, copy
                         <AnswerReview question={row.question} selectedIds={[...row.answer.selectedChoiceIds]} rationalesState={rationalesState} locale={locale} copy={copy}/>
                         <div class="card-sources"><strong>{copy.mockExam.officialSources}</strong><SourceLinks ids={row.question.sourceIds} copy={copy}/><small>{copy.mockExam.verified(formatDate(row.question.verifiedAt, locale))}</small></div>
                       </>
-                    : <p class="mock-exam-review-missing">{copy.mockExam.staleAttemptNotice}</p>}
+                    : <>
+                        <p class="mock-exam-review-missing" role="note">{copy.mockExam.reviewStaleQuestion}</p>
+                        <p class="mock-exam-your-answer"><strong>{copy.mockExam.yourAnswerLabel}</strong> {row.answered ? row.answer.selectedChoiceIds.map((id) => id.toUpperCase()).join(' / ') : copy.mockExam.notAnswered}</p>
+                      </>}
                 </li>
               );
             })}

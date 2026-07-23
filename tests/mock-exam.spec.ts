@@ -187,6 +187,72 @@ test('auto-expires a running exam when the clock runs out', { tag: '@slow' }, as
   expect((stored?.mockExamAttempts as unknown[]).length).toBe(1);
 });
 
+test('does not claim submission when the result cannot be saved, and keeps the exam resumable', async ({ page }) => {
+  // #given — a seeded in-progress exam, then localStorage.setItem blocked for the
+  // study-data key (quota/blocked), so the submit write will fail.
+  await seedStorage(page, STORAGE_KEY, {
+    ...emptyV3(),
+    activeMockExam: makeSession({ startedMsAgo: 60_000, durationMs: 7_200_000, answer: { questionId: refs[0].questionId, selectedChoiceIds: [firstChoiceId] } }),
+  });
+  await page.addInitScript((key) => {
+    const original = Storage.prototype.setItem;
+    Storage.prototype.setItem = function (k, v) {
+      if (k === key) throw new DOMException('blocked', 'QuotaExceededError');
+      return original.call(this, k, v);
+    };
+  }, STORAGE_KEY);
+  await page.reload();
+  await openMockExam(page);
+  await page.getByRole('button', { name: '模試を再開' }).click();
+
+  // #when — submitting through the dialog while the write is blocked
+  await page.getByRole('button', { name: '提出する', exact: true }).click();
+  await page.locator('.mock-exam-submit-dialog').getByRole('button', { name: '提出する' }).click();
+
+  // #then — a save-error screen, NOT a result; storage still holds the active
+  // session and no attempt was persisted, so the exam remains resumable.
+  await expect(page.getByRole('heading', { name: '結果を保存できませんでした' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: '結果', exact: true })).toHaveCount(0);
+  const stored = await readStudyData(page, STORAGE_KEY);
+  expect(stored?.activeMockExam).not.toBeNull();
+  expect((stored?.mockExamAttempts as unknown[]).length).toBe(0);
+});
+
+test('reviews a stale stored attempt without mixing in current question content', async ({ page }) => {
+  const start = 1_690_000_000_000; // fixed past epoch; independent of the machine clock
+  await seedStorage(page, STORAGE_KEY, {
+    ...emptyV3(),
+    mockExamAttempts: [{
+      id: 'attempt-stale-1',
+      blueprintVersion: 1,
+      outcome: 'submitted',
+      questionRefs: [{ questionId: refs[0].questionId, revision: 999 }, refs[1]],
+      answers: [
+        { questionId: refs[0].questionId, questionRevision: 999, selectedChoiceIds: [firstChoiceId], correct: true, answeredAt: new Date(start + 5 * 60_000).toISOString() },
+        { questionId: refs[1].questionId, questionRevision: refs[1].revision, selectedChoiceIds: [], correct: false },
+      ],
+      flaggedQuestionIds: [],
+      startedAt: new Date(start).toISOString(),
+      expiresAt: new Date(start + 7_200_000).toISOString(),
+      completedAt: new Date(start + 30 * 60_000).toISOString(),
+    }],
+  });
+  await page.reload();
+  await openMockExam(page);
+
+  await page.getByRole('button', { name: '過去の模試' }).click();
+  await page.getByRole('button', { name: '結果を開く' }).click();
+
+  // Result: raw scoreboard shown, but the content-dependent breakdowns are hidden.
+  await expect(page.getByRole('heading', { name: '結果', exact: true })).toBeVisible();
+  await expect(page.getByText('ドメイン・難易度・スキル別の内訳は表示しません')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'ドメイン別' })).toHaveCount(0);
+
+  // Review: the stale question shows only the saved answer, not current content.
+  await page.getByRole('button', { name: '問題を復習する' }).click();
+  await expect(page.getByText('この問題は内容が更新されたため、保存された回答のみを表示します。').first()).toBeVisible();
+});
+
 test('has no accessibility violations across landing, runner, and result', { tag: '@slow' }, async ({ page }) => {
   await openMockExam(page);
   await expect(page.getByRole('heading', { name: '60問の模試に挑戦する' })).toBeVisible();
