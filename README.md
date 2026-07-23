@@ -1,54 +1,56 @@
 # CCA Field Notes
 
-Claude Certified Architect – Foundations（CCAR-F）の公開出題範囲を、日本語の独自要約と想起カードで学ぶ非公式Webアプリです。
+**English** | [日本語](README.ja.md)
 
-## 方針
+An unofficial web app for studying the public exam scope of the Claude Certified Architect – Foundations (CCAR-F) exam through original summaries and recall cards. Study content is written in Japanese.
 
-- Anthropic非公式・非提携
-- 2026年7月の公式Exam Guide v1.0にある5領域・30タスクを独自に短く要約
-- 練習カードは公開中の公式プロダクトDocsから独自作成
-- 実試験問題、記憶から再構成した問題、非公開教材、公式サンプル問題は掲載しない
-- 想起カードに加え、独自作成問題による選択式演習（単一選択・複数選択、即時フィードバックと領域別サマリ付き）を収録。本試験の再現ではない
-- 選択式演習にはシナリオ演習モードを収録。架空企業のケース記述を読んでから紐づく設問群に答える形式に慣れるための独自教材で、本試験のシナリオの複製・再現ではない
-- 練習ビューには一覧表示に加えて集中レビューセッションを収録。フィルタ結果を1枚ずつ「思い出す→開示→評価」で回し、キーボードショートカット（Space/Enterで開示、1/2/3で評価、Escで中断）にも対応
-- 進捗はブラウザのlocalStorageだけに保存（JSONの書き出し・読み込みで端末・ブラウザ間の移行が可能）
-- Google Analyticsは設定時に通常読み込みし、ページ閲覧以外の学習データを独自イベントとして送信しない
+## Principles
 
-## 機能
+- Unofficial and not affiliated with Anthropic
+- Short, original summaries of the 5 domains and 30 tasks from the official Exam Guide v1.0 (July 2026)
+- Practice cards are authored independently from the publicly available official product docs
+- Does not include real exam questions, questions reconstructed from memory, non-public materials, or official sample questions
+- In addition to recall cards, includes multiple-choice practice from original questions (single- and multiple-select, with instant feedback and per-domain summaries). Not a reproduction of the real exam
+- The multiple-choice practice includes a scenario mode: an original study aid to get comfortable with reading a fictional company's case description and then answering the linked questions. Not a copy or reproduction of the real exam's scenarios
+- The practice view offers a focused review session in addition to the list view. It cycles through filtered results one card at a time in a "recall → reveal → rate" loop, with keyboard shortcuts (Space/Enter to reveal, 1/2/3 to rate, Esc to stop)
+- Progress is stored only in the browser's localStorage (JSON export/import lets you migrate across devices and browsers)
+- When configured, Google Analytics is loaded normally and does not send any learning data beyond page views as custom events
 
-現在このサービスで利用できる機能です。すべてブラウザ内だけで完結し、サーバー・ログイン・課金はありません。
+## Features
 
-- **Study Guide** — 5領域・30タスクの独自要約。セクション単位で着手・完了・再確認の進捗を記録
-- **Hands-on guides** — 自分の環境で試す手順つきガイド。ステップ単位のチェックと進捗記録
-- **Official scenario mapping** — 公式シナリオを起点に、関連する Study Guide・カード・設問・ハンズオンへ橋渡し
-- **Practice cards** — 想起カード。一覧表示と集中レビューセッション（Space/Enterで開示、1/2/3で評価、Escで中断）
-- **Choice quiz** — 単一選択・複数選択の選択式演習。即時フィードバックと領域別サマリ
-- **Scenario quiz** — 架空企業のケースを読んでから紐づく設問群に答えるシナリオ演習
-- **60問・120分の Mock Exam** — 本番規模の通し模試
-  - **resume** — 中断しても保存済みセッションから再開
-  - **history** — 端末内に保存した過去の模試結果の一覧
-  - **result review** — 結果画面から設問ごとの復習
-  - **per-choice rationale** — 選択肢ごとの解説
-- **Learning analysis** — 模試結果から次に復習すべき領域を提示（公式点数・合否・準備完了度は算出しない）
-  - **evidence level** — 分析の根拠となる回答数の十分さを表示
-  - **stale attempt safety** — 問題内容が更新された回答は再採点せず、軸別集計から除外
-- **local-only storage** — 進捗はこのブラウザのlocalStorageだけに保存
-- **JSON export/import** — 進捗の書き出し・読み込みで端末・ブラウザ間を移行
+These are the features currently available in the service. Everything runs entirely in the browser — no server, no login, no billing.
 
-## 推奨学習順序
+- **Study Guide** — original summaries of the 5 domains and 30 tasks. Tracks not-started / done / needs-review progress per section
+- **Hands-on guides** — step-by-step guides to try in your own environment, with per-step checks and progress tracking
+- **Official scenario mapping** — starts from an official scenario and bridges to the related Study Guide sections, cards, questions, and hands-on guides
+- **Practice cards** — recall cards, with both a list view and a focused review session (Space/Enter to reveal, 1/2/3 to rate, Esc to stop)
+- **Choice quiz** — single- and multiple-select multiple-choice practice with instant feedback and per-domain summaries
+- **Scenario quiz** — read a fictional company's case, then answer the linked set of questions
+- **60-question, 120-minute Mock Exam** — a full-length exam at production scale
+  - **resume** — pick up from a saved session even after interrupting
+  - **history** — a list of past mock exam results saved on the device
+  - **result review** — review each question from the result screen
+  - **per-choice rationale** — an explanation for every choice
+- **Learning analysis** — suggests which domains to review next based on mock exam results (does not compute an official score, pass/fail, or readiness)
+  - **evidence level** — shows whether there are enough answers to back the analysis
+  - **stale attempt safety** — answers whose question content has since changed are not re-scored and are excluded from the per-axis aggregation
+- **local-only storage** — progress is stored only in this browser's localStorage
+- **JSON export/import** — export/import progress to migrate across devices and browsers
 
-このサービス独自の学習上の提案です。公式の推奨順序ではなく、合格や準備完了を示すものでもありません。特定の試験日や期間は前提にせず、自分のペースで繰り返してください。
+## Suggested study order
 
-1. 学習開始地点を選ぶ（ガイドの「学習開始地点を選ぶ」）
-2. Study Guide で基礎を確認する
-3. Hands-on で実際に試す
-4. Practice カードで想起する
-5. Quiz と公式シナリオで判断を練習する
-6. 60問の模試を受ける
-7. 結果・復習・学習分析で誤答を確認する
-8. 復習優先候補に戻って繰り返す
+This is the service's own study suggestion. It is not the official recommended order, and it does not indicate passing or readiness. It assumes no particular exam date or timeframe — repeat it at your own pace.
 
-## 開発
+1. Choose a starting point ("Choose a starting point" in the guide)
+2. Review the fundamentals in the Study Guide
+3. Try things out with the Hands-on guides
+4. Recall with the Practice cards
+5. Practice judgment with the Quiz and official scenarios
+6. Take the 60-question mock exam
+7. Check your mistakes with results, review, and learning analysis
+8. Return to the priority review candidates and repeat
+
+## Development
 
 ```sh
 pnpm install
@@ -59,63 +61,63 @@ pnpm test:e2e
 pnpm build
 ```
 
-Astroの静的ビルドを使用します。サーバー、APIキー、データベースは不要です。
+Uses Astro's static build. No server, API key, or database required.
 
-### E2Eテスト（Playwright）
+### E2E tests (Playwright)
 
-`tests/`は機能別のspecに分割し、共通処理は`tests/fixtures/`（クリーンなstorageで1 navigation開始・共有UIヘルパー・axe/storageヘルパー）に集約しています。純粋ロジックの網羅検証はVitest（`pnpm test`）、ブラウザ統合・focus・storage・routing・遅延chunk・download・アクセシビリティ・レスポンシブはE2Eが担当します。
+`tests/` is split into per-feature specs, and shared logic is centralized in `tests/fixtures/` (a single navigation start with clean storage, shared UI helpers, and axe/storage helpers). Vitest (`pnpm test`) exhaustively verifies pure logic; E2E covers browser integration, focus, storage, routing, lazy chunks, downloads, accessibility, and responsiveness.
 
 ```sh
-pnpm test:e2e          # 完全回帰（毎回production buildを作成）。マージゲート
-pnpm test:e2e:fast     # 開発中の反復用。@slow（axe・レスポンシブ・重いシナリオ）を除外
-pnpm test:e2e:a11y     # アクセシビリティ(axe)のみ
-pnpm test:e2e:ui       # Playwright UIモード
+pnpm test:e2e          # Full regression (builds production every time). Merge gate
+pnpm test:e2e:fast     # For iterating during development. Excludes @slow (axe, responsive, heavy scenarios)
+pnpm test:e2e:a11y     # Accessibility (axe) only
+pnpm test:e2e:ui       # Playwright UI mode
 ```
 
-`test:e2e:fast`は起動済みサーバーを再利用する前提の速いフィードバック用です（下記手順でサーバーを起動しておくと、ビルドを省いて数十秒で完了します）。サーバー未起動なら自動でビルドするため、その初回はゲート同等の時間がかかります。
+`test:e2e:fast` is for fast feedback and assumes a running server is reused (start the server as shown below to skip the build and finish in tens of seconds). If no server is running, it builds automatically, so that first run takes as long as the gate.
 
-`pnpm test:e2e`は毎回productionビルドを作り直すため、開発中に繰り返すと待ち時間が長くなります。ローカルでプレビューサーバーを起動済みなら、明示的に再利用できます（古いビルドを誤って使わないよう、既定では再利用しません）。
+`pnpm test:e2e` rebuilds the production build every time, so repeating it during development gets slow. If you already have a local preview server running, you can explicitly reuse it (reuse is disabled by default to avoid accidentally using a stale build).
 
 ```sh
-# 別ターミナルで起動（analyticsテストが測定IDを要求するため、webServerと同じIDでビルド）
+# Start in a separate terminal (build with the same ID as the webServer, since the analytics tests require a measurement ID)
 PUBLIC_GA_MEASUREMENT_ID=G-TEST123456 pnpm build && pnpm preview --host 127.0.0.1 --port 4325
-pnpm test:e2e:reuse   # または test:e2e:fast。起動済みサーバーへ実行
+pnpm test:e2e:reuse   # or test:e2e:fast. Runs against the already-running server
 ```
 
-`test:e2e:fast`は開発中のフィードバック用で、マージ前には必ず`pnpm test:e2e`（full）を通してください。ワーカー数は`PW_WORKERS`で上書きできます（既定2）。
+`test:e2e:fast` is for development feedback; always pass `pnpm test:e2e` (full) before merging. The worker count can be overridden with `PW_WORKERS` (default 2).
 
-### Webフォント
+### Web fonts
 
-見出し用フォント（Barlow Condensed / Zen Kaku Gothic New）は、使用文字だけにサブセットしたwoff2を`public/fonts/`にコミットしてセルフホストしています。見出しやUI文言を変更してサブセットに文字が足りなくなると`pnpm test`が失敗するので、その場合は次で再生成してください。
+The heading fonts (Barlow Condensed / Zen Kaku Gothic New) are self-hosted as woff2 subsetted to only the characters in use and committed under `public/fonts/`. If you change a heading or UI string and the subset no longer has the needed characters, `pnpm test` fails; regenerate with the following in that case.
 
 ```sh
 pnpm build
 pnpm fonts:subset
 ```
 
-ファイル名には内容ハッシュが含まれ、参照は`public/fonts/manifest.json`経由で自動追従します。生成物のwoff2とmanifestはコミットしてください。
+File names include a content hash, and references follow automatically via `public/fonts/manifest.json`. Commit the generated woff2 files and the manifest.
 
 ## Google Analytics
 
-GA4のWebデータストリームに表示される測定IDを、Production環境のみに設定します。未設定ならGoogleタグとアクセス解析の表示は出力されません。不正な形式はビルドエラーになります。
+The measurement ID shown on the GA4 web data stream is set for the Production environment only. If unset, no Google tag or analytics output is emitted. An invalid format is a build error.
 
 ```sh
 vercel env add PUBLIC_GA_MEASUREMENT_ID production
 vercel deploy --prod
 ```
 
-値は`G-...`形式です。設定時は`gtag.js`を通常読み込みし、広告ストレージ・広告向けユーザーデータ・広告パーソナライズを拒否した状態で基本ページビューを設定します。Google Signalsと広告パーソナライズ用シグナルも無効で、GA Cookieはアクセス中のホストだけに限定します。アプリ独自のカスタムイベントは実装していません。ページビューだけに限定する場合は、GA4 Webデータストリーム側でも「拡張計測」を無効にしてください。利用者向け説明は`/privacy/`に掲載します。
+The value is in `G-...` format. When set, `gtag.js` is loaded normally and configures basic page views with ad storage, ad user data, and ad personalization denied. Google Signals and ad-personalization signals are also disabled, and GA cookies are limited to the host being visited. No app-specific custom events are implemented. To limit to page views only, also disable "enhanced measurement" on the GA4 web data stream. A user-facing explanation is published at `/privacy/`.
 
-## 告知動画（video/）
+## Promo video (video/)
 
-`video/`はSNS告知動画（約30秒・1920×1080・H.264）を生成する独立したRemotionプロジェクトです。自前の`package.json`を持ち、アプリ本体のビルド・テスト・デプロイには影響しません。画面素材は`video/assets/`に置いた実画面スクリーンショットで、`cd video && pnpm install && npx remotion render promo out/promo.mp4`でレンダリングします（`video/out/`の生成物はコミットしません）。
+`video/` is a standalone Remotion project that generates a social promo video (about 30 seconds, 1920×1080, H.264). It has its own `package.json` and does not affect the main app's build, test, or deploy. The screen material is real screenshots placed in `video/assets/`, and you render with `cd video && pnpm install && npx remotion render promo out/promo.mp4` (the artifacts under `video/out/` are not committed).
 
-## 公式情報
+## Official information
 
 - [Certification page](https://anthropic-partners.skilljar.com/claude-certified-architect-foundations-certification)
 - [Exam Guide v1.0](https://everpath-course-content.s3-accelerate.amazonaws.com/instructor%2F6nizmqk8tpzpfjvt6qmmav7rh%2Fpublic%2F1783542750%2FClaude+Certified+Architect+%E2%80%93+Foundations+Exam+Guide.pdf)
 
-最終確認: 2026-07-14
+Last verified: 2026-07-14
 
 ## License
 
