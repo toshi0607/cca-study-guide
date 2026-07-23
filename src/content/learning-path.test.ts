@@ -14,6 +14,7 @@ import { ui } from '../i18n/ui';
 import { locales } from '../i18n/locales';
 
 const readmeText = readFileSync(fileURLToPath(new URL('../../README.md', import.meta.url)), 'utf8');
+const readmeJaText = readFileSync(fileURLToPath(new URL('../../README.ja.md', import.meta.url)), 'utf8');
 
 // The App View union has no runtime form; this mirrors src/components/app/types.ts.
 // A stage target that resolves to a view must be one of these.
@@ -106,15 +107,17 @@ describe('user-facing copy stays audience-neutral', () => {
     }
   });
 
-  it('contains no person/date-specific framing in the README', () => {
+  it('contains no person/date-specific framing in either README', () => {
     for (const pattern of FORBIDDEN) {
-      expect(pattern.test(readmeText), `pattern ${pattern}`).toBe(false);
+      expect(pattern.test(readmeText), `pattern ${pattern} (README.md)`).toBe(false);
+      expect(pattern.test(readmeJaText), `pattern ${pattern} (README.ja.md)`).toBe(false);
     }
   });
 
-  it('keeps the README official-sources verified date in sync with content', () => {
-    // #then the README "最終確認" line matches the single VERIFIED_AT source of truth
-    expect(readmeText).toContain(`最終確認: ${VERIFIED_AT}`);
+  it('keeps both READMEs official-sources verified date in sync with content', () => {
+    // #then each README's verified-date line matches the single VERIFIED_AT source of truth
+    expect(readmeText).toContain(`Last verified: ${VERIFIED_AT}`);
+    expect(readmeJaText).toContain(`最終確認: ${VERIFIED_AT}`);
   });
 });
 
