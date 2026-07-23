@@ -71,7 +71,6 @@ export type UiCopy = {
     started: string;
     notStarted: string;
     coverage: string;
-    objectives: (count: number) => string;
   };
   guide: {
     eyebrow: string;
@@ -109,6 +108,9 @@ export type UiCopy = {
     diagnosisOpenSection: (title: string) => string;
     pathTitle: string;
     pathNote: string;
+    // Analysis-stage CTA shown when no attempt exists yet: names the precondition
+    // instead of promising an analysis screen the learner cannot reach.
+    analysisCtaNoAttempt: string;
     // Display text only. Stage identity, order, and target live in the
     // locale-independent typed data (`src/content/learning-path.ts`); this map is
     // keyed by that data's stage id so ja/en can never disagree on structure.
@@ -647,12 +649,11 @@ export const ui = {
       emptyAllClearDescription: 'この調子で復習を続けましょう。',
     },
     status: {
-      eyebrow: 'LOCAL PROGRESS',
-      title: 'この端末の進捗',
-      started: '着手',
-      notStarted: '未着手',
-      coverage: '収録範囲',
-      objectives: (count) => `${count}項目`,
+      eyebrow: 'CARD PRACTICE PROGRESS',
+      title: 'カード練習の進捗',
+      started: '評価済み',
+      notStarted: '未評価',
+      coverage: '収録カード',
     },
     guide: {
       eyebrow: 'PUBLIC BLUEPRINT / 30 OBJECTIVES',
@@ -683,6 +684,7 @@ export const ui = {
       diagnosisOpenSection: (title) => `「${title}」を開く`,
       pathTitle: '推奨学習サイクル',
       pathNote: 'これはこのサービス独自の学習上の提案で、公式の推奨順序ではありません。合格や準備完了を示すものではなく、すべての段階が今すぐ利用できます。自分のペースで繰り返してください。',
+      analysisCtaNoAttempt: '模試を受けて分析を利用する',
       stages: {
         start: { title: '学習開始地点を選ぶ', description: 'まず下の「学習開始地点を選ぶ」で、最初に確認したいテーマを決めます。', cta: '開始地点を選ぶ' },
         guide: { title: 'Study Guideで基礎を確認する', description: '5領域・30タスクの独自要約で、対象範囲の全体像と要点を押さえます。', cta: 'Study Guideを開く' },
@@ -1209,12 +1211,11 @@ export const ui = {
       emptyAllClearDescription: 'Nice work — keep reviewing at this pace.',
     },
     status: {
-      eyebrow: 'LOCAL PROGRESS',
-      title: 'Progress on this device',
-      started: 'Started',
-      notStarted: 'Not started',
-      coverage: 'Coverage',
-      objectives: (count) => `${count} objectives`,
+      eyebrow: 'CARD PRACTICE PROGRESS',
+      title: 'Card-practice progress',
+      started: 'Reviewed',
+      notStarted: 'Not reviewed',
+      coverage: 'Cards included',
     },
     guide: {
       eyebrow: 'PUBLIC BLUEPRINT / 30 OBJECTIVES',
@@ -1245,6 +1246,7 @@ export const ui = {
       diagnosisOpenSection: (title) => `Open “${title}”`,
       pathTitle: 'Recommended study cycle',
       pathNote: 'This is this service’s own study guidance, not an official recommended order. It does not indicate passing or readiness, and every stage is available right now. Repeat the cycle at your own pace.',
+      analysisCtaNoAttempt: 'Take a mock exam to use learning analysis',
       stages: {
         start: { title: 'Choose where to start', description: 'Start by picking the theme you want to review first in “Choose where to start” below.', cta: 'Choose a starting point' },
         guide: { title: 'Confirm the fundamentals in the Study Guide', description: 'Use the independent summaries of 5 domains and 30 tasks to grasp the scope and key points.', cta: 'Open the Study Guide' },

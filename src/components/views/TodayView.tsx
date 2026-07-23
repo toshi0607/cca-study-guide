@@ -85,9 +85,9 @@ export function TodayView({ locale, copy, now, ready, reviews, dueCards, session
       <section class="status-strip" aria-labelledby="status-title">
         <div><p class="eyebrow">{copy.status.eyebrow}</p><h2 id="status-title">{copy.status.title}</h2></div>
         <dl>
-          <div><dt>{copy.status.started}</dt><dd>{ready ? `${formatNumber(reviewedCount, locale)} / ${formatNumber(cards.length, locale)}` : '—'}</dd></div>
+          <div><dt>{copy.status.started}</dt><dd>{ready ? formatNumber(reviewedCount, locale) : '—'}</dd></div>
           <div><dt>{copy.status.notStarted}</dt><dd>{ready ? formatNumber(cards.length - reviewedCount, locale) : '—'}</dd></div>
-          <div><dt>{copy.status.coverage}</dt><dd>{copy.status.objectives(30)}</dd></div>
+          <div><dt>{copy.status.coverage}</dt><dd>{formatNumber(cards.length, locale)}</dd></div>
         </dl>
       </section>
     </div>

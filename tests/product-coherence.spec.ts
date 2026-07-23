@@ -184,6 +184,37 @@ test('Today weak-area label distinguishes card practice from mock-exam analysis'
   await expect(page.getByRole('heading', { name: 'カード練習でつまずいた領域' })).toBeVisible();
 });
 
+test('Today progress panel is scoped to card practice, not whole-service', async ({ page }) => {
+  // The panel only counts Practice cards, so it must not read as service-wide progress.
+  await expect(page.getByRole('heading', { name: 'カード練習の進捗' })).toBeVisible();
+  const strip = page.locator('.status-strip');
+  await expect(strip).toContainText('評価済み');
+  await expect(strip).toContainText('未評価');
+  await expect(strip).toContainText('収録カード');
+  await expect(strip).not.toContainText('この端末の進捗');
+});
+
+// --- Learning-analysis CTA reflects attempt state (§7.2 follow-up) ---
+
+test('Guide analysis CTA states the precondition when no attempt exists', async ({ page }) => {
+  await openGuide(page); // clean storage: no attempts
+  const list = page.locator('.guide-path-list');
+  await expect(list.getByRole('button', { name: '模試を受けて分析を利用する' })).toBeVisible();
+  await expect(list.getByRole('button', { name: '模試結果の分析を開く' })).toHaveCount(0);
+  // Clicking still leads somewhere sensible — the Mock Exam start screen — not a dead end.
+  await list.getByRole('button', { name: '模試を受けて分析を利用する' }).click();
+  await expect(page.locator('.mock-exam-landing')).toBeVisible();
+});
+
+test('Guide analysis CTA opens the analysis directly once an attempt exists', async ({ page }) => {
+  await seed(page, { mockExamAttempts: [fullAttempt('a1', 1_690_000_000_000, 30)] });
+  await openGuide(page);
+  const list = page.locator('.guide-path-list');
+  await expect(list.getByRole('button', { name: '模試を受けて分析を利用する' })).toHaveCount(0);
+  await list.getByRole('button', { name: '模試結果の分析を開く' }).click();
+  await expect(page.getByRole('heading', { name: '模試結果を分析する' })).toBeVisible();
+});
+
 // --- Progress service-wide overview (§8, §12.12–14) ---
 
 test('Progress shows aggregates for every feature with correct seeded values', async ({ page }) => {

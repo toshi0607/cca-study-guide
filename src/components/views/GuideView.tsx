@@ -20,6 +20,7 @@ type Props = {
   locale: Locale;
   copy: UiCopy;
   records: Record<string, StudyGuideProgress>;
+  hasMockExamAttempts: boolean;
   onProgressAction: (sectionId: string, revision: number, action: 'start' | 'complete' | 'reconfirm') => boolean;
   onOpenCard: (cardId: string) => void;
   onOpenQuestion: (questionId: string) => void;
@@ -39,7 +40,7 @@ function focusElement(el: HTMLElement | null) {
   el.focus({ preventScroll: true });
 }
 
-export function GuideView({ locale, copy, records, onProgressAction, onOpenCard, onOpenQuestion, onOpenStage, onOpenOfficialScenarios }: Props) {
+export function GuideView({ locale, copy, records, hasMockExamAttempts, onProgressAction, onOpenCard, onOpenQuestion, onOpenStage, onOpenOfficialScenarios }: Props) {
   const [diagnosis, setDiagnosis] = useState('');
   const [recommendation, setRecommendation] = useState<string | null>(null);
   const resultRef = useRef<HTMLDivElement>(null);
@@ -110,9 +111,13 @@ export function GuideView({ locale, copy, records, onProgressAction, onOpenCard,
 
         <ol class="guide-path-list">{learningPath.map((stage) => {
           const text = copy.guide.stages[stage.id];
+          // The analysis stage lands on the Mock Exam start screen until an attempt
+          // exists (there is nothing to analyze yet), so its CTA states that
+          // precondition rather than promising an analysis screen it cannot open.
+          const cta = stage.id === 'analysis' && !hasMockExamAttempts ? copy.guide.analysisCtaNoAttempt : text.cta;
           return <li key={stage.id}>
             <div class="guide-path-copy"><strong>{text.title}</strong><span>{text.description}</span></div>
-            <button type="button" class="guide-path-link" onClick={() => openStage(stage.target)}>{text.cta} <span aria-hidden="true">→</span></button>
+            <button type="button" class="guide-path-link" onClick={() => openStage(stage.target)}>{cta} <span aria-hidden="true">→</span></button>
           </li>;
         })}</ol>
 

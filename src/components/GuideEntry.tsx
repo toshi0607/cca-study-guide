@@ -10,6 +10,7 @@ export function GuideEntry(props: {
   locale: Locale;
   copy: UiCopy;
   records: Record<string, StudyGuideProgress>;
+  hasMockExamAttempts: boolean;
   onProgressAction: (sectionId: string, revision: number, action: 'start' | 'complete' | 'reconfirm') => boolean;
   onOpenCard: (cardId: string) => void;
   onOpenQuestion: (questionId: string) => void;
