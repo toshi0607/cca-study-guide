@@ -43,11 +43,11 @@ Goal: reproducible, low-cost release verification WITHOUT growing PR CI time.
 - [x] A: playwright.production.config.ts + tests/production/* (9) + prod fixture — VERIFIED. 9 tests. My runs: 2w 15.6s green, 2w 13.5s green, 1w 17.5s green (+ subagent 2w×2 green) = 4 consecutive green @ 2 workers. No sleeps/retries. Context-per-test isolation, external-failure tolerant. Assertions full-strength (mirror existing specs). JA Quiz label corrected to 演習. workers=2 kept (faster + stable).
 - [x] C: .github/workflows/production-smoke.yml — VERIFIED (workflow_dispatch only, 2-job chain, artifacts, summary, download-artifact between jobs). Assumes `pnpm verify:production -- --json <path>` + `pnpm test:e2e:production`.
 - [x] D: SKILL.md + docs — VERIFIED. Skill has smoke/full modes, output template, NOT-DO list, READY/BLOCKED/NEEDS HUMAN REVIEW criteria. RELEASE_CHECKLIST retains all 35 original gates + four-layer structure + Automated-by column. PRODUCTION_SMOKE.md complete. Only real script names.
-- [ ] Main: package.json scripts + .gitignore
-- [ ] Main: integrate, verify each subagent, resolve conflicts
-- [ ] Main: full verification suite (§9)
-- [ ] Main: prod smoke ×2 green, measure time, worker 1 vs 2
-- [ ] Main: PR
+- [x] Main: package.json scripts (test:e2e:production, verify:production); .gitignore already covers artifacts
+- [x] Main: integrated + verified all 4 subagents; fixed pnpm `--` arg, testIgnore, vitest include
+- [x] Main: full verification suite (§9) — all green
+- [x] Main: prod smoke green 4× (2w 13.5–15.6s, 1w 17.5s); workers=2 chosen
+- [x] Main: PR #45 created; CI green (E2E + Lighthouse); production-smoke NOT triggered on PR
 
 ## Notes
 
