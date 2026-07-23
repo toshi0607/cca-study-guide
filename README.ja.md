@@ -4,6 +4,22 @@
 
 Claude Certified Architect – Foundations（CCAR-F）の公開出題範囲を、日本語の独自要約と想起カードで学ぶ非公式Webアプリです。
 
+[![ライブデモ](https://img.shields.io/badge/Live_demo-cca.toshi0607.com-087e9b?style=for-the-badge)](https://cca.toshi0607.com)
+
+## 動く様子
+
+集中レビューセッション —「**思い出す → 開示 → 評価**」をブラウザ内だけで（Space/Enterで開示、1/2/3で評価）:
+
+![集中レビューセッション](docs/media/recall-review.gif)
+
+| Study Guide（5領域・30タスク） | 選択式・シナリオ演習 |
+| --- | --- |
+| ![Study Guide](docs/media/shot-guide.png) | ![選択式演習](docs/media/shot-quiz.png) |
+| **60問 Mock Exam** | **学習分析** |
+| ![60問 Mock Exam](docs/media/shot-mock-exam.png) | ![学習分析](docs/media/shot-analysis.png) |
+
+[**すぐ試す → cca.toshi0607.com**](https://cca.toshi0607.com) — 登録不要・進捗はブラウザ内に保存。
+
 ## 方針
 
 - Anthropic非公式・非提携
@@ -108,9 +124,18 @@ vercel deploy --prod
 
 値は`G-...`形式です。設定時は`gtag.js`を通常読み込みし、広告ストレージ・広告向けユーザーデータ・広告パーソナライズを拒否した状態で基本ページビューを設定します。Google Signalsと広告パーソナライズ用シグナルも無効で、GA Cookieはアクセス中のホストだけに限定します。アプリ独自のカスタムイベントは実装していません。ページビューだけに限定する場合は、GA4 Webデータストリーム側でも「拡張計測」を無効にしてください。利用者向け説明は`/privacy/`に掲載します。
 
-## 告知動画（video/）
+## 告知動画
 
-`video/`はSNS告知動画（約30秒・1920×1080・H.264）を生成する独立したRemotionプロジェクトです。自前の`package.json`を持ち、アプリ本体のビルド・テスト・デプロイには影響しません。画面素材は`video/assets/`に置いた実画面スクリーンショットで、`cd video && pnpm install && npx remotion render promo out/promo.mp4`でレンダリングします（`video/out/`の生成物はコミットしません）。
+`video/`はSNS告知動画（約34秒・1920×1080・H.264）を生成する独立したRemotionプロジェクトです。自前の`package.json`を持ち、アプリ本体のビルド・テスト・デプロイには影響しません。`video-hf/`は同じコンポジションを`remotion-to-hyperframes`スキルで[HyperFrames](https://hyperframes.heygen.com/)（HTML + GSAP）へ移植したものです（`video-hf/TRANSLATION_NOTES.md`参照）。画面素材は`video/assets/`に置いた実画面スクリーンショットです。
+
+```sh
+# Remotion
+cd video && pnpm install && npx remotion render promo out/promo.mp4
+# HyperFrames（PATH上に system ffmpeg が必要）
+cd video-hf && npx hyperframes render --quality high --output out/promo.mp4
+```
+
+`out/`の生成物はコミットせず、完成した動画はGitHub Release（[promo-video-v2](https://github.com/toshi0607/cca-study-guide/releases/tag/promo-video-v2)）で配布します。
 
 ## 公式情報
 
