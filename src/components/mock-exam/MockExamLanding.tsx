@@ -4,7 +4,7 @@ import { MOCK_EXAM_DURATION_SECONDS, MOCK_EXAM_QUESTION_COUNT } from '../../lib/
 // Start screen. Exam size and duration come from the blueprint constants, never
 // re-hardcoded here. When a session is already in flight, resume is the primary
 // action and starting over is a distinct, guarded secondary action.
-export function MockExamLanding({ hasActiveSession, hasHistory, createError, copy, onStart, onResume, onNewExam, onOpenHistory }: {
+export function MockExamLanding({ hasActiveSession, hasHistory, createError, copy, onStart, onResume, onNewExam, onOpenHistory, onOpenAnalysis }: {
   hasActiveSession: boolean;
   hasHistory: boolean;
   createError: boolean;
@@ -13,6 +13,7 @@ export function MockExamLanding({ hasActiveSession, hasHistory, createError, cop
   onResume: () => void;
   onNewExam: () => void;
   onOpenHistory: () => void;
+  onOpenAnalysis: () => void;
 }) {
   return (
     <section class="mock-exam-landing" aria-labelledby="mock-exam-title">
@@ -44,7 +45,10 @@ export function MockExamLanding({ hasActiveSession, hasHistory, createError, cop
         : <div class="mock-exam-landing-actions">
             <button type="button" class="mock-exam-primary" onClick={onStart}>{copy.mockExam.startButton}</button>
           </div>}
-      {hasHistory && <button type="button" class="mock-exam-link" onClick={onOpenHistory}>{copy.mockExam.historyButton}</button>}
+      <div class="mock-exam-landing-links">
+        {hasHistory && <button type="button" class="mock-exam-link" onClick={onOpenHistory}>{copy.mockExam.historyButton}</button>}
+        <button type="button" class="mock-exam-link" onClick={onOpenAnalysis}>{copy.mockExam.analysis.openButton}</button>
+      </div>
     </section>
   );
 }

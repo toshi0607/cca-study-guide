@@ -1119,3 +1119,51 @@ main {
   .mock-exam-runner-nav .mock-exam-primary { margin-left: 0; width: 100%; }
   .mock-exam-result-actions .mock-exam-primary, .mock-exam-result-actions .mock-exam-secondary { flex: 1 1 auto; }
 }
+
+/* Task 9 — learning analysis */
+.mock-exam-landing-links { margin-top: 14px; display: flex; flex-wrap: wrap; gap: 4px 20px; }
+.mock-exam-analysis { margin-top: 24px; display: grid; gap: 24px; }
+.mock-exam-analysis > .page-header { margin: 0; }
+.mock-exam-analysis-empty { padding: clamp(24px, 4vw, 42px); border: 1px dashed var(--grid-strong); background: var(--surface); text-align: center; }
+.mock-exam-analysis-empty-title { margin: 0 0 8px; font-weight: 700; font-size: 1.1rem; }
+.mock-exam-analysis-counts { margin: 0; display: flex; flex-wrap: wrap; gap: 6px 18px; font: .82rem var(--mono); color: var(--ink-soft); }
+.mock-exam-analysis-note { margin: 0; padding: 12px 14px; border-left: 4px solid var(--cyan); background: var(--cyan-pale); font-size: .82rem; line-height: 1.7; }
+
+.mock-exam-range { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; }
+.mock-exam-range-legend { font-size: .78rem; color: var(--ink-soft); text-transform: uppercase; letter-spacing: .04em; }
+.mock-exam-range-option { min-height: 44px; padding: 0 16px; border: 1px solid var(--grid-strong); border-radius: 2px; background: var(--surface); color: var(--ink); cursor: pointer; font-weight: 700; font-size: .84rem; }
+.mock-exam-range-option[aria-pressed="true"] { border-color: var(--cyan-dark); background: var(--cyan-pale); color: var(--cyan-dark); }
+.mock-exam-range-summary { font: .82rem var(--mono); color: var(--ink-soft); }
+
+.mock-exam-stability, .mock-exam-evidence, .mock-exam-priority, .mock-exam-axis, .mock-exam-trend, .mock-exam-next-actions { padding: 18px 20px; border: 1px solid var(--grid); background: var(--surface); }
+.mock-exam-analysis section > h3 { margin: 0 0 12px; font-size: 1.05rem; }
+.mock-exam-stability-label { margin: 0 0 6px; font-size: 1.1rem; }
+.mock-exam-stability p { margin: 0 0 12px; line-height: 1.7; }
+.mock-exam-stability-disclaimers { margin: 0; padding-left: 20px; display: grid; gap: 6px; color: var(--ink-soft); font-size: .82rem; line-height: 1.6; }
+.mock-exam-evidence p { margin: 0 0 12px; line-height: 1.7; font-size: .9rem; }
+.mock-exam-evidence-legend { margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px 16px; list-style: none; font: .82rem var(--mono); color: var(--ink-soft); }
+
+.mock-exam-axis-note { margin: 0 0 12px; font-size: .8rem; color: var(--ink-soft); line-height: 1.6; }
+.mock-exam-axis-empty { margin: 0; padding: 16px; border: 1px dashed var(--grid-strong); text-align: center; color: var(--ink-soft); font-size: .86rem; }
+.mock-exam-table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.mock-exam-axis-table, .mock-exam-trend-table { width: 100%; border-collapse: collapse; font-size: .86rem; }
+.mock-exam-axis-table th, .mock-exam-axis-table td, .mock-exam-trend-table th, .mock-exam-trend-table td { padding: 8px 12px; text-align: right; border-bottom: 1px solid var(--grid); white-space: nowrap; }
+.mock-exam-axis-table thead th, .mock-exam-trend-table thead th { font: 700 .74rem var(--mono); color: var(--ink-soft); text-transform: uppercase; letter-spacing: .03em; border-bottom: 2px solid var(--grid-strong); }
+.mock-exam-axis-table th[scope="row"], .mock-exam-trend-table th[scope="row"], .mock-exam-axis-table thead th:first-child, .mock-exam-trend-table thead th:first-child { text-align: left; }
+.mock-exam-axis-table tbody td { font: .84rem var(--mono); font-variant-numeric: tabular-nums; }
+.mock-exam-trend-table tbody td { font: .82rem var(--mono); font-variant-numeric: tabular-nums; }
+.mock-exam-axis-row.evidence-insufficient th[scope="row"] { border-left: 3px solid var(--grid-strong); }
+.mock-exam-axis-row.evidence-limited th[scope="row"] { border-left: 3px solid var(--amber); }
+.mock-exam-axis-row.evidence-sufficient th[scope="row"] { border-left: 3px solid var(--cyan-dark); }
+.mock-exam-axis-table th[scope="row"] { padding-left: 12px; }
+
+.mock-exam-review-group { margin-top: 14px; }
+.mock-exam-review-group h4 { margin: 0 0 8px; font-size: .92rem; color: var(--ink); }
+.mock-exam-priority-list { margin: 0; padding: 0 0 0 20px; display: grid; gap: 8px; }
+.mock-exam-priority-item { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 16px; }
+.mock-exam-priority-name { font-weight: 700; }
+.mock-exam-priority-detail { font: .78rem var(--mono); color: var(--ink-soft); }
+
+.mock-exam-next-actions-list { margin: 0; padding: 0; display: grid; gap: 12px; list-style: none; }
+.mock-exam-next-action { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 16px; padding: 12px 14px; border: 1px solid var(--grid); background: var(--cyan-pale); }
+.mock-exam-next-action span { flex: 1 1 220px; line-height: 1.6; font-size: .9rem; }

@@ -293,6 +293,17 @@ function App({ locale, analyticsEnabled = false }: { locale: Locale; analyticsEn
     navigate('practice');
   };
 
+  // Learning-analysis "next action" links reuse the existing Practice view: an
+  // optional domain id preselects that domain's cards, otherwise it opens the
+  // full deck. Skills are not a Practice filter axis, so a skill action falls back
+  // to opening practice unfiltered rather than inventing a route.
+  const openMockExamPractice = (domainId?: string) => {
+    setQuery('');
+    setDomainFilter(domainId ?? 'all');
+    setStateFilter('all');
+    navigate('practice');
+  };
+
   const startDueReview = () => {
     setQuery('');
     setDomainFilter('all');
@@ -310,7 +321,7 @@ function App({ locale, analyticsEnabled = false }: { locale: Locale; analyticsEn
         <p ref={noticeRef} class="notice" tabIndex={-1} aria-live="polite">{notice}</p>
         {view === 'today' && <TodayView locale={locale} copy={copy} now={now} ready={ready} reviews={data.reviews} dueCards={dueCards} onStartDueReview={startDueReview} onOpenWeakDomain={openWeakPractice} onOpenMockExam={openMockExam}/>}
 
-        {view === 'mock-exam' && <MockExamEntry locale={locale} copy={copy} session={data.activeMockExam} attempts={data.mockExamAttempts} storageAvailable={storageAvailable} readData={readMockExamData} writeData={writeMockExamData}/>}
+        {view === 'mock-exam' && <MockExamEntry locale={locale} copy={copy} session={data.activeMockExam} attempts={data.mockExamAttempts} storageAvailable={storageAvailable} readData={readMockExamData} writeData={writeMockExamData} onOpenPractice={openMockExamPractice}/>}
 
         {view === 'guide' && <GuideEntry locale={locale} copy={copy} records={data.studyGuideProgress} onProgressAction={saveGuideProgress} onOpenCard={openGuideCard} onOpenQuestion={openGuideQuestion} onOpenHandsOn={() => navigate('hands-on')} onOpenOfficialScenarios={() => navigate('official-scenarios')}/>}
 
