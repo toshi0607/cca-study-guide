@@ -10,13 +10,13 @@ An unofficial web app for studying the public exam scope of the Claude Certified
 
 The focused review session — **recall → reveal → rate**, entirely in the browser (Space/Enter to reveal, 1/2/3 to rate):
 
-![Focused recall review session](docs/media/recall-review.gif)
+![Focused recall review session](docs/media/recall-review-en.gif)
 
 | Study Guide (5 domains · 30 tasks) | Choice & scenario quiz |
 | --- | --- |
-| ![Study Guide](docs/media/shot-guide.png) | ![Choice quiz](docs/media/shot-quiz.png) |
+| ![Study Guide](docs/media/shot-guide-en.png) | ![Choice quiz](docs/media/shot-quiz-en.png) |
 | **60-question Mock Exam** | **Learning analysis** |
-| ![60-question Mock Exam](docs/media/shot-mock-exam.png) | ![Learning analysis](docs/media/shot-analysis.png) |
+| ![60-question Mock Exam](docs/media/shot-mock-exam-en.png) | ![Learning analysis](docs/media/shot-analysis-en.png) |
 
 [**Try it live → cca.toshi0607.com**](https://cca.toshi0607.com) — no signup; progress stays in your browser.
 
