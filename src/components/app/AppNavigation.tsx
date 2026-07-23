@@ -4,10 +4,10 @@ import { LanguageNav } from './LanguageNav';
 import type { View } from './types';
 
 // Hands-on and the official-scenarios sub-area are reached from inside the Guide
-// view (its learning path and entry sections), not from the bottom navigation,
-// so the 360px five-item bar stays uncrowded. They are therefore deliberately
-// excluded from the navigable keys.
-type NavKey = Exclude<View, 'hands-on' | 'official-scenarios'>;
+// view (its learning path and entry sections), and the mock exam is launched from
+// the Today view, not from the bottom navigation, so the 360px five-item bar stays
+// uncrowded. They are therefore deliberately excluded from the navigable keys.
+type NavKey = Exclude<View, 'hands-on' | 'official-scenarios' | 'mock-exam'>;
 export const viewKeys: NavKey[] = ['today', 'guide', 'practice', 'quiz', 'progress'];
 export const icons: Record<NavKey, string> = { today: '⌂', guide: '▤', practice: '◇', quiz: '☑', progress: '✓' };
 

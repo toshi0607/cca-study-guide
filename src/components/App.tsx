@@ -12,11 +12,26 @@ import { formatDate } from './app/format';
 import type { View } from './app/types';
 import { GuideEntry } from './GuideEntry';
 import { HandsOnEntry } from './HandsOnEntry';
+import { MockExamEntry } from './MockExamEntry';
 import { OfficialScenariosEntry } from './OfficialScenariosEntry';
 import { PracticeView, type StateFilter } from './views/PracticeView';
 import { ProgressView } from './views/ProgressView';
 import { QuizView } from './views/QuizView';
 import { TodayView } from './views/TodayView';
+
+// Keep the Mock Exam engine out of the initial bundle: App never imports it. The
+// exam view (lazily loaded) owns all engine calls and receives only this storage
+// bridge, so the landing route ships none of the exam logic.
+function detectStorageAvailable(): boolean {
+  try {
+    const probe = '__cca_probe__';
+    window.localStorage.setItem(probe, '1');
+    window.localStorage.removeItem(probe);
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 function studyStorage() {
   try {
@@ -42,6 +57,7 @@ function App({ locale, analyticsEnabled = false }: { locale: Locale; analyticsEn
   const [quizTargetQuestionId, setQuizTargetQuestionId] = useState<string | null>(null);
   const [quizTargetScenarioId, setQuizTargetScenarioId] = useState<string | null>(null);
   const [handsOnTargetGuideId, setHandsOnTargetGuideId] = useState<string | null>(null);
+  const [storageAvailable, setStorageAvailable] = useState(true);
   const noticeRef = useRef<HTMLParagraphElement>(null);
   const dataRef = useRef<StudyData>(createEmptyStudyData());
   // Serializes imports: a second file picked while one is still being read
@@ -57,6 +73,7 @@ function App({ locale, analyticsEnabled = false }: { locale: Locale; analyticsEn
     const loaded = studyStorage().load();
     dataRef.current = loaded;
     setData(loaded);
+    setStorageAvailable(detectStorageAvailable());
     refreshNow();
     setReady(true);
 
@@ -250,6 +267,25 @@ function App({ locale, analyticsEnabled = false }: { locale: Locale; analyticsEn
   const saveHandsOnReconfirm = (guideId: string, revision: number) =>
     saveHandsOn(guideId, (record) => reconfirmHandsOnGuide(record, revision, new Date()), () => copy.handsOn.actionDone.reconfirm, true);
 
+  // Storage bridge handed to the lazily-loaded Mock Exam view. readData returns
+  // the canonical document (re-read immediately before every exam mutation);
+  // writeData validates and persists the whole document, updates state, and
+  // surfaces the save-failed notice on refusal — mirroring commitData's contract
+  // without pulling any exam logic into this component.
+  const readMockExamData = (): StudyData => studyStorage().load();
+  const writeMockExamData = (next: StudyData): boolean => {
+    if (!studyStorage().save(next)) {
+      setNotice(copy.notices.saveFailed);
+      focusNotice();
+      return false;
+    }
+    dataRef.current = next;
+    setData(next);
+    return true;
+  };
+
+  const openMockExam = () => navigate('mock-exam');
+
   const openWeakPractice = (domainId: string) => {
     setQuery('');
     setDomainFilter(domainId);
@@ -272,7 +308,9 @@ function App({ locale, analyticsEnabled = false }: { locale: Locale; analyticsEn
       <main id="main-content">
         <h1 class="sr-only">{copy.pageTitle}</h1>
         <p ref={noticeRef} class="notice" tabIndex={-1} aria-live="polite">{notice}</p>
-        {view === 'today' && <TodayView locale={locale} copy={copy} now={now} ready={ready} reviews={data.reviews} dueCards={dueCards} onStartDueReview={startDueReview} onOpenWeakDomain={openWeakPractice}/>}
+        {view === 'today' && <TodayView locale={locale} copy={copy} now={now} ready={ready} reviews={data.reviews} dueCards={dueCards} onStartDueReview={startDueReview} onOpenWeakDomain={openWeakPractice} onOpenMockExam={openMockExam}/>}
+
+        {view === 'mock-exam' && <MockExamEntry locale={locale} copy={copy} session={data.activeMockExam} attempts={data.mockExamAttempts} storageAvailable={storageAvailable} readData={readMockExamData} writeData={writeMockExamData}/>}
 
         {view === 'guide' && <GuideEntry locale={locale} copy={copy} records={data.studyGuideProgress} onProgressAction={saveGuideProgress} onOpenCard={openGuideCard} onOpenQuestion={openGuideQuestion} onOpenHandsOn={() => navigate('hands-on')} onOpenOfficialScenarios={() => navigate('official-scenarios')}/>}
 
