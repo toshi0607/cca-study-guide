@@ -1,10 +1,11 @@
 import React from "react";
 import { AbsoluteFill, Sequence } from "remotion";
+import analysisShot from "../assets/analysis.png";
 import guideShot from "../assets/guide.png";
+import mockExamShot from "../assets/mock-exam.png";
 import practiceShot from "../assets/practice.png";
 import quizShot from "../assets/quiz.png";
 import scenarioShot from "../assets/scenario.png";
-import weakShot from "../assets/weak.png";
 import {
   BrowserFrame,
   Eyebrow,
@@ -18,12 +19,13 @@ import {
 import { bodyFont, displayFont, monoFont, palette } from "./theme";
 
 export const SCENES = {
-  hook: { from: 0, duration: 140 },
-  guide: { from: 140, duration: 165 },
-  cards: { from: 305, duration: 165 },
-  quiz: { from: 470, duration: 165 },
-  weak: { from: 635, duration: 135 },
-  closing: { from: 770, duration: 130 },
+  hook: { from: 0, duration: 135 },
+  guide: { from: 135, duration: 155 },
+  cards: { from: 290, duration: 145 },
+  quiz: { from: 435, duration: 145 },
+  mock: { from: 580, duration: 155 },
+  analysis: { from: 735, duration: 150 },
+  closing: { from: 885, duration: 130 },
 } as const;
 
 export const TOTAL_DURATION = SCENES.closing.from + SCENES.closing.duration;
@@ -287,20 +289,41 @@ export const Promo: React.FC = () => (
       />
     </Sequence>
 
-    <Sequence from={SCENES.weak.from} durationInFrames={SCENES.weak.duration}>
+    <Sequence from={SCENES.mock.from} durationInFrames={SCENES.mock.duration}>
       <FeatureScene
-        duration={SCENES.weak.duration}
-        eyebrow="Weak areas"
+        duration={SCENES.mock.duration}
+        eyebrow="Mock exam / 60 questions · 120 min"
         headline={
           <>
-            苦手を、
+            60問120分、
             <br />
-            見える化。
+            通しで。
           </>
         }
-        sub="「もう一度」「難しい」と評価したカードを領域別に集計して復習へ"
+        sub="本番規模の通し模試。中断しても再開でき、履歴と設問ごとの復習つき"
         frame={
-          <BrowserFrame src={weakShot} width={1090} height={700} pan={[24, 66]} />
+          <BrowserFrame src={mockExamShot} width={1090} height={700} pan={[10, 40]} />
+        }
+      />
+    </Sequence>
+
+    <Sequence
+      from={SCENES.analysis.from}
+      durationInFrames={SCENES.analysis.duration}
+    >
+      <FeatureScene
+        duration={SCENES.analysis.duration}
+        eyebrow="Learning analysis"
+        headline={
+          <>
+            結果から、
+            <br />
+            次の復習へ。
+          </>
+        }
+        sub="模試結果を領域別に分析し、次に復習すべき所を提示。合否や点数は出しません"
+        frame={
+          <BrowserFrame src={analysisShot} width={1090} height={700} pan={[0, 20]} />
         }
       />
     </Sequence>
