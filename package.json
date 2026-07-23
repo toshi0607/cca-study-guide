@@ -16,7 +16,8 @@
     "test:e2e:reuse": "PW_REUSE_SERVER=1 playwright test",
     "test:e2e:ui": "playwright test --ui",
     "test:watch": "vitest",
-    "fonts:subset": "node scripts/subset-fonts.mjs"
+    "fonts:subset": "node scripts/subset-fonts.mjs",
+    "test:bundle": "node scripts/check-initial-bundle.mjs"
   },
   "dependencies": {
     "@astrojs/preact": "^6.0.1",

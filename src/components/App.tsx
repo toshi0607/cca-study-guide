@@ -17,7 +17,7 @@ import { MockExamEntry } from './MockExamEntry';
 import { OfficialScenariosEntry } from './OfficialScenariosEntry';
 import { PracticeView, type StateFilter } from './views/PracticeView';
 import { ProgressView } from './views/ProgressView';
-import { QuizView } from './views/QuizView';
+import { QuizEntry } from './QuizEntry';
 import { TodayView } from './views/TodayView';
 
 // Keep the Mock Exam engine out of the initial bundle: App never imports it. The
@@ -59,6 +59,7 @@ function App({ locale, analyticsEnabled = false }: { locale: Locale; analyticsEn
   const [quizTargetScenarioId, setQuizTargetScenarioId] = useState<string | null>(null);
   const [handsOnTargetGuideId, setHandsOnTargetGuideId] = useState<string | null>(null);
   const [storageAvailable, setStorageAvailable] = useState(true);
+  const [dataUnreadable, setDataUnreadable] = useState(false);
   // Which Mock Exam screen to land on when the view opens: the start screen, or
   // straight to the learning analysis (used by Today/Progress/learning-path CTAs).
   const [mockExamIntent, setMockExamIntent] = useState<'landing' | 'analysis'>('landing');
@@ -78,6 +79,7 @@ function App({ locale, analyticsEnabled = false }: { locale: Locale; analyticsEn
     dataRef.current = loaded;
     setData(loaded);
     setStorageAvailable(detectStorageAvailable());
+    setDataUnreadable(studyStorage().hasUnreadableCurrentDocument());
     refreshNow();
     setReady(true);
 
@@ -140,7 +142,7 @@ function App({ locale, analyticsEnabled = false }: { locale: Locale; analyticsEn
     });
 
   const exportData = () => {
-    const blob = new Blob([JSON.stringify(buildStudyDataExport(data, new Date()), null, 2)], { type: 'application/json' });
+    const blob = new Blob([JSON.stringify(buildStudyDataExport(studyStorage().load(), new Date()), null, 2)], { type: 'application/json' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
     link.download = `cca-field-notes-${new Date().toISOString().slice(0, 10)}.json`;
@@ -337,6 +339,7 @@ function App({ locale, analyticsEnabled = false }: { locale: Locale; analyticsEn
       <main id="main-content">
         <h1 class="sr-only">{copy.pageTitle}</h1>
         <p ref={noticeRef} class="notice" tabIndex={-1} aria-live="polite">{notice}</p>
+        {dataUnreadable && <p class="data-alert" role="alert">{copy.notices.dataUnreadable}</p>}
         {view === 'today' && <TodayView locale={locale} copy={copy} now={now} ready={ready} reviews={data.reviews} dueCards={dueCards} session={data.activeMockExam} attempts={data.mockExamAttempts} onStartDueReview={startDueReview} onOpenWeakDomain={openWeakPractice} onOpenMockExam={openMockExam} onOpenMockExamAnalysis={openMockExamAnalysis}/>}
 
         {view === 'mock-exam' && <MockExamEntry locale={locale} copy={copy} session={data.activeMockExam} attempts={data.mockExamAttempts} storageAvailable={storageAvailable} initialPhase={mockExamIntent} readData={readMockExamData} writeData={writeMockExamData} onOpenPractice={openMockExamPractice}/>}
@@ -358,7 +361,7 @@ function App({ locale, analyticsEnabled = false }: { locale: Locale; analyticsEn
           onRateInList={saveRating} onRateInSession={persistRating}
         />}
 
-        {view === 'quiz' && <QuizView locale={locale} copy={copy} quizStats={data.quizStats} onAnswer={recordQuizAnswer} targetQuestionId={quizTargetQuestionId} onTargetOpened={() => setQuizTargetQuestionId(null)} targetScenarioId={quizTargetScenarioId} onTargetScenarioOpened={() => setQuizTargetScenarioId(null)}/>}
+        {view === 'quiz' && <QuizEntry locale={locale} copy={copy} quizStats={data.quizStats} onAnswer={recordQuizAnswer} targetQuestionId={quizTargetQuestionId} onTargetOpened={() => setQuizTargetQuestionId(null)} targetScenarioId={quizTargetScenarioId} onTargetScenarioOpened={() => setQuizTargetScenarioId(null)}/>}
 
         {view === 'progress' && <ProgressView
           locale={locale} copy={copy}

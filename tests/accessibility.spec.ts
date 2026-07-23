@@ -83,3 +83,15 @@ test('answer review and summary are accessible, keyboard-drivable, and free of h
     expect(dims.body, `body ${width}`).toBe(dims.viewport);
   }
 });
+
+
+// Task 10B: the Quiz setup screen (mode/count/domain chips + scenario list) was
+// only ever axe-scanned after a round, once setup UI was gone. Scan it directly.
+test('quiz setup screen has no serious or critical accessibility violations', { tag: '@slow' }, async ({ page }) => {
+  await page.goto('/');
+  await page.evaluate(() => localStorage.clear());
+  await page.reload();
+  await page.getByRole('button', { name: '演習' }).first().click();
+  await expect(page.getByRole('heading', { name: '選択式演習' })).toBeVisible();
+  await expectNoSeriousOrCritical(page);
+});

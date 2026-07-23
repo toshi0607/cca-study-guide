@@ -215,6 +215,16 @@ main {
   box-shadow: var(--shadow);
 }
 
+.data-alert {
+  margin: 0 0 16px;
+  padding: 12px 16px;
+  border: 1px solid var(--danger);
+  border-left-width: 4px;
+  background: #fdf1f0;
+  color: var(--danger);
+  font-weight: 700;
+}
+
 .eyebrow {
   margin: 0 0 8px;
   color: var(--cyan-dark);

@@ -20,6 +20,8 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm test
       - run: pnpm build
+      - name: Check initial bundle (no heavy chunks eagerly loaded)
+        run: node scripts/check-initial-bundle.mjs
       - name: Serve production build
         run: |
           pnpm preview --host 127.0.0.1 --port 4321 &

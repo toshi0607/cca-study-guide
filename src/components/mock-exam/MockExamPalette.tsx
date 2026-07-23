@@ -43,7 +43,7 @@ export function MockExamPalette({ open, refs, currentIndex, answered, flagged, c
         <h2>{copy.mockExam.paletteTitle}</h2>
         <button type="button" class="mock-exam-secondary" onClick={onClose}>{copy.mockExam.paletteClose}</button>
       </div>
-      <div class="mock-exam-palette-filters" role="group" aria-label={copy.mockExam.paletteTitle}>
+      <div class="mock-exam-palette-filters" role="group" aria-label={copy.mockExam.paletteFilterLabel}>
         {(['all', 'unanswered', 'flagged'] as const).map((key) => (
           <button key={key} type="button" class={filter === key ? 'is-active' : ''} aria-pressed={filter === key} onClick={() => setFilter(key)}>
             {filterLabel[key]}

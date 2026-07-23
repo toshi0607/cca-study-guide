@@ -28,7 +28,7 @@ export const sources: Source[] = [
   { id: 'context-windows', title: 'Context windows', publisher: 'Anthropic', url: 'https://platform.claude.com/docs/en/build-with-claude/context-windows', official: true, verifiedAt: VERIFIED_AT },
   { id: 'context-editing', title: 'Context editing', publisher: 'Anthropic', url: 'https://platform.claude.com/docs/en/build-with-claude/context-editing', official: true, verifiedAt: VERIFIED_AT },
   { id: 'code-index', title: 'Claude Code documentation index', publisher: 'Anthropic', url: 'https://code.claude.com/docs/llms.txt', official: true, verifiedAt: VERIFIED_AT },
-  { id: 'platform-index', title: 'Claude Platform documentation index', publisher: 'Anthropic', url: 'https://platform.claude.com/docs/llms.txt', official: true, verifiedAt: VERIFIED_AT },
+  { id: 'platform-index', title: 'Claude Platform documentation index', publisher: 'Anthropic', url: 'https://platform.claude.com/llms.txt', official: true, verifiedAt: VERIFIED_AT },
   { id: 'mcp-tools', title: 'MCP specification: tools', publisher: 'MCP Project', url: 'https://modelcontextprotocol.io/specification/2025-11-25/server/tools', official: true, verifiedAt: VERIFIED_AT },
   { id: 'define-tools', title: 'Define tools', publisher: 'Anthropic', url: 'https://platform.claude.com/docs/en/agents-and-tools/tool-use/define-tools', official: true, verifiedAt: '2026-07-18' },
 ];
