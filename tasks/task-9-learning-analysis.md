@@ -147,4 +147,15 @@ Lighthouse（同一マシン, mobile, 3 runs median, GA=test）:
 
 ## Review（レビュー結果と対応）
 
-（fresh-context subagent レビュー後に記録）
+fresh-context `reviewer` (opus) が 13 観点をレビュー。**Critical / High / Medium: 0 件。Approve。**
+検証: `vitest run mock-exam-analysis` exit0 31/31、`npm run build` 0 errors、`test:no-analytics` exit0、
+storage-schema/storage/mock-exam-types/package.json の diff は空。分析ロジックは dist の
+MockExamAnalysis chunk のみに存在し App chunk に非混入。
+
+Low 2 件（いずれも仕様どおりの設計・保持）:
+1. review-skill / skill 系アクションは Practice を無フィルタで開く。skill は Practice の filter 軸に
+   無いため（§7 の「捏造しない、汎用導線にする」に準拠）。code コメントと spec に明記済み。
+2. practice-weak-area の gate は `incorrect > 0`（未回答含む）。文言は「データを増やす」中立表現のため
+   弱点断定にはならない。意図的。
+
+いずれも PR 本文に理由を記載。
