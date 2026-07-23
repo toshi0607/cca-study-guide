@@ -9,7 +9,7 @@ import { localize, type UiCopy } from '../../i18n/ui';
 import type { ReviewState } from '../../lib/scheduler';
 import { isWeak } from '../../lib/weakness';
 
-export function TodayView({ locale, copy, now, ready, reviews, dueCards, onStartDueReview, onOpenWeakDomain }: {
+export function TodayView({ locale, copy, now, ready, reviews, dueCards, onStartDueReview, onOpenWeakDomain, onOpenMockExam }: {
   locale: Locale;
   copy: UiCopy;
   now: Date | null;
@@ -18,6 +18,7 @@ export function TodayView({ locale, copy, now, ready, reviews, dueCards, onStart
   dueCards: Card[];
   onStartDueReview: () => void;
   onOpenWeakDomain: (domainId: string) => void;
+  onOpenMockExam: () => void;
 }) {
   const reviewedCount = Object.keys(reviews).filter((id) => cards.some((card) => card.id === id)).length;
   const weakByDomain = useMemo(() => domains
@@ -41,6 +42,13 @@ export function TodayView({ locale, copy, now, ready, reviews, dueCards, onStart
         </div>
       </section>
       <Blueprint reviews={reviews} ready={ready} locale={locale} copy={copy}/>
+      <section class="mock-exam-launch" aria-labelledby="mock-exam-launch-title">
+        <div class="section-heading">
+          <div><p class="eyebrow">{copy.mockExam.eyebrow}</p><h2 id="mock-exam-launch-title">{copy.mockExam.title}</h2></div>
+          <p>{copy.mockExam.introduction}</p>
+        </div>
+        <button type="button" class="mock-exam-launch-button" disabled={!ready} onClick={onOpenMockExam}>{copy.mockExam.startButton} <span aria-hidden="true">→</span></button>
+      </section>
       <section class="weak-areas" aria-labelledby="weak-areas-title">
         <div class="section-heading">
           <div><p class="eyebrow">{copy.weakAreas.eyebrow}</p><h2 id="weak-areas-title">{copy.weakAreas.title}</h2></div>

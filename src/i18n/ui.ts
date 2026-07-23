@@ -1,7 +1,7 @@
 import type { LocalizedText, QuestionDifficulty } from '../content/types';
 import type { Locale } from './locales';
 
-type View = 'today' | 'guide' | 'practice' | 'quiz' | 'progress' | 'hands-on' | 'official-scenarios';
+type View = 'today' | 'guide' | 'practice' | 'quiz' | 'progress' | 'hands-on' | 'official-scenarios' | 'mock-exam';
 type HandsOnStatus = 'not_started' | 'in_progress' | 'completed' | 'stale' | 'future';
 type CardKind = 'recall' | 'contrast' | 'scenario';
 type QuestionFormat = 'single' | 'multiple';
@@ -345,6 +345,136 @@ export type UiCopy = {
     reportIssueLead: string;
     reportIssueLink: string;
   };
+  mockExam: {
+    // Lazy-load entry states
+    loading: string;
+    loadError: string;
+    retry: string;
+    // Landing
+    eyebrow: string;
+    title: string;
+    introduction: string;
+    specQuestions: (count: number) => string;
+    specDuration: (minutes: number) => string;
+    specDomainBased: string;
+    disclaimerNot4of6: string;
+    disclaimerRawOnly: string;
+    disclaimerNoScaled: string;
+    disclaimerResumable: string;
+    startButton: string;
+    resumeButton: string;
+    resumeHeading: string;
+    newExamButton: string;
+    discardConfirm: string;
+    createFailed: string;
+    // Runner header / timer
+    questionProgress: (current: number, total: number) => string;
+    timeRemainingLabel: string;
+    timeValue: (minutes: number, seconds: number) => string;
+    lowTimeWarning: (minutes: number) => string;
+    timeUpAnnouncement: string;
+    answeredCount: (count: number) => string;
+    unansweredCount: (count: number) => string;
+    flagButton: string;
+    unflagButton: string;
+    flaggedBadge: string;
+    openPalette: string;
+    submitExam: string;
+    prevQuestion: string;
+    nextQuestion: string;
+    singleHint: string;
+    multipleHint: string;
+    choicesLegend: string;
+    // Palette
+    paletteTitle: string;
+    paletteClose: string;
+    paletteFilterAll: string;
+    paletteFilterUnanswered: string;
+    paletteFilterFlagged: string;
+    paletteEmptyUnanswered: string;
+    paletteEmptyFlagged: string;
+    paletteStateCurrent: string;
+    paletteStateAnswered: string;
+    paletteStateUnanswered: string;
+    paletteStateFlagged: string;
+    paletteQuestionLabel: (number: number, states: string) => string;
+    // Submit dialog
+    submitDialogTitle: string;
+    submitDialogBody: string;
+    submitDialogAnswered: (count: number) => string;
+    submitDialogUnanswered: (count: number) => string;
+    submitDialogFlagged: (count: number) => string;
+    submitDialogWarnNoChange: string;
+    submitDialogWarnUnanswered: string;
+    submitDialogConfirm: string;
+    submitDialogCancel: string;
+    // Result
+    resultEyebrow: string;
+    resultTitle: string;
+    outcomeSubmitted: string;
+    outcomeExpired: string;
+    resultDisclaimer: string;
+    rawAccuracyLabel: string;
+    rawAccuracyValue: (percent: number) => string;
+    totalQuestionsLabel: string;
+    answeredLabel: string;
+    unansweredLabel: string;
+    correctLabel: string;
+    byDomainHeading: string;
+    byDifficultyHeading: string;
+    bySkillHeading: string;
+    skillMultiNote: string;
+    tallyValue: (correct: number, answered: number, total: number) => string;
+    difficulty: Record<QuestionDifficulty, string>;
+    reviewButton: string;
+    historyButton: string;
+    backToLanding: string;
+    // Review
+    reviewTitle: string;
+    reviewBack: string;
+    reviewFilterAll: string;
+    reviewFilterIncorrect: string;
+    reviewFilterUnanswered: string;
+    reviewFilterFlagged: string;
+    reviewEmpty: string;
+    reviewQuestionMeta: (number: number) => string;
+    yourAnswerLabel: string;
+    correctAnswerLabel: string;
+    notAnswered: string;
+    verdictCorrect: string;
+    verdictIncorrect: string;
+    verdictUnanswered: string;
+    explanationHeading: string;
+    rationaleHeading: string;
+    choiceCorrectLabel: string;
+    choiceIncorrectLabel: string;
+    yourChoiceLabel: string;
+    rationaleLoading: string;
+    rationaleLoadError: string;
+    rationaleRetry: string;
+    officialSources: string;
+    verified: (date: string) => string;
+    // History
+    historyTitle: string;
+    historyIntro: string;
+    historyEmpty: string;
+    historyEntryDate: (date: string) => string;
+    historyEntryScore: (correct: number, total: number) => string;
+    historyEntryAccuracy: (percent: number) => string;
+    historyOpen: string;
+    // Compatibility / errors
+    incompatibleTitle: string;
+    incompatibleBody: string;
+    incompatibleDiscard: string;
+    incompatibleDiscardConfirm: string;
+    staleAttemptNotice: string;
+    staleBreakdownHidden: string;
+    reviewStaleQuestion: string;
+    storageUnavailable: string;
+    saveErrorTitle: string;
+    saveErrorBody: string;
+    saveErrorRetry: string;
+  };
   footer: {
     analytics: string;
     github: string;
@@ -370,7 +500,7 @@ export const ui = {
       opensNewTab: '（新しいタブで開く）',
     },
     languageNames: { ja: '日本語', en: 'English' },
-    views: { today: '今日', guide: 'ガイド', practice: '練習', quiz: '演習', progress: '進捗', 'hands-on': 'ハンズオン', 'official-scenarios': '公式シナリオ' },
+    views: { today: '今日', guide: 'ガイド', practice: '練習', quiz: '演習', progress: '進捗', 'hands-on': 'ハンズオン', 'official-scenarios': '公式シナリオ', 'mock-exam': '模試' },
     pageTitle: 'CCA Field Notes — Claude Certified Architect非公式学習ガイド',
     notices: {
       saveFailed: '進捗を保存できませんでした。ブラウザのサイトデータ設定または空き容量を確認してください。',
@@ -677,6 +807,127 @@ export const ui = {
       reportIssueLead: '誤りやリンク切れは',
       reportIssueLink: 'GitHub Issues',
     },
+    mockExam: {
+      loading: '模試を読み込んでいます…',
+      loadError: '模試の読み込みに失敗しました。',
+      retry: '再読み込み',
+      eyebrow: '模擬試験',
+      title: '60問の模試に挑戦する',
+      introduction: '本番と同じ規模で、時間配分と全体像をつかむための練習模試です。',
+      specQuestions: (count) => `${count}問`,
+      specDuration: (minutes) => `${minutes}分`,
+      specDomainBased: '公式のドメイン配分（16 / 11 / 12 / 12 / 9）を再現した出題です。',
+      disclaimerNot4of6: '公式試験の「6つの応用文脈から4つ」という構成は再現していません。',
+      disclaimerRawOnly: '当アプリ独自問題の正答数（raw正答率）のみを表示します。',
+      disclaimerNoScaled: '公式のscaled scoreや合否は算出・判定しません。',
+      disclaimerResumable: '進捗は端末内に保存され、ページを閉じても再開できます。',
+      startButton: '模試を開始',
+      resumeButton: '模試を再開',
+      resumeHeading: '進行中の模試があります',
+      newExamButton: '新しい模試を開始',
+      discardConfirm: '進行中の模試を破棄して新しく始めますか？現在の回答は失われます。',
+      createFailed: '模試を開始できませんでした。問題バンクが不足しています。',
+      questionProgress: (current, total) => `${current} / ${total}`,
+      timeRemainingLabel: '残り時間',
+      timeValue: (minutes, seconds) => `${minutes}:${String(seconds).padStart(2, '0')}`,
+      lowTimeWarning: (minutes) => `残り約${minutes}分です。`,
+      timeUpAnnouncement: '時間切れです。自動的に採点しました。',
+      answeredCount: (count) => `回答済み ${count}`,
+      unansweredCount: (count) => `未回答 ${count}`,
+      flagButton: 'この問題にフラグを付ける',
+      unflagButton: 'フラグを外す',
+      flaggedBadge: 'フラグあり',
+      openPalette: '問題一覧を開く',
+      submitExam: '提出する',
+      prevQuestion: '前の問題',
+      nextQuestion: '次の問題',
+      singleHint: '1つ選択してください。',
+      multipleHint: '当てはまるものをすべて選択してください。',
+      choicesLegend: '選択肢',
+      paletteTitle: '問題一覧',
+      paletteClose: '閉じる',
+      paletteFilterAll: 'すべて',
+      paletteFilterUnanswered: '未回答',
+      paletteFilterFlagged: 'フラグ',
+      paletteEmptyUnanswered: '未回答の問題はありません。',
+      paletteEmptyFlagged: 'フラグを付けた問題はありません。',
+      paletteStateCurrent: '表示中',
+      paletteStateAnswered: '回答済み',
+      paletteStateUnanswered: '未回答',
+      paletteStateFlagged: 'フラグあり',
+      paletteQuestionLabel: (number, states) => `問題${number}（${states}）`,
+      submitDialogTitle: '模試を提出しますか？',
+      submitDialogBody: '提出すると回答を変更できません。',
+      submitDialogAnswered: (count) => `回答済み：${count}問`,
+      submitDialogUnanswered: (count) => `未回答：${count}問`,
+      submitDialogFlagged: (count) => `フラグ：${count}問`,
+      submitDialogWarnNoChange: '提出後は回答を変更できません。',
+      submitDialogWarnUnanswered: '未回答の問題も不正解として全60問中に数えられます。',
+      submitDialogConfirm: '提出する',
+      submitDialogCancel: 'キャンセル',
+      resultEyebrow: '模試結果',
+      resultTitle: '結果',
+      outcomeSubmitted: '提出済み',
+      outcomeExpired: '時間切れ',
+      resultDisclaimer: 'これは当アプリ独自問題の正答数です。公式試験のscaled scoreや合否を再現するものではありません。',
+      rawAccuracyLabel: 'raw正答率',
+      rawAccuracyValue: (percent) => `${percent}%`,
+      totalQuestionsLabel: '総問題数',
+      answeredLabel: '回答済み',
+      unansweredLabel: '未回答',
+      correctLabel: '正答数',
+      byDomainHeading: 'ドメイン別',
+      byDifficultyHeading: '難易度別',
+      bySkillHeading: 'スキル別',
+      skillMultiNote: '複数スキルを持つ問題は各スキルに数えるため、スキル別の合計は総問題数を超えることがあります。',
+      tallyValue: (correct, answered, total) => `${correct} / ${total}（回答 ${answered}）`,
+      difficulty: { foundation: '基礎', application: '応用', analysis: '分析' },
+      reviewButton: '問題を復習する',
+      historyButton: '過去の模試',
+      backToLanding: '模試トップへ戻る',
+      reviewTitle: '問題の復習',
+      reviewBack: '結果へ戻る',
+      reviewFilterAll: 'すべて',
+      reviewFilterIncorrect: '不正解',
+      reviewFilterUnanswered: '未回答',
+      reviewFilterFlagged: 'フラグ',
+      reviewEmpty: '該当する問題はありません。',
+      reviewQuestionMeta: (number) => `問題${number}`,
+      yourAnswerLabel: 'あなたの回答',
+      correctAnswerLabel: '正解',
+      notAnswered: '未回答',
+      verdictCorrect: '正解',
+      verdictIncorrect: '不正解',
+      verdictUnanswered: '未回答',
+      explanationHeading: '解説',
+      rationaleHeading: '選択肢別の解説',
+      choiceCorrectLabel: '正解',
+      choiceIncorrectLabel: '不正解',
+      yourChoiceLabel: 'あなたの選択',
+      rationaleLoading: '解説を読み込んでいます…',
+      rationaleLoadError: '解説の読み込みに失敗しました。',
+      rationaleRetry: '再読み込み',
+      officialSources: '公式ソース',
+      verified: (date) => `確認日：${date}`,
+      historyTitle: '過去の模試',
+      historyIntro: '端末内に保存された過去の模試結果です。',
+      historyEmpty: 'まだ完了した模試はありません。',
+      historyEntryDate: (date) => date,
+      historyEntryScore: (correct, total) => `${correct} / ${total}`,
+      historyEntryAccuracy: (percent) => `${percent}%`,
+      historyOpen: '結果を開く',
+      incompatibleTitle: '模試を再開できません',
+      incompatibleBody: '問題内容が更新されたため、この模試は安全に再開できません。',
+      incompatibleDiscard: 'この模試を破棄する',
+      incompatibleDiscardConfirm: 'この模試を破棄しますか？回答は失われます。',
+      staleAttemptNotice: '問題内容が更新されているため、この結果は現在の問題では再採点していません。',
+      staleBreakdownHidden: '問題内容が更新されているため、ドメイン・難易度・スキル別の内訳は表示しません。',
+      reviewStaleQuestion: 'この問題は内容が更新されたため、保存された回答のみを表示します。',
+      storageUnavailable: 'この端末では進捗を保存できません。受験は続けられますが、再読み込み後には復元できません。',
+      saveErrorTitle: '結果を保存できませんでした',
+      saveErrorBody: '採点は完了しましたが、端末への保存に失敗したため、まだ提出は確定していません。この模試は進行中のままです。もう一度お試しください。',
+      saveErrorRetry: '保存をやり直す',
+    },
     footer: { analytics: 'アクセス解析について', github: 'GitHub' },
   },
   en: {
@@ -695,7 +946,7 @@ export const ui = {
       opensNewTab: ' (opens in a new tab)',
     },
     languageNames: { ja: '日本語', en: 'English' },
-    views: { today: 'Today', guide: 'Guide', practice: 'Practice', quiz: 'Quiz', progress: 'Progress', 'hands-on': 'Hands-on', 'official-scenarios': 'Official scenarios' },
+    views: { today: 'Today', guide: 'Guide', practice: 'Practice', quiz: 'Quiz', progress: 'Progress', 'hands-on': 'Hands-on', 'official-scenarios': 'Official scenarios', 'mock-exam': 'Mock exam' },
     pageTitle: 'CCA Field Notes — Unofficial Claude Certified Architect study guide',
     notices: {
       saveFailed: 'Your progress could not be saved. Check this browser’s site-data settings or available storage.',
@@ -1001,6 +1252,127 @@ export const ui = {
       blueprintVerified: (date) => `Exam scope last verified ${date}.`,
       reportIssueLead: 'Report errors or broken links in',
       reportIssueLink: 'GitHub Issues',
+    },
+    mockExam: {
+      loading: 'Loading the mock exam…',
+      loadError: 'The mock exam failed to load.',
+      retry: 'Reload',
+      eyebrow: 'Mock exam',
+      title: 'Take the 60-question mock exam',
+      introduction: 'A practice exam at full scale, to rehearse pacing and see the whole picture.',
+      specQuestions: (count) => `${count} questions`,
+      specDuration: (minutes) => `${minutes} minutes`,
+      specDomainBased: 'Questions follow the official domain distribution (16 / 11 / 12 / 12 / 9).',
+      disclaimerNot4of6: 'It does not reproduce the official "four of six applied contexts" structure.',
+      disclaimerRawOnly: 'It shows only the raw number correct (raw accuracy) on this app’s own questions.',
+      disclaimerNoScaled: 'It does not compute an official scaled score or a pass/fail verdict.',
+      disclaimerResumable: 'Progress is saved on this device, so you can close the page and resume.',
+      startButton: 'Start the mock exam',
+      resumeButton: 'Resume the mock exam',
+      resumeHeading: 'You have an exam in progress',
+      newExamButton: 'Start a new mock exam',
+      discardConfirm: 'Discard the exam in progress and start a new one? Your current answers will be lost.',
+      createFailed: 'Could not start the mock exam: the question bank is insufficient.',
+      questionProgress: (current, total) => `${current} / ${total}`,
+      timeRemainingLabel: 'Time remaining',
+      timeValue: (minutes, seconds) => `${minutes}:${String(seconds).padStart(2, '0')}`,
+      lowTimeWarning: (minutes) => `About ${minutes} minutes remaining.`,
+      timeUpAnnouncement: 'Time is up. Your exam was graded automatically.',
+      answeredCount: (count) => `Answered ${count}`,
+      unansweredCount: (count) => `Unanswered ${count}`,
+      flagButton: 'Flag this question',
+      unflagButton: 'Remove flag',
+      flaggedBadge: 'Flagged',
+      openPalette: 'Open question list',
+      submitExam: 'Submit',
+      prevQuestion: 'Previous question',
+      nextQuestion: 'Next question',
+      singleHint: 'Select one.',
+      multipleHint: 'Select all that apply.',
+      choicesLegend: 'Choices',
+      paletteTitle: 'Questions',
+      paletteClose: 'Close',
+      paletteFilterAll: 'All',
+      paletteFilterUnanswered: 'Unanswered',
+      paletteFilterFlagged: 'Flagged',
+      paletteEmptyUnanswered: 'No unanswered questions.',
+      paletteEmptyFlagged: 'No flagged questions.',
+      paletteStateCurrent: 'current',
+      paletteStateAnswered: 'answered',
+      paletteStateUnanswered: 'unanswered',
+      paletteStateFlagged: 'flagged',
+      paletteQuestionLabel: (number, states) => `Question ${number} (${states})`,
+      submitDialogTitle: 'Submit the mock exam?',
+      submitDialogBody: 'After you submit, you cannot change your answers.',
+      submitDialogAnswered: (count) => `Answered: ${count}`,
+      submitDialogUnanswered: (count) => `Unanswered: ${count}`,
+      submitDialogFlagged: (count) => `Flagged: ${count}`,
+      submitDialogWarnNoChange: 'You cannot change answers after submitting.',
+      submitDialogWarnUnanswered: 'Unanswered questions count as incorrect within the 60-question total.',
+      submitDialogConfirm: 'Submit',
+      submitDialogCancel: 'Cancel',
+      resultEyebrow: 'Mock exam result',
+      resultTitle: 'Result',
+      outcomeSubmitted: 'Submitted',
+      outcomeExpired: 'Time expired',
+      resultDisclaimer: 'This is the number correct on this app’s own questions. It does not reproduce the official exam’s scaled score or pass/fail result.',
+      rawAccuracyLabel: 'Raw accuracy',
+      rawAccuracyValue: (percent) => `${percent}%`,
+      totalQuestionsLabel: 'Total questions',
+      answeredLabel: 'Answered',
+      unansweredLabel: 'Unanswered',
+      correctLabel: 'Correct',
+      byDomainHeading: 'By domain',
+      byDifficultyHeading: 'By difficulty',
+      bySkillHeading: 'By skill',
+      skillMultiNote: 'A question with multiple skills counts toward each one, so the by-skill totals can exceed the number of questions.',
+      tallyValue: (correct, answered, total) => `${correct} / ${total} (answered ${answered})`,
+      difficulty: { foundation: 'Foundation', application: 'Application', analysis: 'Analysis' },
+      reviewButton: 'Review the questions',
+      historyButton: 'Past exams',
+      backToLanding: 'Back to the mock exam start',
+      reviewTitle: 'Question review',
+      reviewBack: 'Back to result',
+      reviewFilterAll: 'All',
+      reviewFilterIncorrect: 'Incorrect',
+      reviewFilterUnanswered: 'Unanswered',
+      reviewFilterFlagged: 'Flagged',
+      reviewEmpty: 'No matching questions.',
+      reviewQuestionMeta: (number) => `Question ${number}`,
+      yourAnswerLabel: 'Your answer',
+      correctAnswerLabel: 'Correct answer',
+      notAnswered: 'Not answered',
+      verdictCorrect: 'Correct',
+      verdictIncorrect: 'Incorrect',
+      verdictUnanswered: 'Unanswered',
+      explanationHeading: 'Explanation',
+      rationaleHeading: 'Per-choice explanation',
+      choiceCorrectLabel: 'Correct',
+      choiceIncorrectLabel: 'Incorrect',
+      yourChoiceLabel: 'Your choice',
+      rationaleLoading: 'Loading explanations…',
+      rationaleLoadError: 'Explanations failed to load.',
+      rationaleRetry: 'Reload',
+      officialSources: 'Official sources',
+      verified: (date) => `Verified: ${date}`,
+      historyTitle: 'Past exams',
+      historyIntro: 'Mock exam results saved on this device.',
+      historyEmpty: 'No completed exams yet.',
+      historyEntryDate: (date) => date,
+      historyEntryScore: (correct, total) => `${correct} / ${total}`,
+      historyEntryAccuracy: (percent) => `${percent}%`,
+      historyOpen: 'Open result',
+      incompatibleTitle: 'This exam cannot be resumed',
+      incompatibleBody: 'The question content has been updated, so this exam cannot be safely resumed.',
+      incompatibleDiscard: 'Discard this exam',
+      incompatibleDiscardConfirm: 'Discard this exam? Your answers will be lost.',
+      staleAttemptNotice: 'The question content has changed, so this result has not been re-graded against the current questions.',
+      staleBreakdownHidden: 'The question content has changed, so the by-domain, by-difficulty, and by-skill breakdowns are not shown.',
+      reviewStaleQuestion: 'This question’s content has changed, so only your saved answer is shown.',
+      storageUnavailable: 'Progress cannot be saved on this device. You can keep taking the exam, but it cannot be restored after a reload.',
+      saveErrorTitle: 'Could not save the result',
+      saveErrorBody: 'Grading finished, but saving to this device failed, so your submission is not yet final. This exam is still in progress. Please try again.',
+      saveErrorRetry: 'Retry saving',
     },
     footer: { analytics: 'Analytics information', github: 'GitHub' },
   },
