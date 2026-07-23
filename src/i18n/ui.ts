@@ -220,6 +220,9 @@ export type UiCopy = {
     eyebrow: string;
     title: string;
     introduction: string;
+    loading: string;
+    loadError: string;
+    loadRetry: string;
     searchLabel: string;
     searchPlaceholder: string;
     stateLegend: string;
@@ -379,6 +382,7 @@ export type UiCopy = {
     analyticsDisclosure: string;
     details: string;
     exportJson: string;
+    dataUnreadableActions: string;
     importJson: string;
     reset: string;
     weakCount: (count: number) => string;
@@ -801,6 +805,9 @@ export const ui = {
       eyebrow: 'INDEPENDENT RETRIEVAL PRACTICE',
       title: '練習カード',
       introduction: '実試験の再現ではありません。まず自分の言葉で答えてから開いてください。',
+      loading: '練習カードを読み込んでいます…',
+      loadError: '練習カードを読み込めませんでした。もう一度お試しください。',
+      loadRetry: 'ページを再読み込み',
       searchLabel: 'カードを検索',
       searchPlaceholder: '例：MCP、スキーマ、フック',
       stateLegend: '状態',
@@ -956,6 +963,7 @@ export const ui = {
       analyticsDisclosure: 'Google Analyticsで基本的なページ閲覧情報を収集します。学習カード、検索語、評価、進捗データは独自イベントとして送信しません。',
       details: '詳細を見る',
       exportJson: '進捗をJSONで書き出す',
+      dataUnreadableActions: '保存データを読み込めないため、書き出しと削除を一時的に無効にしています。データはこの端末に残っている可能性があります。',
       importJson: '進捗をJSONから読み込む',
       reset: 'この端末の進捗を削除',
       weakCount: (count) => `苦手 ${count}`,
@@ -1368,6 +1376,9 @@ export const ui = {
       eyebrow: 'INDEPENDENT RETRIEVAL PRACTICE',
       title: 'Practice cards',
       introduction: 'These cards do not reproduce the actual exam. Answer in your own words before revealing the response.',
+      loading: 'Loading the practice cards…',
+      loadError: 'Could not load the practice cards. Please try again.',
+      loadRetry: 'Reload the page',
       searchLabel: 'Search cards',
       searchPlaceholder: 'Try: MCP, schema, hooks',
       stateLegend: 'Status',
@@ -1523,6 +1534,7 @@ export const ui = {
       analyticsDisclosure: 'Google Analytics collects basic page-view information. Study cards, search terms, ratings, and progress are not sent as custom events.',
       details: 'View details',
       exportJson: 'Export progress as JSON',
+      dataUnreadableActions: 'Export and delete are disabled while saved data cannot be read. Your data may still be on this device.',
       importJson: 'Import progress from JSON',
       reset: 'Delete progress on this device',
       weakCount: (count) => `${count} struggling`,

@@ -833,6 +833,8 @@ main {
 .data-actions { display: grid; min-width: 240px; }
 .data-actions button { margin-top: 8px; }
 .data-actions .danger { border-color: var(--danger); background: var(--surface); color: var(--danger); }
+.data-actions-note { margin: 8px 0 0; color: var(--danger); font-size: 0.85rem; font-weight: 600; }
+.data-actions button:disabled { opacity: 0.5; cursor: not-allowed; }
 .data-actions .danger:hover { background: #fff0ef; border-color: var(--danger); }
 .analytics-disclosure { padding-left: 12px; border-left: 3px solid var(--cyan); font-size: .9rem; }
 .site-footer {

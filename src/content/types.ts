@@ -293,3 +293,19 @@ export type HandsOnGuide = {
   sourceIds: string[];
   verifiedAt: string;
 };
+
+// Lightweight projections of Card/Domain used by the initial landing (Today,
+// Blueprint) so the full prose in cards.ts/domains.ts stays out of the eager
+// bundle. Kept in sync with the full content by content.test.ts.
+export type CardSpine = {
+  id: string;
+  domainId: string;
+  revision: number;
+};
+
+export type DomainSpine = {
+  id: string;
+  number: Domain['number'];
+  weight: number;
+  title: LocalizedText;
+};

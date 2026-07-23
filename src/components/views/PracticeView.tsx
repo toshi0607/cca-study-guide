@@ -4,7 +4,6 @@ import { CardAnswer } from '../practice/CardAnswer';
 import { PracticeSession } from '../practice/PracticeSession';
 import { cards } from '../../content/cards';
 import { domains } from '../../content/domains';
-import type { Card } from '../../content/types';
 import type { Locale } from '../../i18n/locales';
 import { localize, type UiCopy } from '../../i18n/ui';
 import { isDue, type Rating, type ReviewState } from '../../lib/scheduler';
@@ -33,8 +32,8 @@ export function PracticeView({
   onStateFilterChange: (state: StateFilter) => void;
   revealed: Record<string, boolean>;
   onToggleRevealed: (cardId: string) => void;
-  sessionCards: Card[] | null;
-  onStartSession: (cards: Card[]) => void;
+  sessionCards: string[] | null;
+  onStartSession: (cardIds: string[]) => void;
   onExitSession: (aborted: boolean) => void;
   onRateInList: (cardId: string, rating: Rating) => void;
   onRateInSession: (cardId: string, rating: Rating) => boolean;
@@ -71,14 +70,14 @@ export function PracticeView({
         const target = cards.find((card) => card.id === activeTargetCardId);
         return target ? <div class="practice-target"><p tabIndex={-1} role="status" aria-live="polite" ref={targetNoticeRef}>{copy.practice.targetAnnouncement(localize(target.prompt, locale))}</p><button type="button" onClick={() => { setActiveTargetCardId(null); requestAnimationFrame(() => searchInputRef.current?.focus()); }}>{copy.practice.showAll}</button></div> : null;
       })()}
-      {sessionCards && <PracticeSession locale={locale} copy={copy} initialCards={sessionCards} reviews={reviews} dueCount={dueCount} onRate={onRateInSession} onExit={onExitSession}/>}
+      {sessionCards && <PracticeSession locale={locale} copy={copy} initialCards={sessionCards.flatMap((id) => { const card = cards.find((value) => value.id === id); return card ? [card] : []; })} reviews={reviews} dueCount={dueCount} onRate={onRateInSession} onExit={onExitSession}/>}
       {!sessionCards && <><div class="filter-panel">
         <label class="search-label" for="card-search">{copy.practice.searchLabel}<input ref={searchInputRef} id="card-search" type="search" value={query} onInput={(event) => onQueryChange(event.currentTarget.value)} placeholder={copy.practice.searchPlaceholder}/></label>
         <fieldset><legend>{copy.practice.stateLegend}</legend><div class="chips">{stateFilters.map((key) => <button key={key} type="button" class={stateFilter === key ? 'selected' : ''} aria-pressed={stateFilter === key} onClick={() => onStateFilterChange(key)}>{copy.practice.filters[key]}</button>)}</div></fieldset>
         <fieldset><legend>{copy.practice.domainLegend}</legend><div class="chips"><button type="button" class={domainFilter === 'all' ? 'selected' : ''} aria-pressed={domainFilter === 'all'} onClick={() => onDomainFilterChange('all')}>{copy.practice.allDomains}</button>{domains.map((domain) => <button key={domain.id} type="button" class={domainFilter === domain.id ? 'selected' : ''} aria-pressed={domainFilter === domain.id} onClick={() => onDomainFilterChange(domain.id)}>D{domain.number}</button>)}</div></fieldset>
       </div>
       <div class="session-start-row">
-        <button class="quiz-start session-start" disabled={!filteredCards.length} onClick={() => onStartSession(filteredCards)}>{copy.session.start} <span aria-hidden="true">→</span></button>
+        <button class="quiz-start session-start" disabled={!filteredCards.length} onClick={() => onStartSession(filteredCards.map((card) => card.id))}>{copy.session.start} <span aria-hidden="true">→</span></button>
         {!filteredCards.length && <p class="session-start-hint">{copy.session.cannotStart}</p>}
       </div>
       <p class="result-count">{copy.practice.resultCount(filteredCards.length)}</p>

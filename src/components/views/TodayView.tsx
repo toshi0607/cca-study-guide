@@ -1,22 +1,20 @@
 import { useMemo } from 'preact/hooks';
 import { Blueprint } from '../app/Blueprint';
 import { formatDate, formatNumber } from '../app/format';
-import { cards } from '../../content/cards';
-import { domains } from '../../content/domains';
-import type { Card } from '../../content/types';
+import { cardIndex, domainIndex } from '../../content/card-index';
 import type { Locale } from '../../i18n/locales';
 import { localize, type UiCopy } from '../../i18n/ui';
 import type { ReviewState } from '../../lib/scheduler';
 import type { MockExamAttempt, MockExamSession } from '../../lib/mock-exam';
 import { isWeak } from '../../lib/weakness';
 
-export function TodayView({ locale, copy, now, ready, reviews, dueCards, session, attempts, onStartDueReview, onOpenWeakDomain, onOpenMockExam, onOpenMockExamAnalysis }: {
+export function TodayView({ locale, copy, now, ready, reviews, dueCount, session, attempts, onStartDueReview, onOpenWeakDomain, onOpenMockExam, onOpenMockExamAnalysis }: {
   locale: Locale;
   copy: UiCopy;
   now: Date | null;
   ready: boolean;
   reviews: Record<string, ReviewState>;
-  dueCards: Card[];
+  dueCount: number;
   session: MockExamSession | null;
   attempts: readonly MockExamAttempt[];
   onStartDueReview: () => void;
@@ -33,9 +31,9 @@ export function TodayView({ locale, copy, now, ready, reviews, dueCards, session
     : hasAttempt
       ? copy.mockExam.todayOpenResults
       : copy.mockExam.startButton;
-  const reviewedCount = Object.keys(reviews).filter((id) => cards.some((card) => card.id === id)).length;
-  const weakByDomain = useMemo(() => domains
-    .map((domain) => ({ domain, count: cards.filter((card) => card.domainId === domain.id && isWeak(reviews[card.id])).length }))
+  const reviewedCount = Object.keys(reviews).filter((id) => cardIndex.some((card) => card.id === id)).length;
+  const weakByDomain = useMemo(() => domainIndex
+    .map((domain) => ({ domain, count: cardIndex.filter((card) => card.domainId === domain.id && isWeak(reviews[card.id])).length }))
     .filter((entry) => entry.count > 0)
     .sort((a, b) => b.count - a.count), [reviews]);
 
@@ -49,8 +47,8 @@ export function TodayView({ locale, copy, now, ready, reviews, dueCards, session
         </div>
         <div class="due-block">
           <span>{copy.today.dueTitle}</span>
-          <strong>{ready && now ? formatNumber(dueCards.length, locale) : '—'}</strong>
-          <span>{ready && now ? copy.today.dueCount(dueCards.length) : '—'}</span>
+          <strong>{ready && now ? formatNumber(dueCount, locale) : '—'}</strong>
+          <span>{ready && now ? copy.today.dueCount(dueCount) : '—'}</span>
           <button disabled={!ready} onClick={onStartDueReview}>{copy.today.startReview} <span aria-hidden="true">→</span></button>
         </div>
       </section>
@@ -86,8 +84,8 @@ export function TodayView({ locale, copy, now, ready, reviews, dueCards, session
         <div><p class="eyebrow">{copy.status.eyebrow}</p><h2 id="status-title">{copy.status.title}</h2></div>
         <dl>
           <div><dt>{copy.status.started}</dt><dd>{ready ? formatNumber(reviewedCount, locale) : '—'}</dd></div>
-          <div><dt>{copy.status.notStarted}</dt><dd>{ready ? formatNumber(cards.length - reviewedCount, locale) : '—'}</dd></div>
-          <div><dt>{copy.status.coverage}</dt><dd>{formatNumber(cards.length, locale)}</dd></div>
+          <div><dt>{copy.status.notStarted}</dt><dd>{ready ? formatNumber(cardIndex.length - reviewedCount, locale) : '—'}</dd></div>
+          <div><dt>{copy.status.coverage}</dt><dd>{formatNumber(cardIndex.length, locale)}</dd></div>
         </dl>
       </section>
     </div>
