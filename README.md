@@ -4,6 +4,22 @@
 
 An unofficial web app for studying the public exam scope of the Claude Certified Architect – Foundations (CCAR-F) exam through original summaries and recall cards. Study content is written in Japanese.
 
+[![Live demo](https://img.shields.io/badge/Live_demo-cca.toshi0607.com-087e9b?style=for-the-badge)](https://cca.toshi0607.com)
+
+## In action
+
+The focused review session — **recall → reveal → rate**, entirely in the browser (Space/Enter to reveal, 1/2/3 to rate):
+
+![Focused recall review session](docs/media/recall-review.gif)
+
+| Study Guide (5 domains · 30 tasks) | Choice & scenario quiz |
+| --- | --- |
+| ![Study Guide](docs/media/shot-guide.png) | ![Choice quiz](docs/media/shot-quiz.png) |
+| **60-question Mock Exam** | **Learning analysis** |
+| ![60-question Mock Exam](docs/media/shot-mock-exam.png) | ![Learning analysis](docs/media/shot-analysis.png) |
+
+[**Try it live → cca.toshi0607.com**](https://cca.toshi0607.com) — no signup; progress stays in your browser.
+
 ## Principles
 
 - Unofficial and not affiliated with Anthropic
@@ -108,9 +124,18 @@ vercel deploy --prod
 
 The value is in `G-...` format. When set, `gtag.js` is loaded normally and configures basic page views with ad storage, ad user data, and ad personalization denied. Google Signals and ad-personalization signals are also disabled, and GA cookies are limited to the host being visited. No app-specific custom events are implemented. To limit to page views only, also disable "enhanced measurement" on the GA4 web data stream. A user-facing explanation is published at `/privacy/`.
 
-## Promo video (video/)
+## Promo video
 
-`video/` is a standalone Remotion project that generates a social promo video (about 30 seconds, 1920×1080, H.264). It has its own `package.json` and does not affect the main app's build, test, or deploy. The screen material is real screenshots placed in `video/assets/`, and you render with `cd video && pnpm install && npx remotion render promo out/promo.mp4` (the artifacts under `video/out/` are not committed).
+`video/` is a standalone Remotion project that generates a social promo video (about 34 seconds, 1920×1080, H.264). It has its own `package.json` and does not affect the main app's build, test, or deploy. `video-hf/` is the same composition ported to [HyperFrames](https://hyperframes.heygen.com/) (HTML + GSAP) via the `remotion-to-hyperframes` skill — see `video-hf/TRANSLATION_NOTES.md`. Screen material is real screenshots under `video/assets/`.
+
+```sh
+# Remotion
+cd video && pnpm install && npx remotion render promo out/promo.mp4
+# HyperFrames (needs a system ffmpeg on PATH)
+cd video-hf && npx hyperframes render --quality high --output out/promo.mp4
+```
+
+Rendered output under `out/` is not committed — the finished video is published as a GitHub Release ([promo-video-v2](https://github.com/toshi0607/cca-study-guide/releases/tag/promo-video-v2)).
 
 ## Official information
 
