@@ -1,4 +1,5 @@
 import type { LocalizedText, QuestionDifficulty } from '../content/types';
+import type { EvidenceLevel, LearningStability } from '../lib/mock-exam-analysis';
 import type { Locale } from './locales';
 
 type View = 'today' | 'guide' | 'practice' | 'quiz' | 'progress' | 'hands-on' | 'official-scenarios' | 'mock-exam';
@@ -474,6 +475,67 @@ export type UiCopy = {
     saveErrorTitle: string;
     saveErrorBody: string;
     saveErrorRetry: string;
+    // Task 9 — learning analysis (a separate, dynamically-loaded sub-view).
+    analysis: {
+      openButton: string;
+      eyebrow: string;
+      title: string;
+      intro: string;
+      back: string;
+      rangeLegend: string;
+      rangeAllTime: string;
+      rangeRecent3: string;
+      rangeSummary: (attempts: number, total: number) => string;
+      compatibleAnswers: (count: number) => string;
+      staleExcluded: (count: number) => string;
+      staleNote: string;
+      evidenceLegend: string;
+      evidenceExplanation: string;
+      evidence: Record<EvidenceLevel, string>;
+      domainHeading: string;
+      difficultyHeading: string;
+      skillHeading: string;
+      skillMultiNote: string;
+      colArea: string;
+      colCount: string;
+      colAnswered: string;
+      colCorrect: string;
+      colIncorrect: string;
+      colAccuracy: string;
+      colEvidence: string;
+      accuracyValue: (percent: number) => string;
+      countValue: (correct: number, total: number) => string;
+      axisEmpty: string;
+      reviewHeading: string;
+      reviewNote: string;
+      reviewDomainSub: string;
+      reviewSkillSub: string;
+      reviewNone: string;
+      reviewInsufficient: string;
+      stabilityHeading: string;
+      stability: Record<LearningStability, { label: string; description: string }>;
+      stabilityDisclaimers: string[];
+      trendHeading: string;
+      trendCaption: string;
+      trendColDate: string;
+      trendColOutcome: string;
+      trendColScore: string;
+      trendColAccuracy: string;
+      trendColAnswered: string;
+      trendColStale: string;
+      trendEmpty: string;
+      nextActionsHeading: string;
+      actionReviewDomain: (name: string) => string;
+      actionReviewSkill: (name: string) => string;
+      actionPracticeWeakArea: (name: string) => string;
+      actionTakeAnother: string;
+      actionRetakeLatest: string;
+      openPractice: string;
+      startExam: string;
+      nextActionsEmpty: string;
+      emptyTitle: string;
+      emptyBody: string;
+    };
   };
   footer: {
     analytics: string;
@@ -927,6 +989,75 @@ export const ui = {
       saveErrorTitle: '結果を保存できませんでした',
       saveErrorBody: '採点は完了しましたが、端末への保存に失敗したため、まだ提出は確定していません。この模試は進行中のままです。もう一度お試しください。',
       saveErrorRetry: '保存をやり直す',
+      analysis: {
+        openButton: '学習分析',
+        eyebrow: '学習分析',
+        title: '模試結果を分析する',
+        intro: '端末内に保存された模試結果から、次に復習すべき領域を確認します。公式試験の合否や点数を予測するものではありません。',
+        back: '模試トップへ戻る',
+        rangeLegend: '分析対象',
+        rangeAllTime: '全期間',
+        rangeRecent3: '直近3回',
+        rangeSummary: (attempts, total) => `対象 ${attempts} / 全 ${total} 回`,
+        compatibleAnswers: (count) => `compatible回答：${count}`,
+        staleExcluded: (count) => `staleのため軸別分析から除外した回答：${count}`,
+        staleNote: 'stale回答（問題が削除された、または内容が更新された回答）は現在の問題で再採点せず、ドメイン・難易度・スキル別の集計から除外しています。全体のraw正答率と推移には保存済みの正誤として残します。',
+        evidenceLegend: 'データ量の目安',
+        evidenceExplanation: '各領域の回答数に応じて、断定を避けた表現を用います。回答数が少ない領域は「弱点」「得意」とは表示しません。',
+        evidence: { insufficient: 'データ不足', limited: '参考値', sufficient: '傾向を確認可能' },
+        domainHeading: 'ドメイン別',
+        difficultyHeading: '難易度別',
+        skillHeading: 'スキル別',
+        skillMultiNote: '複数スキルを持つ問題は各スキルに数えるため、スキル別の合計は問題数を超えることがあります。',
+        colArea: '領域',
+        colCount: '回答数',
+        colAnswered: '回答',
+        colCorrect: '正答',
+        colIncorrect: '不正解',
+        colAccuracy: 'raw正答率',
+        colEvidence: 'データ量',
+        accuracyValue: (percent) => `${percent}%`,
+        countValue: (correct, total) => `${correct} / ${total}`,
+        axisEmpty: '対象となる回答がありません。',
+        reviewHeading: '復習優先候補',
+        reviewNote: '直近の回答で正答率が相対的に低い領域です。この学習ガイド内の回答データに基づく参考情報であり、公式の合格基準ではありません。',
+        reviewDomainSub: 'ドメイン',
+        reviewSkillSub: 'スキル',
+        reviewNone: '明確な復習優先候補なし',
+        reviewInsufficient: 'データ不足',
+        stabilityHeading: '学習結果の安定状況',
+        stability: {
+          insufficient_data: { label: 'データ不足', description: '安定状況を判断するには、完了した模試が3回以上かつ十分な回答数が必要です。' },
+          building_evidence: { label: 'データを蓄積中', description: '複数回の結果はありますが、まだ一定の範囲に収まっているとは言えません。' },
+          stable_practice: { label: '結果が一定範囲に収まっています', description: '直近の複数回の結果がraw正答率で近い範囲に収まっています。これは成績の高さや合格可能性を示すものではありません。' },
+        },
+        stabilityDisclaimers: [
+          'これは公式試験の合否予測ではありません。',
+          'scaled scoreや720点への換算でもありません。',
+          '同じ問題を繰り返すと、反復exposureによりraw正答率が上がることがあります。',
+          '同じ60問バンクの繰り返しのため、本番の性能を直接表すものではありません。',
+        ],
+        trendHeading: '模試の推移',
+        trendCaption: '完了日時ごとの模試結果（古い順）',
+        trendColDate: '完了日時',
+        trendColOutcome: '結果',
+        trendColScore: '正答 / 総数',
+        trendColAccuracy: 'raw正答率',
+        trendColAnswered: '回答 / 未回答',
+        trendColStale: 'stale回答',
+        trendEmpty: 'まだ完了した模試はありません。',
+        nextActionsHeading: '次の学習アクション',
+        actionReviewDomain: (name) => `${name}を練習で復習する`,
+        actionReviewSkill: (name) => `${name}を含む問題を練習する`,
+        actionPracticeWeakArea: (name) => `${name}はまだ回答数が少ないため、追加練習でデータを増やす`,
+        actionTakeAnother: '模試をもう1回実施してサンプルを増やす',
+        actionRetakeLatest: '最新の問題で模試を受け直す',
+        openPractice: '練習を開く',
+        startExam: '模試を開始',
+        nextActionsEmpty: '今は特定の学習アクションはありません。学習を続けてください。',
+        emptyTitle: 'まだ分析できる模試結果がありません',
+        emptyBody: '模試を1回以上完了すると、ここに分析が表示されます。',
+      },
     },
     footer: { analytics: 'アクセス解析について', github: 'GitHub' },
   },
@@ -1373,6 +1504,75 @@ export const ui = {
       saveErrorTitle: 'Could not save the result',
       saveErrorBody: 'Grading finished, but saving to this device failed, so your submission is not yet final. This exam is still in progress. Please try again.',
       saveErrorRetry: 'Retry saving',
+      analysis: {
+        openButton: 'Learning analysis',
+        eyebrow: 'Learning analysis',
+        title: 'Analyze your mock exam results',
+        intro: 'From the mock exam results saved on this device, see which areas to review next. It does not predict the official exam’s pass/fail result or score.',
+        back: 'Back to the mock exam start',
+        rangeLegend: 'Analysis range',
+        rangeAllTime: 'All time',
+        rangeRecent3: 'Last 3',
+        rangeSummary: (attempts, total) => `Showing ${attempts} of ${total}`,
+        compatibleAnswers: (count) => `Compatible answers: ${count}`,
+        staleExcluded: (count) => `Excluded from axis analysis as stale: ${count}`,
+        staleNote: 'Stale answers (whose question was removed or whose content changed) are not re-graded against the current questions and are excluded from the by-domain, by-difficulty, and by-skill breakdowns. They remain in the overall raw accuracy and trend as their stored correctness.',
+        evidenceLegend: 'Evidence level',
+        evidenceExplanation: 'Wording avoids strong claims based on how many answers each area has. Areas with few answers are not labeled a "weakness" or a "strength".',
+        evidence: { insufficient: 'Not enough data', limited: 'Reference only', sufficient: 'Trend readable' },
+        domainHeading: 'By domain',
+        difficultyHeading: 'By difficulty',
+        skillHeading: 'By skill',
+        skillMultiNote: 'A question with multiple skills counts toward each one, so the by-skill totals can exceed the number of questions.',
+        colArea: 'Area',
+        colCount: 'Answers',
+        colAnswered: 'Answered',
+        colCorrect: 'Correct',
+        colIncorrect: 'Incorrect',
+        colAccuracy: 'Raw accuracy',
+        colEvidence: 'Evidence',
+        accuracyValue: (percent) => `${percent}%`,
+        countValue: (correct, total) => `${correct} / ${total}`,
+        axisEmpty: 'No answers to analyze.',
+        reviewHeading: 'Review priority',
+        reviewNote: 'Areas where your recent answers are relatively low in accuracy. This is a reference based on your answer data within this study guide, not an official passing criterion.',
+        reviewDomainSub: 'Domains',
+        reviewSkillSub: 'Skills',
+        reviewNone: 'No clear review priority',
+        reviewInsufficient: 'Not enough data',
+        stabilityHeading: 'Learning consistency',
+        stability: {
+          insufficient_data: { label: 'Not enough data', description: 'Judging consistency needs at least three completed mock exams and enough answers.' },
+          building_evidence: { label: 'Building evidence', description: 'You have several results, but they do not yet fall within a consistent range.' },
+          stable_practice: { label: 'Results within a consistent range', description: 'Your recent results fall within a close raw-accuracy range. This does not indicate a high score or a likelihood of passing.' },
+        },
+        stabilityDisclaimers: [
+          'This is not a prediction of the official exam’s pass/fail outcome.',
+          'It is not a scaled score or a conversion to 720 points.',
+          'Repeating the same questions can raise raw accuracy through repeated exposure.',
+          'Because it repeats the same 60-question bank, it does not directly reflect real exam performance.',
+        ],
+        trendHeading: 'Mock exam trend',
+        trendCaption: 'Mock exam results by completion time (oldest first)',
+        trendColDate: 'Completed',
+        trendColOutcome: 'Outcome',
+        trendColScore: 'Correct / total',
+        trendColAccuracy: 'Raw accuracy',
+        trendColAnswered: 'Answered / unanswered',
+        trendColStale: 'Stale answers',
+        trendEmpty: 'No completed exams yet.',
+        nextActionsHeading: 'Next learning actions',
+        actionReviewDomain: (name) => `Review the ${name} domain with practice`,
+        actionReviewSkill: (name) => `Practice questions covering ${name}`,
+        actionPracticeWeakArea: (name) => `${name} still has few answers — add practice to gather more data`,
+        actionTakeAnother: 'Take another mock exam to increase your sample',
+        actionRetakeLatest: 'Retake the mock exam with the latest questions',
+        openPractice: 'Open practice',
+        startExam: 'Start the mock exam',
+        nextActionsEmpty: 'No specific learning action right now. Keep practicing.',
+        emptyTitle: 'No mock exam results to analyze yet',
+        emptyBody: 'Complete at least one mock exam and your analysis will appear here.',
+      },
     },
     footer: { analytics: 'Analytics information', github: 'GitHub' },
   },

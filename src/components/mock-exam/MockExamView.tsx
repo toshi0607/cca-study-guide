@@ -17,6 +17,7 @@ import {
 import { applyMockExamCreate, applyMockExamDiscard, applyMockExamSessionChange, finalizeMockExam, type MockExamFinalizeOutcome } from '../../lib/mock-exam-controller';
 import type { StudyData } from '../../lib/storage';
 import { useSecondTick } from '../../lib/use-mock-exam';
+import { MockExamAnalysisEntry } from './MockExamAnalysisEntry';
 import { MockExamHistory } from './MockExamHistory';
 import { MockExamLanding } from './MockExamLanding';
 import { MockExamResult as MockExamResultView } from './MockExamResult';
@@ -41,9 +42,12 @@ export type MockExamViewProps = MockExamStorageBridge & {
   session: MockExamSession | null;
   attempts: readonly MockExamAttempt[];
   storageAvailable: boolean;
+  // Opens the Practice view (optionally preselecting a domain) for a learning-
+  // analysis "next action". Supplied by App; reuses existing navigation.
+  onOpenPractice: (domainId?: string) => void;
 };
 
-type Phase = 'landing' | 'running' | 'result' | 'incompatible' | 'history' | 'save-error';
+type Phase = 'landing' | 'running' | 'result' | 'incompatible' | 'history' | 'save-error' | 'analysis';
 type ActiveResult = { attempt: MockExamAttempt; result: MockExamResult; stale: boolean };
 
 function createExamId(): string {
@@ -56,7 +60,7 @@ function createExamId(): string {
 // through the bridge, calls the pure engine/controller, and writes back. It holds
 // only the screen phase and the graded result being shown. All completion funnels
 // through `finalize`, guarded so submit and auto-expiry never double-grade.
-export function MockExamView({ locale, copy, session, attempts, storageAvailable, readData, writeData }: MockExamViewProps) {
+export function MockExamView({ locale, copy, session, attempts, storageAvailable, readData, writeData, onOpenPractice }: MockExamViewProps) {
   const questionById = useMemo(() => new Map(questions.map((question) => [question.id, question])), []);
   const choiceIds = useMemo(() => new Map(questions.map((question) => [question.id, question.choices.map((choice) => choice.id)])), []);
   const [phase, setPhase] = useState<Phase>('landing');
@@ -68,6 +72,7 @@ export function MockExamView({ locale, copy, session, attempts, storageAvailable
   const resultHeadingRef = useRef<HTMLHeadingElement | null>(null);
   const reviewHeadingRef = useRef<HTMLHeadingElement | null>(null);
   const historyHeadingRef = useRef<HTMLHeadingElement | null>(null);
+  const analysisHeadingRef = useRef<HTMLHeadingElement | null>(null);
   const incompatibleRef = useRef<HTMLElement | null>(null);
   const saveErrorRef = useRef<HTMLElement | null>(null);
   const finalizingRef = useRef(false);
@@ -233,6 +238,7 @@ export function MockExamView({ locale, copy, session, attempts, storageAvailable
         onResume={handleResume}
         onNewExam={handleNewExam}
         onOpenHistory={() => setPhase('history')}
+        onOpenAnalysis={() => setPhase('analysis')}
       />}
 
       {phase === 'running' && session && currentQuestion && <MockExamRunner
@@ -288,6 +294,17 @@ export function MockExamView({ locale, copy, session, attempts, storageAvailable
         copy={copy}
         onOpen={openAttempt}
         onBack={() => setPhase(active ? 'result' : 'landing')}
+        onOpenAnalysis={() => setPhase('analysis')}
+      />}
+
+      {phase === 'analysis' && <MockExamAnalysisEntry
+        locale={locale}
+        copy={copy}
+        attempts={attempts}
+        headingRef={analysisHeadingRef}
+        onOpenPractice={onOpenPractice}
+        onTakeAnother={() => setPhase('landing')}
+        onBack={() => setPhase('landing')}
       />}
     </div>
   );

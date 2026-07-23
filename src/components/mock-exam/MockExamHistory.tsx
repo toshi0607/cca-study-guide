@@ -9,13 +9,14 @@ import { formatDate } from '../app/format';
 // accuracy are read straight from the stored attempt's own correctness flags, so
 // the list is stable even after the question content changes — no re-grading, no
 // trend analysis (that is deliberately out of scope for this task).
-export function MockExamHistory({ attempts, headingRef, locale, copy, onOpen, onBack }: {
+export function MockExamHistory({ attempts, headingRef, locale, copy, onOpen, onBack, onOpenAnalysis }: {
   attempts: readonly MockExamAttempt[];
   headingRef: MutableRef<HTMLHeadingElement | null>;
   locale: Locale;
   copy: UiCopy;
   onOpen: (attempt: MockExamAttempt) => void;
   onBack: () => void;
+  onOpenAnalysis: () => void;
 }) {
   const ordered = [...attempts].sort((a, b) => b.completedAt.localeCompare(a.completedAt));
 
@@ -46,7 +47,10 @@ export function MockExamHistory({ attempts, headingRef, locale, copy, onOpen, on
               );
             })}
           </ul>}
-      <button type="button" class="mock-exam-link" onClick={onBack}>{copy.mockExam.backToLanding}</button>
+      <div class="mock-exam-landing-links">
+        {ordered.length > 0 && <button type="button" class="mock-exam-link" onClick={onOpenAnalysis}>{copy.mockExam.analysis.openButton}</button>}
+        <button type="button" class="mock-exam-link" onClick={onBack}>{copy.mockExam.backToLanding}</button>
+      </div>
     </section>
   );
 }
