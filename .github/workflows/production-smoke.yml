@@ -1,0 +1,105 @@
+name: Production smoke
+
+# Manual release verification only — never wired to push/pull_request/schedule
+# so it adds zero load to PR CI. Run by hand (or from a release runbook) after
+# a production deploy to confirm Vercel served the intended commit and the
+# live site's critical flows still work.
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: production-smoke
+  cancel-in-progress: true
+
+jobs:
+  verify-deployment:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # Intentionally NOT setting PUBLIC_GA_MEASUREMENT_ID here (unlike e2e.yml
+      # / perf.yml, which use a test id for PR builds). This build's asset
+      # bytes are compared against what Vercel actually served in production,
+      # and Vercel builds with the real GA id. The GA id only affects an
+      # inline snippet, not the hashed /_astro/App.*.js or client.*.js island
+      # bundles that scripts/verify-production-deployment.mjs diffs — so the
+      # identity check is robust either way, but building without a forced
+      # test id keeps this closer to the real production build.
+      - run: pnpm build
+      - run: mkdir -p tmp
+      # Exact JSON-output flag is owned by scripts/verify-production-deployment.mjs;
+      # adjust `--json <path>` here if that script's CLI surface changes.
+      - run: pnpm verify:production -- --json tmp/production-deployment-report.json
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: production-deployment-report
+          path: tmp/production-deployment-report.json
+          retention-days: 7
+          if-no-files-found: warn
+
+  production-smoke:
+    needs: verify-deployment
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # Only Chromium is exercised (see playwright.production.config.ts projects).
+      - run: pnpm exec playwright install --with-deps chromium
+      # Runs against live production (https://cca.toshi0607.com by default);
+      # does not build or serve locally.
+      - run: pnpm test:e2e:production
+      # Pull the identity report from verify-deployment's job so the summary
+      # step below (this job runs on a separate, fresh runner) can read it.
+      - uses: actions/download-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: production-deployment-report
+          path: tmp
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: production-playwright-report
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7
+          if-no-files-found: ignore
+      - name: Write summary
+        if: ${{ !cancelled() }}
+        run: |
+          {
+            echo "## Production smoke summary"
+            echo ""
+            echo "- Tested commit: \`${{ github.sha }}\`"
+            echo ""
+            if [ -f tmp/production-deployment-report.json ]; then
+              echo "### Deployment identity"
+              echo '```json'
+              cat tmp/production-deployment-report.json
+              echo '```'
+            else
+              echo "_No deployment identity report found (tmp/production-deployment-report.json missing)._"
+            fi
+            echo ""
+            if [ -f playwright-report/index.html ] || [ -d test-results ]; then
+              echo "### Playwright report"
+              echo "See the \`production-playwright-report\` artifact for full results (HTML report, traces, screenshots, videos)."
+            fi
+            echo ""
+            if [ "${{ job.status }}" = "success" ]; then
+              echo "**Verdict: PASS**"
+            else
+              echo "**Verdict: FAIL**"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"

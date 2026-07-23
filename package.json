@@ -15,9 +15,11 @@
     "test:e2e:a11y": "playwright test accessibility.spec.ts",
     "test:e2e:reuse": "PW_REUSE_SERVER=1 playwright test",
     "test:e2e:ui": "playwright test --ui",
+    "test:e2e:production": "playwright test --config=playwright.production.config.ts",
     "test:watch": "vitest",
     "fonts:subset": "node scripts/subset-fonts.mjs",
-    "test:bundle": "node scripts/check-initial-bundle.mjs"
+    "test:bundle": "node scripts/check-initial-bundle.mjs",
+    "verify:production": "node scripts/verify-production-deployment.mjs"
   },
   "dependencies": {
     "@astrojs/preact": "^6.0.1",
