@@ -1,0 +1,10 @@
+node_modules
+dist
+.DS_Store
+.env
+
+# Rendered output and review artifacts are distributed via GitHub Releases,
+# not committed (mirrors ../video/.gitignore).
+out
+snapshots
+.hyperframes

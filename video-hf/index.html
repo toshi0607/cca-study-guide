@@ -1,0 +1,688 @@
+<!doctype html>
+<html lang="ja" data-resolution="landscape">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Zen+Kaku+Gothic+New:wght@400;700;900&display=swap"
+      rel="stylesheet"
+    />
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        width: 1920px;
+        height: 1080px;
+        overflow: hidden;
+        background: #f4f7f9;
+      }
+      :root {
+        --paper: #f4f7f9;
+        --surface: #ffffff;
+        --ink: #173447;
+        --ink-soft: #4c6574;
+        --cyan: #087e9b;
+        --cyan-dark: #05657d;
+        --cyan-pale: #dff1f5;
+        --grid-strong: #b5cbd5;
+        --amber: #a85b18;
+        --green: #287158;
+        --danger: #a63f35;
+        --display: "Barlow Condensed", "Zen Kaku Gothic New", sans-serif;
+        --body: "Zen Kaku Gothic New", sans-serif;
+        --mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+      }
+
+      #root {
+        position: relative;
+        font-family: var(--body);
+        color: var(--ink);
+      }
+
+      /* Persistent field-notes grid background (paper + ruled lines). */
+      .grid-bg {
+        position: absolute;
+        inset: 0;
+        background-color: var(--paper);
+        background-image: linear-gradient(rgba(23, 52, 71, 0.05) 2px, transparent 2px),
+          linear-gradient(90deg, rgba(23, 52, 71, 0.05) 2px, transparent 2px);
+        background-size: 56px 56px;
+      }
+
+      .scene {
+        position: absolute;
+        inset: 0;
+      }
+      .scene-inner {
+        position: absolute;
+        inset: 0;
+        opacity: 0;
+      }
+
+      /* Rise-in entrance: CSS holds the from-state, GSAP tweens to rest. */
+      .rise {
+        opacity: 0;
+        transform: translateY(46px);
+      }
+
+      /* Two-column feature layout */
+      .feature-row {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        justify-content: center;
+        gap: 52px;
+        padding: 0 70px;
+      }
+      .feature-col {
+        width: 600px;
+        display: flex;
+        flex-direction: column;
+        gap: 30px;
+      }
+
+      .eyebrow {
+        font-family: var(--mono);
+        font-weight: 700;
+        font-size: 26px;
+        letter-spacing: 0.18em;
+        color: var(--cyan-dark);
+        text-transform: uppercase;
+      }
+      .headline {
+        font-family: var(--body);
+        font-weight: 900;
+        font-size: 88px;
+        line-height: 1.18;
+        letter-spacing: 0.01em;
+        color: var(--ink);
+      }
+      .headline.sm {
+        font-size: 72px;
+      }
+      .sub {
+        font-family: var(--body);
+        font-weight: 400;
+        font-size: 34px;
+        line-height: 1.7;
+        color: var(--ink-soft);
+      }
+
+      /* Domain-weight chips */
+      .chips {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+      }
+      .chip {
+        border: 2px solid var(--cyan-dark);
+        background: var(--surface);
+        padding: 8px 14px;
+        display: flex;
+        align-items: baseline;
+        gap: 8px;
+        box-shadow: 5px 5px 0 rgba(8, 126, 155, 0.13);
+      }
+      .chip .d {
+        font-family: var(--mono);
+        font-weight: 700;
+        font-size: 20px;
+        background: var(--ink);
+        color: #fff;
+        padding: 2px 7px;
+      }
+      .chip .w {
+        font-family: var(--display);
+        font-weight: 700;
+        font-size: 34px;
+        color: var(--cyan-dark);
+      }
+
+      /* Browser mock frame */
+      .browser {
+        width: 1050px;
+        background: var(--surface);
+        border: 3px solid var(--ink);
+        box-shadow: 16px 16px 0 rgba(8, 126, 155, 0.14);
+      }
+      .browser-bar {
+        height: 54px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 0 22px;
+        border-bottom: 2px solid var(--ink);
+        background: var(--cyan-pale);
+      }
+      .dot {
+        width: 16px;
+        height: 16px;
+        border-radius: 8px;
+        opacity: 0.75;
+      }
+      .browser-bar .url {
+        margin-left: 16px;
+        font-family: var(--mono);
+        font-size: 20px;
+        color: var(--ink-soft);
+        letter-spacing: 0.04em;
+      }
+      .browser-screen {
+        position: relative;
+        height: 674px;
+        overflow: hidden;
+      }
+      .shot {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        transform-origin: 50% 40%;
+      }
+      #quiz-overlay {
+        opacity: 0;
+      }
+
+      /* Wordmark */
+      .wordmark {
+        display: inline-flex;
+        align-items: center;
+        gap: 14px;
+        background: var(--ink);
+        color: #eef8fb;
+        padding: 10px 20px;
+        border: 2px solid var(--ink);
+      }
+      .wordmark .mk {
+        font-family: var(--display);
+        font-weight: 700;
+        font-size: 44px;
+        letter-spacing: 0.02em;
+      }
+      .wordmark .sm {
+        display: inline-flex;
+        flex-direction: column;
+        font-family: var(--mono);
+        font-size: 15px;
+        line-height: 1.3;
+        letter-spacing: 0.14em;
+      }
+      .wordmark-tr {
+        position: absolute;
+        top: 44px;
+        right: 80px;
+        transform: scale(0.62);
+        transform-origin: top right;
+      }
+
+      /* Unofficial badge */
+      .badge {
+        position: absolute;
+        left: 80px;
+        bottom: 48px;
+        font-family: var(--mono);
+        font-size: 22px;
+        letter-spacing: 0.06em;
+        color: var(--ink-soft);
+        display: flex;
+        align-items: center;
+        gap: 14px;
+      }
+      .badge .tag {
+        border: 2px solid var(--ink-soft);
+        padding: 3px 10px;
+        font-weight: 700;
+      }
+
+      /* Centered scenes (hook / closing) */
+      .center {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+      }
+      .hook-kicker {
+        font-family: var(--display);
+        font-weight: 700;
+        font-size: 54px;
+        letter-spacing: 0.03em;
+        color: var(--cyan-dark);
+        border-bottom: 4px solid var(--cyan-dark);
+        padding-bottom: 10px;
+      }
+      .hook-head {
+        font-family: var(--body);
+        font-weight: 900;
+        font-size: 130px;
+        line-height: 1.18;
+        color: var(--ink);
+      }
+      .hook-sub {
+        font-family: var(--body);
+        font-weight: 700;
+        font-size: 38px;
+        color: var(--ink-soft);
+      }
+      .close-tags {
+        display: flex;
+        gap: 18px;
+        align-items: center;
+        font-family: var(--body);
+        font-weight: 700;
+        font-size: 40px;
+        color: var(--ink);
+      }
+      .close-tags .sep {
+        color: var(--grid-strong);
+      }
+      .close-url {
+        font-family: var(--display);
+        font-weight: 700;
+        font-size: 96px;
+        color: var(--cyan-dark);
+        border: 4px solid var(--ink);
+        background: var(--surface);
+        padding: 14px 44px;
+        box-shadow: 14px 14px 0 rgba(8, 126, 155, 0.14);
+        letter-spacing: 0.02em;
+      }
+      .close-note {
+        font-family: var(--body);
+        font-weight: 400;
+        font-size: 30px;
+        color: var(--ink-soft);
+      }
+    </style>
+  </head>
+  <body>
+    <div
+      id="root"
+      data-composition-id="main"
+      data-start="0"
+      data-duration="33.833"
+      data-fps="30"
+      data-width="1920"
+      data-height="1080"
+    >
+      <!-- Persistent background so scene crossfades never reveal a black frame -->
+      <div
+        id="bg"
+        class="clip grid-bg"
+        data-start="0"
+        data-duration="33.833"
+        data-track-index="0"
+      ></div>
+
+      <!-- ===================== Scene 1: Hook ===================== -->
+      <div
+        id="scene-hook"
+        class="clip scene"
+        data-start="0"
+        data-duration="4.5"
+        data-track-index="1"
+      >
+        <div class="scene-inner">
+          <div class="center" style="gap: 44px">
+            <div class="rise hook-kicker" data-at="0">
+              Claude Certified Architect – Foundations
+            </div>
+            <div class="rise hook-head" data-at="0.267">何から対策する？</div>
+            <div class="rise hook-sub" data-at="0.667">非公式の学習アプリ、あります。</div>
+          </div>
+          <div class="badge">
+            <span class="tag">非公式</span>Anthropic非公式・非提携の学習アプリです
+          </div>
+        </div>
+      </div>
+
+      <!-- ===================== Scene 2: Guide ===================== -->
+      <div
+        id="scene-guide"
+        class="clip scene"
+        data-start="4.5"
+        data-duration="5.167"
+        data-track-index="1"
+      >
+        <div class="scene-inner">
+          <div class="feature-row">
+            <div class="feature-col">
+              <div class="rise eyebrow" data-at="4.5">Guide / 5 domains · 30 tasks</div>
+              <div class="rise headline" data-at="4.667">
+                <div>出題範囲を、</div>
+                <div>日本語で。</div>
+              </div>
+              <div class="rise sub" data-at="4.833">
+                公式Exam Guideの5領域・30タスクを独自の短い要約で整理
+              </div>
+              <div class="rise chips" data-at="5.0">
+                <div class="chip"><span class="d">D1</span><span class="w">27%</span></div>
+                <div class="chip"><span class="d">D2</span><span class="w">18%</span></div>
+                <div class="chip"><span class="d">D3</span><span class="w">20%</span></div>
+                <div class="chip"><span class="d">D4</span><span class="w">20%</span></div>
+                <div class="chip"><span class="d">D5</span><span class="w">15%</span></div>
+              </div>
+            </div>
+            <div class="rise" data-at="4.767">
+              <div class="browser">
+                <div class="browser-bar">
+                  <span class="dot" style="background: #a63f35"></span>
+                  <span class="dot" style="background: #a85b18"></span>
+                  <span class="dot" style="background: #287158"></span>
+                  <span class="url">cca.toshi0607.com</span>
+                </div>
+                <div class="browser-screen">
+                  <img
+                    id="shot-guide"
+                    class="shot"
+                    src="assets/guide.png"
+                    style="object-position: 50% 0%"
+                    data-pan-end="42"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="wordmark-tr">
+            <div class="wordmark">
+              <span class="mk">CCA</span><span class="sm"><span>FIELD</span><span>NOTES</span></span>
+            </div>
+          </div>
+          <div class="badge">
+            <span class="tag">非公式</span>Anthropic非公式・非提携の学習アプリです
+          </div>
+        </div>
+      </div>
+
+      <!-- ===================== Scene 3: Recall cards ===================== -->
+      <div
+        id="scene-cards"
+        class="clip scene"
+        data-start="9.667"
+        data-duration="4.833"
+        data-track-index="1"
+      >
+        <div class="scene-inner">
+          <div class="feature-row">
+            <div class="feature-col">
+              <div class="rise eyebrow" data-at="9.667">Recall cards / 51</div>
+              <div class="rise headline sm" data-at="9.833">
+                <div>思い出してから、</div>
+                <div>開く。</div>
+              </div>
+              <div class="rise sub" data-at="10.0">
+                想起カード51枚。考えてから開示し、3段階の自己評価で復習間隔が決まる
+              </div>
+            </div>
+            <div class="rise" data-at="9.933">
+              <div class="browser">
+                <div class="browser-bar">
+                  <span class="dot" style="background: #a63f35"></span>
+                  <span class="dot" style="background: #a85b18"></span>
+                  <span class="dot" style="background: #287158"></span>
+                  <span class="url">cca.toshi0607.com</span>
+                </div>
+                <div class="browser-screen">
+                  <img
+                    id="shot-cards"
+                    class="shot"
+                    src="assets/practice.png"
+                    style="object-position: 50% 6%"
+                    data-pan-end="58"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="wordmark-tr">
+            <div class="wordmark">
+              <span class="mk">CCA</span><span class="sm"><span>FIELD</span><span>NOTES</span></span>
+            </div>
+          </div>
+          <div class="badge">
+            <span class="tag">非公式</span>Anthropic非公式・非提携の学習アプリです
+          </div>
+        </div>
+      </div>
+
+      <!-- ===================== Scene 4: Quiz + Scenario ===================== -->
+      <div
+        id="scene-quiz"
+        class="clip scene"
+        data-start="14.5"
+        data-duration="4.833"
+        data-track-index="1"
+      >
+        <div class="scene-inner">
+          <div class="feature-row">
+            <div class="feature-col">
+              <div class="rise eyebrow" data-at="14.5">Choice practice + scenarios</div>
+              <div class="rise headline" data-at="14.667">
+                <div>本番形式で、</div>
+                <div>腕試し。</div>
+              </div>
+              <div class="rise sub" data-at="14.833">
+                単一・複数選択の演習と、ケース記述を読んで答えるシナリオ演習
+              </div>
+            </div>
+            <div class="rise" data-at="14.767">
+              <div class="browser">
+                <div class="browser-bar">
+                  <span class="dot" style="background: #a63f35"></span>
+                  <span class="dot" style="background: #a85b18"></span>
+                  <span class="dot" style="background: #287158"></span>
+                  <span class="url">cca.toshi0607.com</span>
+                </div>
+                <div class="browser-screen">
+                  <img
+                    id="shot-quiz"
+                    class="shot"
+                    src="assets/quiz.png"
+                    style="object-position: 50% 6%"
+                    data-pan-end="42"
+                  />
+                  <img
+                    id="quiz-overlay"
+                    class="shot"
+                    src="assets/scenario.png"
+                    style="object-position: 50% 6%"
+                    data-pan-end="42"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="wordmark-tr">
+            <div class="wordmark">
+              <span class="mk">CCA</span><span class="sm"><span>FIELD</span><span>NOTES</span></span>
+            </div>
+          </div>
+          <div class="badge">
+            <span class="tag">非公式</span>Anthropic非公式・非提携の学習アプリです
+          </div>
+        </div>
+      </div>
+
+      <!-- ===================== Scene 5: Mock exam ===================== -->
+      <div
+        id="scene-mock"
+        class="clip scene"
+        data-start="19.333"
+        data-duration="5.167"
+        data-track-index="1"
+      >
+        <div class="scene-inner">
+          <div class="feature-row">
+            <div class="feature-col">
+              <div class="rise eyebrow" data-at="19.333">
+                Mock exam / 60 questions · 120 min
+              </div>
+              <div class="rise headline" data-at="19.5">
+                <div>60問120分、</div>
+                <div>通しで。</div>
+              </div>
+              <div class="rise sub" data-at="19.667">
+                本番規模の通し模試。中断しても再開でき、履歴と設問ごとの復習つき
+              </div>
+            </div>
+            <div class="rise" data-at="19.6">
+              <div class="browser">
+                <div class="browser-bar">
+                  <span class="dot" style="background: #a63f35"></span>
+                  <span class="dot" style="background: #a85b18"></span>
+                  <span class="dot" style="background: #287158"></span>
+                  <span class="url">cca.toshi0607.com</span>
+                </div>
+                <div class="browser-screen">
+                  <img
+                    id="shot-mock"
+                    class="shot"
+                    src="assets/mock-exam.png"
+                    style="object-position: 50% 10%"
+                    data-pan-end="40"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="wordmark-tr">
+            <div class="wordmark">
+              <span class="mk">CCA</span><span class="sm"><span>FIELD</span><span>NOTES</span></span>
+            </div>
+          </div>
+          <div class="badge">
+            <span class="tag">非公式</span>Anthropic非公式・非提携の学習アプリです
+          </div>
+        </div>
+      </div>
+
+      <!-- ===================== Scene 6: Learning analysis ===================== -->
+      <div
+        id="scene-analysis"
+        class="clip scene"
+        data-start="24.5"
+        data-duration="5.0"
+        data-track-index="1"
+      >
+        <div class="scene-inner">
+          <div class="feature-row">
+            <div class="feature-col">
+              <div class="rise eyebrow" data-at="24.5">Learning analysis</div>
+              <div class="rise headline" data-at="24.667">
+                <div>結果から、</div>
+                <div>次の復習へ。</div>
+              </div>
+              <div class="rise sub" data-at="24.833">
+                模試結果を領域別に分析し、次に復習すべき所を提示。合否や点数は出しません
+              </div>
+            </div>
+            <div class="rise" data-at="24.767">
+              <div class="browser">
+                <div class="browser-bar">
+                  <span class="dot" style="background: #a63f35"></span>
+                  <span class="dot" style="background: #a85b18"></span>
+                  <span class="dot" style="background: #287158"></span>
+                  <span class="url">cca.toshi0607.com</span>
+                </div>
+                <div class="browser-screen">
+                  <img
+                    id="shot-analysis"
+                    class="shot"
+                    src="assets/analysis.png"
+                    style="object-position: 50% 0%"
+                    data-pan-end="20"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="wordmark-tr">
+            <div class="wordmark">
+              <span class="mk">CCA</span><span class="sm"><span>FIELD</span><span>NOTES</span></span>
+            </div>
+          </div>
+          <div class="badge">
+            <span class="tag">非公式</span>Anthropic非公式・非提携の学習アプリです
+          </div>
+        </div>
+      </div>
+
+      <!-- ===================== Scene 7: Closing ===================== -->
+      <div
+        id="scene-closing"
+        class="clip scene"
+        data-start="29.5"
+        data-duration="4.333"
+        data-track-index="1"
+      >
+        <div class="scene-inner">
+          <div class="center" style="gap: 40px">
+            <div class="rise" data-at="29.5">
+              <div class="wordmark" style="transform: scale(1.5); transform-origin: center">
+                <span class="mk">CCA</span><span class="sm"><span>FIELD</span><span>NOTES</span></span>
+              </div>
+            </div>
+            <div class="rise close-tags" data-at="29.7">
+              <span>無料</span><span class="sep">/</span><span>登録不要</span
+              ><span class="sep">/</span><span>進捗はブラウザ内保存</span>
+            </div>
+            <div class="rise close-url" data-at="29.9">cca.toshi0607.com</div>
+            <div class="rise close-note" data-at="30.1">
+              Anthropic非公式・非提携の学習アプリです
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      window.__timelines = window.__timelines || {};
+      const tl = gsap.timeline({ paused: true });
+      const FADE = 0.333;
+
+      // Per-scene soft fade on the inner wrapper (framework owns clip windows).
+      document.querySelectorAll(".scene").forEach((clip) => {
+        const s = parseFloat(clip.dataset.start);
+        const d = parseFloat(clip.dataset.duration);
+        const inner = clip.querySelector(".scene-inner");
+        tl.to(inner, { opacity: 1, duration: FADE, ease: "none" }, s);
+        tl.to(inner, { opacity: 0, duration: FADE, ease: "none" }, s + d - FADE);
+      });
+
+      // Rise-in entrances (spring damping 200 → smooth power ease-out).
+      document.querySelectorAll(".rise").forEach((el) => {
+        const at = parseFloat(el.dataset.at);
+        tl.to(el, { opacity: 1, y: 0, duration: 0.63, ease: "power3.out" }, at);
+      });
+
+      // Ken-burns pan + zoom on every browser screenshot, over its scene window.
+      document.querySelectorAll(".shot").forEach((img) => {
+        const scene = img.closest(".scene");
+        const s = parseFloat(scene.dataset.start);
+        const d = parseFloat(scene.dataset.duration);
+        const panEnd = img.dataset.panEnd;
+        tl.to(
+          img,
+          { objectPosition: `50% ${panEnd}%`, scale: 1.05, duration: d, ease: "none" },
+          s,
+        );
+      });
+
+      // Quiz → scenario crossfade partway through the quiz scene (frame 82).
+      tl.to("#quiz-overlay", { opacity: 1, duration: 0.467, ease: "none" }, 14.5 + 82 / 30);
+
+      window.__timelines["main"] = tl;
+    </script>
+  </body>
+</html>
