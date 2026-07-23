@@ -261,3 +261,48 @@ test('exports, resets, and re-imports Mock Exam state alongside existing progres
   expect(restored.mockExamAttempts).toEqual([mockExamAttempt]);
   expect(restored.reviews['d1-loop-stop']).toEqual(review);
 });
+
+
+// Task 10B (reviewer finding 2): when the current-key document cannot be read
+// (corrupt, or a future version after a deploy rollback), load() shows empty but
+// the raw bytes remain and save() refuses to overwrite. The UI must not let the
+// learner take an EMPTY export (a false backup) or Reset away the recoverable
+// raw document. Export and Reset are disabled and the raw value is preserved.
+for (const seed of [
+  { name: 'corrupt', payload: '{ this is not valid json' },
+  { name: 'future-version', payload: JSON.stringify({ version: 99, reviews: { 'd1-loop-stop': { cardId: 'd1-loop-stop', cardRevisionSeen: 1, dueAt: '2027-01-01T00:00:00.000Z', intervalDays: 1, streak: 1, lapses: 0, lastRating: 'good' } } }) },
+]) {
+  test(`unreadable ${seed.name} data disables export and reset and keeps the raw document`, async ({ page }) => {
+    // #given an unreadable document under the current key
+    await page.goto('/');
+    await page.evaluate(([key, value]) => localStorage.setItem(key, value), [STORAGE_KEY, seed.payload]);
+    await page.reload();
+
+    // #then the persistent warning is shown and the raw bytes are untouched
+    await expect(page.getByRole('alert')).toContainText('読み込めませんでした');
+    await page.getByRole('button', { name: '進捗' }).first().click();
+    const exportBtn = page.getByRole('button', { name: '進捗をJSONで書き出す' });
+    const resetBtn = page.getByRole('button', { name: 'この端末の進捗を削除' });
+
+    // #then export and reset are disabled (no empty backup, no destructive reset)
+    await expect(exportBtn).toBeDisabled();
+    await expect(resetBtn).toBeDisabled();
+
+    // #then the recoverable raw document is still on disk, unchanged
+    expect(await page.evaluate((key) => localStorage.getItem(key), STORAGE_KEY)).toBe(seed.payload);
+  });
+}
+
+test('unreadable data warning and disabled actions are present in English too', async ({ page }) => {
+  // #given an unreadable document, English locale
+  await page.goto('/en/');
+  await page.evaluate(([key, value]) => localStorage.setItem(key, value), [STORAGE_KEY, '{bad']);
+  await page.reload();
+
+  // #then the English warning shows and destructive actions are disabled
+  await expect(page.getByRole('alert')).toContainText('could not be read');
+  await page.getByRole('button', { name: 'Progress' }).first().click();
+  await expect(page.getByRole('button', { name: 'Export progress as JSON' })).toBeDisabled();
+  await expect(page.getByRole('button', { name: 'Delete progress on this device' })).toBeDisabled();
+  expect(await page.evaluate((key) => localStorage.getItem(key), STORAGE_KEY)).toBe('{bad');
+});

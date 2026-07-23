@@ -131,6 +131,22 @@ export function createStudyStorage(storage: StorageLike | undefined) {
       if (!validated || !isCurrentKeyWritable()) return false;
       return persist(validated);
     },
+    // True only when the current key holds a value this build cannot read (corrupt
+    // JSON, or a newer release's document after a deploy rollback). load() returns
+    // empty data in that case so the app looks fresh, and save() refuses to
+    // overwrite it — so the UI must warn the learner not to reset, which would
+    // discard the still-recoverable document. An absent or readable doc returns
+    // false; a throwing storage is a separate (availability) failure.
+    hasUnreadableCurrentDocument(): boolean {
+      if (!storage) return false;
+      try {
+        const current = storage.getItem(STORAGE_KEY);
+        if (current === null) return false;
+        return parseStudyData(parseJson(current)) === null;
+      } catch {
+        return false;
+      }
+    },
     // An explicit reset clears both generations; leaving v1 behind would let the
     // next load migrate the deleted data back.
     reset(): boolean {

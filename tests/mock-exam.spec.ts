@@ -267,3 +267,34 @@ test('has no accessibility violations across landing, runner, and result', { tag
   await expect(page.getByRole('heading', { name: '結果', exact: true })).toBeVisible();
   await expectNoViolations(page);
 });
+
+
+// Task 10B: the palette and submit-confirmation dialogs are separate <dialog>
+// surfaces that the landing/runner/result axe pass never opened. Scan both, and
+// verify the 60-cell palette stays within the viewport (no horizontal overflow)
+// at a 360px mobile width.
+test('palette and submit dialogs are accessible at desktop and mobile widths', { tag: '@slow' }, async ({ page }) => {
+  await openMockExam(page);
+  await page.getByRole('button', { name: '模試を開始' }).click();
+  await expect(page.locator('.mock-exam-runner')).toBeVisible();
+
+  // #then — the question palette dialog is accessible and does not overflow at 1280 or 360
+  for (const width of [1280, 360]) {
+    await page.setViewportSize({ width, height: 800 });
+    await page.getByRole('button', { name: '問題一覧を開く' }).click();
+    await expect(page.getByRole('heading', { name: '問題一覧' })).toBeVisible();
+    await expectNoViolations(page);
+    const dims = await page.evaluate(() => ({ viewport: document.documentElement.clientWidth, document: document.documentElement.scrollWidth }));
+    expect(dims.document, `palette horizontal overflow @${width}`).toBe(dims.viewport);
+    await page.getByRole('button', { name: '閉じる' }).click();
+    await expect(page.getByRole('heading', { name: '問題一覧' })).toHaveCount(0);
+  }
+
+  // #then — the submit confirmation dialog is accessible
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.getByRole('button', { name: '提出する', exact: true }).click();
+  await expect(page.locator('.mock-exam-submit-dialog').getByRole('heading', { name: '模試を提出しますか？' })).toBeVisible();
+  await expectNoViolations(page);
+  await page.locator('.mock-exam-submit-dialog').getByRole('button', { name: 'キャンセル' }).click();
+  await expect(page.locator('.mock-exam-runner')).toBeVisible();
+});

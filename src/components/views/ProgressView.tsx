@@ -10,7 +10,7 @@ import { ProgressOverviewEntry } from './ProgressOverviewEntry';
 
 export function ProgressView({
   locale, copy, reviews, studyGuideProgress, handsOnProgress, quizStats, activeMockExam, mockExamAttempts, dueCount,
-  analyticsEnabled, onExport, onImportFile, onReset,
+  analyticsEnabled, dataUnreadable, onExport, onImportFile, onReset,
   onOpenGuide, onOpenHandsOn, onOpenPractice, onOpenQuiz, onOpenMockExam, onOpenMockExamAnalysis,
 }: {
   locale: Locale;
@@ -23,6 +23,7 @@ export function ProgressView({
   mockExamAttempts: readonly MockExamAttempt[];
   dueCount: number;
   analyticsEnabled: boolean;
+  dataUnreadable: boolean;
   onExport: () => void;
   onImportFile: (event: Event) => void;
   onReset: () => void;
@@ -45,7 +46,7 @@ export function ProgressView({
         onOpenGuide={onOpenGuide} onOpenHandsOn={onOpenHandsOn} onOpenPractice={onOpenPractice}
         onOpenQuiz={onOpenQuiz} onOpenMockExam={onOpenMockExam} onOpenMockExamAnalysis={onOpenMockExamAnalysis}
       />
-      <section class="data-panel" aria-labelledby="data-title"><div><h3 id="data-title">{copy.progress.localData}</h3><p>{copy.progress.localDataDescription}</p>{analyticsEnabled && <p class="analytics-disclosure">{copy.progress.analyticsDisclosure}<a href={localePaths[locale].privacy}>{copy.progress.details}</a></p>}</div><div class="data-actions"><button onClick={onExport}>{copy.progress.exportJson}</button><button onClick={() => importInputRef.current?.click()}>{copy.progress.importJson}</button><input ref={importInputRef} type="file" accept=".json,application/json" hidden onChange={onImportFile}/><button class="danger" onClick={onReset}>{copy.progress.reset}</button></div></section>
+      <section class="data-panel" aria-labelledby="data-title"><div><h3 id="data-title">{copy.progress.localData}</h3><p>{copy.progress.localDataDescription}</p>{analyticsEnabled && <p class="analytics-disclosure">{copy.progress.analyticsDisclosure}<a href={localePaths[locale].privacy}>{copy.progress.details}</a></p>}</div><div class="data-actions"><button onClick={onExport} disabled={dataUnreadable} aria-describedby={dataUnreadable ? 'data-unreadable-actions-note' : undefined}>{copy.progress.exportJson}</button><button onClick={() => importInputRef.current?.click()}>{copy.progress.importJson}</button><input ref={importInputRef} type="file" accept=".json,application/json" hidden onChange={onImportFile}/><button class="danger" onClick={onReset} disabled={dataUnreadable} aria-describedby={dataUnreadable ? 'data-unreadable-actions-note' : undefined}>{copy.progress.reset}</button></div>{dataUnreadable && <p id="data-unreadable-actions-note" class="data-actions-note">{copy.progress.dataUnreadableActions}</p>}</section>
       <section class="sources-panel" aria-labelledby="sources-title"><div><p class="eyebrow">{copy.progress.sourcesEyebrow}</p><h3 id="sources-title">{copy.progress.sourcesTitle}</h3><p>{copy.progress.sourcesDescription}</p></div><div class="source-register">{sources.map((source) => <article key={source.id}><code>{source.id}</code><div><a href={source.url} target="_blank" rel="noreferrer"><span lang="en">{source.title}</span><span class="sr-only">{copy.aria.opensNewTab}</span><span aria-hidden="true"> ↗</span></a><p>{source.publisher} · {copy.progress.verified(formatDate(source.verifiedAt, locale))}</p></div></article>)}</div></section>
       <section class="disclaimer" aria-labelledby="disclaimer-title"><h3 id="disclaimer-title">{copy.progress.disclaimerTitle}</h3><p>{copy.progress.disclaimerBody}</p><p>{copy.progress.blueprintVerified(formatDate(VERIFIED_AT, locale))} {copy.progress.reportIssueLead} <a href="https://github.com/toshi0607/cca-study-guide/issues" target="_blank" rel="noreferrer">{copy.progress.reportIssueLink}<span class="sr-only">{copy.aria.opensNewTab}</span><span aria-hidden="true"> ↗</span></a>.</p></section>
     </section>

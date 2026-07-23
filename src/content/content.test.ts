@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { cards } from './cards';
+import { cardIndex, domainIndex } from './card-index';
 import { domains } from './domains';
 import { handsOnGuides } from './hands-on';
 import { questions, standaloneQuestions } from './questions';
@@ -1339,5 +1340,18 @@ describe('official scenario learning validation', () => {
 
     // #then
     expect(errors).toContain('official scenario learning customer-support-resolution: verifiedAt');
+  });
+});
+
+
+describe('content spine (card-index) stays in sync with full content', () => {
+  it('cardIndex matches cards one-for-one in order with id/domainId/revision', () => {
+    // #then the eager spine never drifts from the single source of truth in cards.ts
+    expect(cardIndex).toEqual(cards.map((card) => ({ id: card.id, domainId: card.domainId, revision: card.revision })));
+  });
+
+  it('domainIndex matches domains in order with id/number/weight/title', () => {
+    // #then Blueprint relies on domain order (node-N classes), so order must match
+    expect(domainIndex).toEqual(domains.map((domain) => ({ id: domain.id, number: domain.number, weight: domain.weight, title: domain.title })));
   });
 });

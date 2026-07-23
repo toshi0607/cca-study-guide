@@ -39,6 +39,7 @@ export type UiCopy = {
     resetConfirm: string;
     resetFailed: string;
     resetDone: string;
+    dataUnreadable: string;
   };
   today: {
     eyebrow: string;
@@ -219,6 +220,9 @@ export type UiCopy = {
     eyebrow: string;
     title: string;
     introduction: string;
+    loading: string;
+    loadError: string;
+    loadRetry: string;
     searchLabel: string;
     searchPlaceholder: string;
     stateLegend: string;
@@ -272,6 +276,9 @@ export type UiCopy = {
     eyebrow: string;
     title: string;
     introduction: string;
+    loading: string;
+    loadError: string;
+    loadRetry: string;
     modeLegend: string;
     modeRandom: string;
     modeScenario: string;
@@ -375,6 +382,7 @@ export type UiCopy = {
     analyticsDisclosure: string;
     details: string;
     exportJson: string;
+    dataUnreadableActions: string;
     importJson: string;
     reset: string;
     weakCount: (count: number) => string;
@@ -435,6 +443,7 @@ export type UiCopy = {
     // Palette
     paletteTitle: string;
     paletteClose: string;
+    paletteFilterLabel: string;
     paletteFilterAll: string;
     paletteFilterUnanswered: string;
     paletteFilterFlagged: string;
@@ -622,6 +631,7 @@ export const ui = {
       resetConfirm: 'この端末の学習進捗をすべて削除します。元に戻せません。',
       resetFailed: '進捗を削除できませんでした。ブラウザのサイトデータ設定を確認してください。',
       resetDone: 'この端末の進捗を削除しました。',
+      dataUnreadable: 'この端末の保存データを読み込めませんでした。新しい変更は保存できません。データはこの端末に残っている場合があるため、復元できる可能性があります。リセットは行わないでください。',
     },
     today: {
       eyebrow: '今日',
@@ -795,6 +805,9 @@ export const ui = {
       eyebrow: 'INDEPENDENT RETRIEVAL PRACTICE',
       title: '練習カード',
       introduction: '実試験の再現ではありません。まず自分の言葉で答えてから開いてください。',
+      loading: '練習カードを読み込んでいます…',
+      loadError: '練習カードを読み込めませんでした。もう一度お試しください。',
+      loadRetry: 'ページを再読み込み',
       searchLabel: 'カードを検索',
       searchPlaceholder: '例：MCP、スキーマ、フック',
       stateLegend: '状態',
@@ -847,6 +860,9 @@ export const ui = {
     quiz: {
       eyebrow: 'INDEPENDENT CHOICE PRACTICE',
       title: '選択式演習',
+      loading: '演習を読み込んでいます…',
+      loadError: '演習を読み込めませんでした。もう一度お試しください。',
+      loadRetry: 'ページを再読み込み',
       introduction: '本試験の再現ではありません。独自作成の選択問題で、単一選択・複数選択の解答形式に慣れるための演習です。',
       modeLegend: '演習モード',
       modeRandom: 'ランダム演習',
@@ -947,6 +963,7 @@ export const ui = {
       analyticsDisclosure: 'Google Analyticsで基本的なページ閲覧情報を収集します。学習カード、検索語、評価、進捗データは独自イベントとして送信しません。',
       details: '詳細を見る',
       exportJson: '進捗をJSONで書き出す',
+      dataUnreadableActions: '保存データを読み込めないため、書き出しと削除を一時的に無効にしています。データはこの端末に残っている可能性があります。',
       importJson: '進捗をJSONから読み込む',
       reset: 'この端末の進捗を削除',
       weakCount: (count) => `苦手 ${count}`,
@@ -1001,6 +1018,7 @@ export const ui = {
       choicesLegend: '選択肢',
       paletteTitle: '問題一覧',
       paletteClose: '閉じる',
+      paletteFilterLabel: 'ステータスで絞り込み',
       paletteFilterAll: 'すべて',
       paletteFilterUnanswered: '未回答',
       paletteFilterFlagged: 'フラグ',
@@ -1184,6 +1202,7 @@ export const ui = {
       resetConfirm: 'Delete all study progress on this device? This cannot be undone.',
       resetFailed: 'Your progress could not be deleted. Check this browser’s site-data settings.',
       resetDone: 'Progress on this device was deleted.',
+      dataUnreadable: 'The study data saved on this device could not be read. New changes cannot be saved. Your data may still be on this device and could be recoverable, so avoid resetting it.',
     },
     today: {
       eyebrow: 'TODAY',
@@ -1357,6 +1376,9 @@ export const ui = {
       eyebrow: 'INDEPENDENT RETRIEVAL PRACTICE',
       title: 'Practice cards',
       introduction: 'These cards do not reproduce the actual exam. Answer in your own words before revealing the response.',
+      loading: 'Loading the practice cards…',
+      loadError: 'Could not load the practice cards. Please try again.',
+      loadRetry: 'Reload the page',
       searchLabel: 'Search cards',
       searchPlaceholder: 'Try: MCP, schema, hooks',
       stateLegend: 'Status',
@@ -1409,6 +1431,9 @@ export const ui = {
     quiz: {
       eyebrow: 'INDEPENDENT CHOICE PRACTICE',
       title: 'Choice quiz',
+      loading: 'Loading the quiz…',
+      loadError: 'Could not load the quiz. Please try again.',
+      loadRetry: 'Reload the page',
       introduction: 'This quiz does not reproduce the actual exam. It uses independently written questions to practice the single- and multiple-select answer formats.',
       modeLegend: 'Mode',
       modeRandom: 'Random quiz',
@@ -1509,6 +1534,7 @@ export const ui = {
       analyticsDisclosure: 'Google Analytics collects basic page-view information. Study cards, search terms, ratings, and progress are not sent as custom events.',
       details: 'View details',
       exportJson: 'Export progress as JSON',
+      dataUnreadableActions: 'Export and delete are disabled while saved data cannot be read. Your data may still be on this device.',
       importJson: 'Import progress from JSON',
       reset: 'Delete progress on this device',
       weakCount: (count) => `${count} struggling`,
@@ -1563,6 +1589,7 @@ export const ui = {
       choicesLegend: 'Choices',
       paletteTitle: 'Questions',
       paletteClose: 'Close',
+      paletteFilterLabel: 'Filter by status',
       paletteFilterAll: 'All',
       paletteFilterUnanswered: 'Unanswered',
       paletteFilterFlagged: 'Flagged',

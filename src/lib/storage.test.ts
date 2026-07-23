@@ -30,6 +30,29 @@ const withProgress = (data: StudyData): StudyData => ({
 });
 
 describe('study storage', () => {
+  it('flags a present-but-unreadable current document without touching it', () => {
+    // #given a corrupt value under the current key
+    const memory = memoryStorage();
+    memory.setItem(STORAGE_KEY, '{not valid json');
+
+    // #then it is reported unreadable, load() shows empty, and the raw value is preserved
+    const storage = createStudyStorage(memory);
+    expect(storage.hasUnreadableCurrentDocument()).toBe(true);
+    expect(storage.load()).toEqual(createEmptyStudyData());
+    expect(memory.values.get(STORAGE_KEY)).toBe('{not valid json');
+  });
+
+  it('does not flag empty, valid, or unavailable storage as unreadable', () => {
+    // #given empty storage
+    expect(createStudyStorage(memoryStorage()).hasUnreadableCurrentDocument()).toBe(false);
+    // #given a valid current-version document
+    const memory = memoryStorage();
+    createStudyStorage(memory).save(createEmptyStudyData());
+    expect(createStudyStorage(memory).hasUnreadableCurrentDocument()).toBe(false);
+    // #given no storage at all
+    expect(createStudyStorage(undefined).hasUnreadableCurrentDocument()).toBe(false);
+  });
+
   it('round-trips current-version data and resets it', () => {
     // #given
     const memory = memoryStorage();
