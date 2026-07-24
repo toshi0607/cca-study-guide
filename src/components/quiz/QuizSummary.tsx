@@ -24,7 +24,7 @@ export function QuizSummary({ results, correctCount, wrongResults, rationalesSta
     <div class="quiz-summary">
       <section class="quiz-score" aria-labelledby="quiz-score-title">
         <p class="eyebrow" id="quiz-score-title">{copy.quiz.summaryEyebrow}</p>
-        <h3>{copy.quiz.summaryTitle}</h3>
+        <h3 class="section-title">{copy.quiz.summaryTitle}</h3>
         <div class="quiz-score-figure">
           <span>{copy.quiz.accuracy}</span>
           <strong>{results.length ? Math.round((correctCount / results.length) * 100) : 0}%</strong>
@@ -32,7 +32,7 @@ export function QuizSummary({ results, correctCount, wrongResults, rationalesSta
         </div>
       </section>
       <section class="quiz-domains" aria-labelledby="quiz-domains-title">
-        <h3 id="quiz-domains-title">{copy.quiz.byDomain}</h3>
+        <h3 id="quiz-domains-title" class="section-title">{copy.quiz.byDomain}</h3>
         {domains.map((domain) => {
           const domainResults = results.filter((result) => result.question.domainId === domain.id);
           if (!domainResults.length) return null;
@@ -45,7 +45,7 @@ export function QuizSummary({ results, correctCount, wrongResults, rationalesSta
         })}
       </section>
       <section class="quiz-missed" aria-labelledby="quiz-missed-title">
-        <h3 id="quiz-missed-title">{copy.quiz.wrongTitle}</h3>
+        <h3 id="quiz-missed-title" class="section-title">{copy.quiz.wrongTitle}</h3>
         {wrongResults.length
           ? <ul>{wrongResults.map((result) => <li key={result.question.id}>
               <details class="quiz-review-item">
@@ -59,7 +59,7 @@ export function QuizSummary({ results, correctCount, wrongResults, rationalesSta
             </li>)}</ul>
           : <p>{copy.quiz.noWrong}</p>}
       </section>
-      <button class="quiz-start" onClick={onRetry}>{copy.quiz.retry}</button>
+      <button class="btn quiz-start" onClick={onRetry}>{copy.quiz.retry}</button>
     </div>
   );
 }

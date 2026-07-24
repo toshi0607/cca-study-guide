@@ -47,7 +47,7 @@ export function QuizQuestion({
       </details>}
       <div class="card-prompt"><p class="eyebrow">{copy.practice.question}</p><h3>{localize(current.stem, locale)}</h3></div>
       {!answered && <>
-        <p class="quiz-hint">{current.format === 'single' ? copy.quiz.singleHint : copy.quiz.multipleHint}</p>
+        <p class="note note--info quiz-hint">{current.format === 'single' ? copy.quiz.singleHint : copy.quiz.multipleHint}</p>
         <fieldset class="choice-list">
           <legend class="sr-only">{copy.quiz.choicesLegend}</legend>
           {current.choices.map((choice) => {
@@ -62,21 +62,21 @@ export function QuizQuestion({
                 else onToggleMultiple(choice.id);
               }}
             >
-              <span class="choice-id" aria-hidden="true">{choice.id.toUpperCase()}</span>
+              <span class="badge badge--cyan choice-id" aria-hidden="true">{choice.id.toUpperCase()}</span>
               <span class="choice-text">{localize(choice.text, locale)}</span>
             </button>;
           })}
         </fieldset>
-        {current.format === 'multiple' && <button class="quiz-submit" disabled={!selected.length} onClick={onSubmitMultiple}>{copy.quiz.submitAnswer}</button>}
+        {current.format === 'multiple' && <button class="btn btn--wide quiz-submit" disabled={!selected.length} onClick={onSubmitMultiple}>{copy.quiz.submitAnswer}</button>}
       </>}
       {currentResult && <div class="quiz-feedback" role="status" tabIndex={-1} ref={feedbackRef}>
         <p class={`quiz-verdict ${currentResult.correct ? 'is-correct' : 'is-incorrect'}`}>{currentResult.correct ? copy.quiz.resultCorrect : copy.quiz.resultIncorrect}</p>
         <p class="quiz-correct-answer"><strong>{copy.quiz.correctAnswerLabel}</strong> {answerText(current)}</p>
         <AnswerReview question={current} selectedIds={currentResult.selectedIds} rationalesState={rationalesState} locale={locale} copy={copy}/>
         <div class="card-sources"><strong>{copy.quiz.officialSources}</strong><SourceLinks ids={current.sourceIds} copy={copy}/><small>{copy.quiz.verified(formatDate(current.verifiedAt, locale))}</small></div>
-        <button class="quiz-next" onClick={onAdvance}>{index + 1 >= total ? copy.quiz.showResults : copy.quiz.next} <span aria-hidden="true">→</span></button>
+        <button class="btn btn--wide quiz-next" onClick={onAdvance}>{index + 1 >= total ? copy.quiz.showResults : copy.quiz.next} <span aria-hidden="true">→</span></button>
       </div>}
-      <button class="quiz-quit" onClick={onQuit}>{copy.quiz.quit}</button>
+      <button class="btn--text quiz-quit" onClick={onQuit}>{copy.quiz.quit}</button>
     </article>
   );
 }

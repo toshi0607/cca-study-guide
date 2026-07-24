@@ -107,7 +107,7 @@ export function PracticeSession({ locale, copy, initialCards, reviews, dueCount,
     return (
       <section class="session-summary" aria-labelledby="session-summary-title" ref={summaryRef} tabIndex={-1}>
         <p class="eyebrow">{copy.session.summaryEyebrow}</p>
-        <h3 id="session-summary-title">{copy.session.summaryTitle}</h3>
+        <h3 id="session-summary-title" class="section-title">{copy.session.summaryTitle}</h3>
         <dl class="session-breakdown" aria-label={copy.session.breakdownLegend}>
           <div><dt>{copy.practice.ratingAgain}</dt><dd>{formatNumber(tally.again, locale)}</dd></div>
           <div><dt>{copy.practice.ratingHard}</dt><dd>{formatNumber(tally.hard, locale)}</dd></div>
@@ -115,8 +115,8 @@ export function PracticeSession({ locale, copy, initialCards, reviews, dueCount,
         </dl>
         <p class="session-summary-meta">{copy.session.ratedCount(queue.length)} · {copy.session.dueRemaining(dueCount)}</p>
         <div class="session-summary-actions">
-          <button class="quiz-start" onClick={restart}>{copy.session.restart}</button>
-          <button class="quiz-quit" onClick={() => onExit(false)}>{copy.session.backToList}</button>
+          <button class="btn quiz-start" onClick={restart}>{copy.session.restart}</button>
+          <button class="btn--text quiz-quit" onClick={() => onExit(false)}>{copy.session.backToList}</button>
         </div>
       </section>
     );
@@ -131,13 +131,13 @@ export function PracticeSession({ locale, copy, initialCards, reviews, dueCount,
       <p class="sr-only" aria-live="polite">{liveMessage}</p>
       <article class="practice-card session-card">
         <header>
-          <div><span class="card-domain">D{domain.number}</span><span>{copy.practice.kinds[card.kind]}</span></div>
+          <div><span class="badge badge--ink">D{domain.number}</span><span>{copy.practice.kinds[card.kind]}</span></div>
           <div class="session-progress"><code>{copy.session.progress(index + 1, queue.length)}</code><span>{copy.session.remaining(queue.length - index - 1)}</span></div>
         </header>
         <div class="card-prompt"><p class="eyebrow">{copy.practice.question}</p><h3>{localize(card.prompt, locale)}</h3></div>
-        {!revealed && <button class="reveal-button" ref={revealRef} aria-expanded={false} aria-controls="session-answer" onClick={reveal}>{copy.practice.revealAnswer} <span aria-hidden="true">+</span></button>}
+        {!revealed && <button class="btn btn--wide reveal-button" ref={revealRef} aria-expanded={false} aria-controls="session-answer" onClick={reveal}>{copy.practice.revealAnswer} <span aria-hidden="true">+</span></button>}
         {revealed && <CardAnswer card={card} review={review} locale={locale} copy={copy} id="session-answer" onRate={rate} answerRef={answerRef}/>}
-        <button class="quiz-quit" onClick={requestAbort}>{copy.session.quit}</button>
+        <button class="btn--text quiz-quit" onClick={requestAbort}>{copy.session.quit}</button>
       </article>
       <p class="session-shortcuts">{copy.session.shortcutsReveal} · {copy.session.shortcutsRate} · {copy.session.shortcutsQuit}</p>
     </div>

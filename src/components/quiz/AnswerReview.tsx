@@ -19,11 +19,11 @@ export function AnswerReview({ question, selectedIds, rationalesState, locale, c
   return (
     <>
       <section class="answer-section">
-        <h4>{copy.quiz.explanationHeading}</h4>
+        <h4 class="sub-title">{copy.quiz.explanationHeading}</h4>
         <p>{localize(question.explanation, locale)}</p>
       </section>
       <section class="answer-section">
-        <h4>{copy.quiz.rationaleHeading}</h4>
+        <h4 class="sub-title">{copy.quiz.rationaleHeading}</h4>
         <ChoiceReview question={question} selectedIds={selectedIds} rationalesState={rationalesState} locale={locale} copy={copy}/>
       </section>
     </>

@@ -24,9 +24,9 @@ export function ChoiceReview({ question, selectedIds, rationalesState, locale, c
   return (
     <div class="choice-review">
       {rationalesState.status === 'loading' && <p class="rationale-status" role="status" aria-live="polite">{copy.quiz.rationaleLoading}</p>}
-      {rationalesState.status === 'error' && <div class="rationale-error" role="alert">
+      {rationalesState.status === 'error' && <div class="note note--warn rationale-error" role="alert">
         <p>{copy.quiz.rationaleLoadError}</p>
-        <button type="button" onClick={() => window.location.reload()}>{copy.quiz.rationaleRetry}</button>
+        <button type="button" class="btn" onClick={() => window.location.reload()}>{copy.quiz.rationaleRetry}</button>
       </div>}
       <ol class="choice-review-list">
         {question.choices.map((choice) => {
@@ -36,10 +36,10 @@ export function ChoiceReview({ question, selectedIds, rationalesState, locale, c
           const rationale = questionRationales?.[choice.id];
           return <li key={choice.id} class={`choice-button ${isCorrect ? 'correct' : 'incorrect'}`}>
             <div class="choice-review-head">
-              <span class="choice-id" aria-hidden="true">{choice.id.toUpperCase()}</span>
+              <span class="badge badge--cyan choice-id" aria-hidden="true">{choice.id.toUpperCase()}</span>
               <span class="choice-text">{localize(choice.text, locale)}</span>
-              <span class={`choice-mark ${isCorrect ? 'choice-mark--correct' : 'choice-mark--incorrect'}`}>{isCorrect ? copy.quiz.choiceCorrectLabel : copy.quiz.choiceIncorrectLabel}</span>
-              {wasSelected && <span class="choice-mark choice-mark--picked">{copy.quiz.yourChoiceLabel}</span>}
+              <span class={`badge badge--outline choice-mark ${isCorrect ? 'choice-mark--correct' : 'choice-mark--incorrect'}`}>{isCorrect ? copy.quiz.choiceCorrectLabel : copy.quiz.choiceIncorrectLabel}</span>
+              {wasSelected && <span class="badge badge--outline choice-mark choice-mark--picked">{copy.quiz.yourChoiceLabel}</span>}
             </div>
             {rationale && <p class="choice-rationale">{localize(rationale, locale)}</p>}
           </li>;
