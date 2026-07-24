@@ -14,20 +14,40 @@ import subsetFont from 'subset-font';
 // from the i18n modules and fails when the committed manifest no longer
 // covers them.
 
+// Fonts are fetched from a pinned google/fonts commit (never the mutable
+// `main` ref) and every download's sha256 is checked against the value below
+// before it is written to disk or subset. To update fonts/licenses
+// intentionally:
+//   1. Pick the new upstream commit SHA (e.g. `git ls-remote
+//      https://github.com/google/fonts.git HEAD`).
+//   2. Update PINNED_COMMIT below.
+//   3. Remove the stale cache: `rm -rf node_modules/.cache/font-src`.
+//   4. Run `pnpm build && pnpm fonts:subset` — it will fail with a sha256
+//      mismatch error that prints the actual hash of each file.
+//   5. Copy those printed hashes into the matching `sha256`/`licenseSha256`
+//      fields in SOURCES below and re-run to confirm it passes.
+const PINNED_COMMIT = '6f2d0cd65e61cb237409c0802757a1e55481422d'; // google/fonts main HEAD, pinned 2026-07-25
+
+const rawUrl = (path) => `https://raw.githubusercontent.com/google/fonts/${PINNED_COMMIT}/${path}`;
+
 const SOURCES = [
   {
     family: 'Barlow Condensed',
     weight: 700,
-    url: 'https://raw.githubusercontent.com/google/fonts/main/ofl/barlowcondensed/BarlowCondensed-Bold.ttf',
-    license: 'https://raw.githubusercontent.com/google/fonts/main/ofl/barlowcondensed/OFL.txt',
+    url: rawUrl('ofl/barlowcondensed/BarlowCondensed-Bold.ttf'),
+    sha256: 'e476562ec9c1e16cf16475895b511f08c804f438cc9a9f80a44ea50a0eeb5b65',
+    license: rawUrl('ofl/barlowcondensed/OFL.txt'),
+    licenseSha256: '186d750eb496a4c17a76385f82be6aea2ac1cf2de074a811d63786cf374ea73f',
     outputBase: 'barlow-condensed-700',
     licenseOutput: 'OFL-barlow-condensed.txt',
   },
   {
     family: 'Zen Kaku Gothic New',
     weight: 900,
-    url: 'https://raw.githubusercontent.com/google/fonts/main/ofl/zenkakugothicnew/ZenKakuGothicNew-Black.ttf',
-    license: 'https://raw.githubusercontent.com/google/fonts/main/ofl/zenkakugothicnew/OFL.txt',
+    url: rawUrl('ofl/zenkakugothicnew/ZenKakuGothicNew-Black.ttf'),
+    sha256: '795819a979184981842994d8f4eb9e14ce443d687bd5e731d6ca67ded8f92261',
+    license: rawUrl('ofl/zenkakugothicnew/OFL.txt'),
+    licenseSha256: '0fac78a235c98d640cb06332eb5362c211d86fa03c011df438c35005d22ad2c7',
     outputBase: 'zen-kaku-gothic-new-900',
     licenseOutput: 'OFL-zen-kaku-gothic-new.txt',
   },
@@ -74,19 +94,38 @@ const collectDisplayText = async () => {
   return text;
 };
 
-const fetchBinary = async (url) => {
+const verifySha256 = (buffer, expectedSha256, label) => {
+  const actual = createHash('sha256').update(buffer).digest('hex');
+  if (actual !== expectedSha256) {
+    throw new Error(
+      `sha256 mismatch for ${label}: expected ${expectedSha256}, got ${actual}. ` +
+        `google/fonts のコミット ${PINNED_COMMIT} 以降で内容が変わった、または破損している可能性があります。 ` +
+        `意図的にフォント/ライセンスを更新する場合は scripts/subset-fonts.mjs の PINNED_COMMIT を新しい ` +
+        `google/fonts の main HEAD コミット SHA に更新し、\`rm -rf node_modules/.cache/font-src\` してから ` +
+        `再実行し、表示された sha256 で SOURCES の sha256/licenseSha256 を更新してください。`
+    );
+  }
+};
+
+// Cache key includes a hash of the full URL (not just the URL's basename) so
+// that files sharing a basename across families (e.g. every font family's
+// license is named `OFL.txt`) never collide in the shared cache directory.
+const fetchBinary = async (url, expectedSha256, label) => {
   const cacheDir = 'node_modules/.cache/font-src';
   await mkdir(cacheDir, { recursive: true });
-  const cachePath = join(cacheDir, url.split('/').pop());
+  const cacheKey = createHash('sha256').update(url).digest('hex').slice(0, 16);
+  const cachePath = join(cacheDir, `${cacheKey}-${url.split('/').pop()}`);
+  let buffer;
   try {
-    return await readFile(cachePath);
+    buffer = await readFile(cachePath);
   } catch {
     const response = await fetch(url);
     if (!response.ok) throw new Error(`Failed to download ${url}: ${response.status}`);
-    const buffer = Buffer.from(await response.arrayBuffer());
+    buffer = Buffer.from(await response.arrayBuffer());
     await writeFile(cachePath, buffer);
-    return buffer;
   }
+  verifySha256(buffer, expectedSha256, label);
+  return buffer;
 };
 
 const baseChars = BASE_RANGES.flatMap(([start, end]) => {
@@ -118,7 +157,10 @@ for (const stale of await readdir('public/fonts')) {
 const manifest = { generatedBy: 'scripts/subset-fonts.mjs', characters: subsetText, fonts: [] };
 
 for (const source of SOURCES) {
-  const [ttf, license] = await Promise.all([fetchBinary(source.url), fetchBinary(source.license)]);
+  const [ttf, license] = await Promise.all([
+    fetchBinary(source.url, source.sha256, `${source.family} font (${source.url})`),
+    fetchBinary(source.license, source.licenseSha256, `${source.family} license (${source.license})`),
+  ]);
   const woff2 = await subsetFont(ttf, subsetText, { targetFormat: 'woff2' });
   const hash = createHash('sha256').update(woff2).digest('hex').slice(0, 8);
   const output = `${source.outputBase}.${hash}.woff2`;
