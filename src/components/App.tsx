@@ -5,7 +5,7 @@ import { ui } from '../i18n/ui';
 import { isDue, scheduleReview, type Rating } from '../lib/scheduler';
 import { completeStudyGuideSection, reconfirmStudyGuideSection, startStudyGuideSection } from '../lib/study-guide-progress';
 import { completeHandsOnGuide, reconfirmHandsOnGuide, setHandsOnStepCompletion, startHandsOnGuide } from '../lib/hands-on-progress';
-import { buildStudyDataExport, createEmptyStudyData, createStudyStorage, parseStudyDataImport, type ImportedStudyData, type StudyData } from '../lib/storage';
+import { buildStudyDataExport, createEmptyStudyData, createStudyStorage, isImportSizeAllowed, MAX_IMPORT_TEXT_LENGTH, parseStudyDataImport, type ImportedStudyData, type StudyData } from '../lib/storage';
 import { AppBottomNav, AppHeader } from './app/AppNavigation';
 import { formatDate } from './app/format';
 import type { View } from './app/types';
@@ -178,6 +178,14 @@ function App({ locale, analyticsEnabled = false }: { locale: Locale; analyticsEn
     const file = input.files?.[0];
     input.value = '';
     if (!file || importBusyRef.current) return;
+    // Reject an oversized file by its reported size, before reading it into memory
+    // or handing it to JSON.parse — parseStudyDataImport repeats this check on the
+    // decoded text, but that check should never fire when this one already ran.
+    if (!isImportSizeAllowed(file.size)) {
+      setNotice(copy.notices.importTooLarge(MAX_IMPORT_TEXT_LENGTH / (1024 * 1024)));
+      focusNotice();
+      return;
+    }
     importBusyRef.current = true;
     void file.text()
       .then((text) => applyImport(parseStudyDataImport(text)), () => applyImport(null))

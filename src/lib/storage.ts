@@ -44,10 +44,28 @@ export function buildStudyDataExport(data: StudyData, exportedAt: Date): StudyDa
 
 export type ImportedStudyData = { data: StudyData; exportedAt?: string; migrated: boolean };
 
+// Every major browser guarantees at least 5MB of localStorage per origin, and this
+// app's largest realistic export — every card reviewed, every quiz answered, full
+// study-guide and hands-on progress — runs to a few hundred KB (see the fixtures in
+// storage.test.ts). 5MB rejects a file that could not possibly be a legitimate
+// export long before we would otherwise find out the slow way, via a browser
+// QuotaExceededError on save. The export format is effectively ASCII (ids, ISO
+// dates, numbers, booleans), so `string.length` (UTF-16 code units) and a File's
+// byte size track closely enough for this guard.
+export const MAX_IMPORT_TEXT_LENGTH = 5 * 1024 * 1024; // 5MB
+
+// Pure so both the file-size check (before the file is even read into memory) and
+// parseStudyDataImport (before JSON.parse) can share one rule, and so the boundary
+// is unit-testable without needing a real File object.
+export function isImportSizeAllowed(length: number): boolean {
+  return length <= MAX_IMPORT_TEXT_LENGTH;
+}
+
 // Accepts both a StudyDataExportDocument and a bare StudyData document —
 // the export wrapper keeps the StudyData fields at the top level. A v1 document
 // is migrated before it reaches the caller, so imports never apply v1 shapes.
 export function parseStudyDataImport(text: string): ImportedStudyData | null {
+  if (!isImportSizeAllowed(text.length)) return null;
   try {
     const parsed: unknown = JSON.parse(text);
     const result = parseStudyData(parsed);
