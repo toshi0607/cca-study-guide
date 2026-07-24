@@ -66,6 +66,26 @@ mismatch, a missing/older Production manifest, or an off-allowlist host.
 (`playwright.production.config.ts`, tests under `tests/production/`) against
 the live site.
 
+### Security headers (post-deploy)
+
+The CSP and other security headers in `vercel.json` are served only by the
+Vercel edge, so neither the Playwright suites nor `astro preview` exercise
+them. After a deploy that touches `vercel.json`, `src/components/GoogleAnalytics.astro`,
+or the Astro version, confirm the header is present and intact:
+
+```
+curl -sI https://cca.toshi0607.com/ | grep -i -E 'content-security-policy|x-frame-options|x-content-type-options|referrer-policy|permissions-policy'
+```
+
+Expect a `Content-Security-Policy` whose `script-src` lists `'self'`, three
+`sha256-…` hashes, and `https://www.googletagmanager.com` (no `'unsafe-inline'`),
+plus `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`,
+`Referrer-Policy: strict-origin-when-cross-origin`, and a `Permissions-Policy`.
+If the site renders but the browser console logs `Refused to execute inline
+script … violates the following Content Security Policy directive`, the
+inline-script hashes drifted — rebuild and run `pnpm test:csp`, which recomputes
+them from `dist/` and reports the hashes to add to `vercel.json`.
+
 ## Why this is safe to run against real Production
 
 This is a local-only, no-backend static app — there is no shared server state
