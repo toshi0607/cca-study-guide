@@ -178,7 +178,7 @@
 .quiz-score, .quiz-domains, .quiz-missed { padding: var(--pad-panel); border: 1px solid var(--grid-strong); background: var(--surface); }
 .quiz-score-figure { display: grid; justify-items: start; }
 .quiz-score-figure > span { color: var(--ink-soft); font: var(--fs-micro) var(--mono); letter-spacing: .08em; text-transform: uppercase; }
-.quiz-score-figure strong { color: var(--cyan-dark); font: 700 clamp(3rem, 6vw, 4.6rem)/1.15 var(--display); }
+.quiz-score-figure strong { color: var(--cyan-dark); font: 700 clamp(3rem, 6vw, 4.6rem)/1.15 var(--display); }  /* ds-allow: score display figure (§2) */
 .quiz-missed ul { margin: 0; padding: 0; list-style: none; }
 .quiz-missed li { padding: var(--space-4) 0; border-top: 1px solid var(--grid); }
 .quiz-missed li p { margin: 0 0 var(--space-2); }
@@ -198,7 +198,7 @@
 .session-breakdown { display: flex; flex-wrap: wrap; gap: var(--space-3) var(--space-8); margin: var(--space-5) 0 0; }
 .session-breakdown div { display: grid; justify-items: start; }
 .session-breakdown dt { color: var(--ink-soft); font-size: var(--fs-xs); font-weight: 700; }
-.session-breakdown dd { margin: 0; color: var(--cyan-dark); font: 700 2rem/1.2 var(--display); font-variant-numeric: tabular-nums; }
+.session-breakdown dd { margin: 0; color: var(--cyan-dark); font: 700 2rem/1.2 var(--display); font-variant-numeric: tabular-nums; }  /* ds-allow: breakdown display figure (§2) */
 .session-summary-meta { margin: var(--space-4) 0 0; color: var(--ink-soft); font: var(--fs-xs) var(--mono); }
 .session-summary-actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-5); margin-top: var(--space-6); }
 

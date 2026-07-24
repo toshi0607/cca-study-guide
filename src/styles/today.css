@@ -24,7 +24,7 @@
   right: -10px;
   top: 16px;
   color: rgb(8 126 155 / 8%);
-  font: 700 4rem/1 var(--display);
+  font: 700 4rem/1 var(--display);  /* ds-allow: watermark display figure (§2) */
   letter-spacing: .02em;
 }
 
@@ -39,7 +39,7 @@
 }
 
 .today-hero > div:first-child { container-type: inline-size; }
-.today-hero h2 { max-width: 740px; font-size: clamp(1.7rem, 4.2vw, 4.5rem); font-size: var(--fs-hero); }
+.today-hero h2 { max-width: 740px; font-size: clamp(1.7rem, 4.2vw, 4.5rem); font-size: var(--fs-hero); }  /* ds-allow: hero title, --fs-hero + vw fallback (§3.4) */
 .today-hero h2 em { color: var(--cyan); font-style: normal; }
 .today-hero > div:first-child > p:last-child { max-width: 590px; margin: var(--space-5) 0 0; color: var(--ink-soft); }
 
@@ -55,7 +55,7 @@
 }
 
 .due-block > span { color: var(--ink-soft); font: var(--fs-micro) var(--mono); letter-spacing: .08em; text-transform: uppercase; }
-.due-block strong { margin: var(--space-1) 0 calc(-1 * var(--space-1)); font: 700 clamp(3.6rem, 6vw, 5.4rem)/1 var(--display); letter-spacing: -.01em; }
+.due-block strong { margin: var(--space-1) 0 calc(-1 * var(--space-1)); font: 700 clamp(3.6rem, 6vw, 5.4rem)/1 var(--display); letter-spacing: -.01em; }  /* ds-allow: due-count display figure (§2) */
 .due-block .btn { margin-top: var(--space-6); }
 
 .blueprint {
@@ -172,21 +172,21 @@
 
 @media (max-width: 1120px) {
   .today-hero { grid-template-columns: 1fr; gap: var(--space-6); }
-  .today-hero h2 { font-size: clamp(1.7rem, 11cqi, 3.2rem); }
+  .today-hero h2 { font-size: clamp(1.7rem, 11cqi, 3.2rem); }  /* ds-allow: hero title responsive cap (§3.4) */
   .blueprint-map {
     min-height: 0;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     grid-template-rows: auto;
   }
   .blueprint-lines { display: none; }
-  .blueprint-node { grid-column: auto !important; grid-row: auto !important; min-height: 0; }
-  .blueprint-node.node-1 { grid-column: 1 / -1 !important; }
+  .blueprint-node { grid-column: auto !important; grid-row: auto !important; min-height: 0; }  /* ds-allow: blueprint grid override */
+  .blueprint-node.node-1 { grid-column: 1 / -1 !important; }  /* ds-allow: blueprint grid override */
 }
 
 @media (max-width: 760px) {
   .today-hero { grid-template-columns: 1fr; padding: var(--space-6) var(--space-5) var(--space-6); gap: var(--space-6); box-shadow: 6px 6px 0 rgb(8 126 155 / 12%); }
-  .today-hero::after { font-size: 2.4rem; top: 12px; }
-  .today-hero h2 { font-size: clamp(1.9rem, 8.5vw, 2.6rem); }
+  .today-hero::after { font-size: 2.4rem; top: 12px; }  /* ds-allow: watermark display figure (§2) */
+  .today-hero h2 { font-size: clamp(1.9rem, 8.5vw, 2.6rem); }  /* ds-allow: hero title responsive cap (§3.4) */
   .due-block { padding: var(--space-6) var(--space-5); }
   .blueprint { padding: var(--space-6) var(--space-4); }
   .blueprint-map { margin-top: var(--space-6); grid-template-columns: 1fr; gap: var(--space-3); }

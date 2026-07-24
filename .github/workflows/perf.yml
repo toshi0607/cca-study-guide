@@ -18,6 +18,8 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - name: Check design tokens (no raw colours/sizes outside tokens.css)
+        run: node scripts/check-design-tokens.mjs
       - run: pnpm test
       - run: pnpm build
       - name: Check initial bundle (no heavy chunks eagerly loaded)

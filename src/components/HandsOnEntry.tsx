@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'preact/hooks';
 import type { Locale } from '../i18n/locales';
 import type { UiCopy } from '../i18n/ui';
 import type { HandsOnProgress } from '../lib/storage';
+import { Button } from './app/Button';
 
 type HandsOnComponent = typeof import('./views/HandsOnView').HandsOnView;
 
@@ -32,7 +33,7 @@ export function HandsOnEntry(props: {
     return () => { cancelled = true; };
   }, []);
 
-  if (error) return <section class="guide-load-error panel" role="alert" tabIndex={-1} ref={errorRef}><p>{props.copy.handsOn.loadError}</p><button type="button" class="btn" onClick={() => window.location.reload()}>{props.copy.handsOn.retry}</button></section>;
+  if (error) return <section class="guide-load-error panel" role="alert" tabIndex={-1} ref={errorRef}><p>{props.copy.handsOn.loadError}</p><Button onClick={() => window.location.reload()}>{props.copy.handsOn.retry}</Button></section>;
   if (!HandsOn) return <section class="guide-loading panel" role="status" aria-live="polite" aria-busy="true"><p>{props.copy.handsOn.loading}</p></section>;
   return <HandsOn {...props}/>;
 }
