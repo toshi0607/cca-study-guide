@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'preact/hooks';
 import type { Locale } from '../i18n/locales';
 import type { UiCopy } from '../i18n/ui';
 import type { QuizStat } from '../lib/storage';
+import { Button } from './app/Button';
 
 type QuizComponent = typeof import('./views/QuizView').QuizView;
 
@@ -33,7 +34,7 @@ export function QuizEntry(props: {
     return () => { cancelled = true; };
   }, []);
 
-  if (error) return <section class="quiz-load-error" role="alert" tabIndex={-1} ref={errorRef}><p>{props.copy.quiz.loadError}</p><button type="button" onClick={() => window.location.reload()}>{props.copy.quiz.loadRetry}</button></section>;
-  if (!Quiz) return <section class="quiz-loading" role="status" aria-live="polite" aria-busy="true"><p>{props.copy.quiz.loading}</p></section>;
+  if (error) return <section class="quiz-load-error panel" role="alert" tabIndex={-1} ref={errorRef}><p>{props.copy.quiz.loadError}</p><Button onClick={() => window.location.reload()}>{props.copy.quiz.loadRetry}</Button></section>;
+  if (!Quiz) return <section class="quiz-loading panel" role="status" aria-live="polite" aria-busy="true"><p>{props.copy.quiz.loading}</p></section>;
   return <Quiz {...props}/>;
 }
