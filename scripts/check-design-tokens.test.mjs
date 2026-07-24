@@ -31,9 +31,33 @@ describe('check-design-tokens scanCss', () => {
     expect(scanCss('a.css', '.x { font: var(--fs-micro)/22px var(--mono); }')).toEqual([]);
   });
 
-  it('respects a trailing ds-allow marker', () => {
-    expect(scanCss('a.css', '.x { font-size: 4rem; /* ds-allow: display figure */ }')).toEqual([]);
-    expect(scanCss('a.css', '.x { color: #fff !important; /* ds-allow: reason */ }')).toEqual([]);
+  it('respects an end-of-line ds-allow marker with a reason', () => {
+    expect(scanCss('a.css', '.x { font-size: 4rem; } /* ds-allow: display figure */')).toEqual([]);
+    expect(scanCss('a.css', '.x { color: #fff !important; } /* ds-allow: reason */')).toEqual([]);
+  });
+
+  it('does not honour a ds-allow at the start of a line (must be end-of-line)', () => {
+    const f = scanCss('a.css', '/* ds-allow: sneaky */ .x { color: #fff; }');
+    expect(f).toHaveLength(1);
+    expect(f[0].rule).toBe('raw-hex');
+  });
+
+  it('does not honour a reasonless ds-allow marker', () => {
+    const f = scanCss('a.css', '.x { color: #fff; } /* ds-allow: */');
+    expect(f).toHaveLength(1);
+    expect(f[0].rule).toBe('raw-hex');
+  });
+
+  it('catches a font-size split across lines (declaration-based, not line-based)', () => {
+    const f = scanCss('a.css', '.title {\n  font-size:\n    2rem;\n}');
+    expect(f).toHaveLength(1);
+    expect(f[0].rule).toBe('raw-font-size');
+  });
+
+  it('catches a font shorthand split across lines', () => {
+    const f = scanCss('a.css', '.title {\n  font:\n    700 2rem/1.2 var(--display);\n}');
+    expect(f).toHaveLength(1);
+    expect(f[0].rule).toBe('raw-font-size');
   });
 
   it('does not flag values that live inside a comment', () => {

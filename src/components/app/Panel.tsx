@@ -3,9 +3,10 @@ import type { ComponentChildren, JSX } from 'preact';
 import { panelClass } from './ui';
 
 type PanelProps = Omit<JSX.HTMLAttributes<HTMLElement>, 'class'> & {
-  // Panels appear as section/header/article/div; createElement takes the tag as
-  // a string so no polymorphic-JSX gymnastics (or `any`) are needed.
-  as?: keyof JSX.IntrinsicElements;
+  // Panels are block containers only; the union keeps the element in step with
+  // the HTMLElement attribute type and rejects button/input/svg. createElement
+  // takes the tag as a string so no polymorphic-JSX gymnastics (or `any`).
+  as?: 'section' | 'header' | 'article' | 'div';
   hero?: boolean;
   compact?: boolean;
   size?: 'sm';

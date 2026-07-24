@@ -20,11 +20,15 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
-const ALLOW = /\/\*\s*ds-allow\b/;
+// A valid opt-out is `/* ds-allow: <reason> */` at the END of a line (an optional
+// closing brace may follow). Requiring the colon+reason and the end-of-line
+// anchor stops a marker at the start of a line from silently exempting a whole
+// rule, and stops empty, meaningless exemptions.
+const ALLOW = /\/\*\s*ds-allow:\s*\S.*?\*\/\s*}?\s*$/;
 const HEX = /#[0-9a-fA-F]{3,8}\b/;
 const IMPORTANT = /!important/;
 
-function stripColorMix(code) {
+function stripFns(code) {
   // Drop var(...) first — it holds a ) that would truncate a naive color-mix
   // match, and never contains a hex literal — then remove color-mix() blends so
   // a hex operand inside a blend is not flagged as a raw palette colour.
@@ -32,10 +36,12 @@ function stripColorMix(code) {
 }
 
 // A raw rem/px used as a font SIZE (not a line-height, which lives after `/`).
-function hasRawFontSize(code) {
-  const fontSize = code.match(/font-size:\s*([^;{}]+)/);
+// `decl` is a single declaration with its whitespace already collapsed, so a
+// property split across several source lines is inspected as one string.
+function hasRawFontSize(decl) {
+  const fontSize = decl.match(/font-size:\s*([^;{}]+)/);
   if (fontSize && /[\d.]+(?:rem|px)\b/.test(fontSize[1])) return true;
-  const shorthand = code.match(/(?:^|[;{\s])font:\s*([^;{}]+)/);
+  const shorthand = decl.match(/(?:^|[;{\s])font:\s*([^;{}]+)/);
   if (shorthand) {
     const sizeSlot = shorthand[1].split('/')[0]; // size is before any /line-height
     if (/[\d.]+(?:rem|px)\b/.test(sizeSlot)) return true;
@@ -43,35 +49,38 @@ function hasRawFontSize(code) {
   return false;
 }
 
-// Returns the code on `line` with comments removed, threading multi-line block
-// comments through `state.inBlock`. The ds-allow marker is read from the raw
-// line separately, so stripping the comment here does not hide the opt-out.
-function codeOutsideComments(line, state) {
-  let code = '';
-  let rest = line;
-  while (rest.length) {
-    if (state.inBlock) {
-      const end = rest.indexOf('*/');
-      if (end === -1) { rest = ''; } else { rest = rest.slice(end + 2); state.inBlock = false; }
-    } else {
-      const start = rest.indexOf('/*');
-      if (start === -1) { code += rest; rest = ''; } else { code += rest.slice(0, start); rest = rest.slice(start + 2); state.inBlock = true; }
-    }
-  }
-  return code;
+// Replace every comment's body with spaces, preserving newlines and length so
+// character offsets still map to the original line numbers.
+function blankComments(text) {
+  return text.replace(/\/\*[\s\S]*?\*\//g, (m) => m.replace(/[^\n]/g, ' '));
 }
 
+// Scans by DECLARATION, not by line: the comment-free source is split on
+// ; { } and each chunk's whitespace is collapsed before the checks, so
+// `font-size:\n  2rem;` is caught exactly like `font-size: 2rem;`.
 export function scanCss(name, text) {
   const findings = [];
-  const state = { inBlock: false };
-  text.split('\n').forEach((raw, index) => {
-    const code = codeOutsideComments(raw, state);
-    if (ALLOW.test(raw)) return; // explicit, documented opt-out
-    const at = { file: name, line: index + 1, text: raw.trim() };
-    if (HEX.test(stripColorMix(code))) findings.push({ ...at, rule: 'raw-hex' });
-    else if (hasRawFontSize(code)) findings.push({ ...at, rule: 'raw-font-size' });
-    if (IMPORTANT.test(code)) findings.push({ ...at, rule: 'important' });
-  });
+  const rawLines = text.split('\n');
+  const allowLines = new Set(rawLines.map((l, i) => (ALLOW.test(l) ? i : -1)).filter((i) => i >= 0));
+
+  const code = blankComments(text);
+  const chunkRe = /[^;{}]+/g;
+  let m;
+  while ((m = chunkRe.exec(code)) !== null) {
+    const chunk = m[0];
+    if (!chunk.trim()) continue;
+    const startLine = code.slice(0, m.index).split('\n').length - 1;
+    const endLine = startLine + (chunk.match(/\n/g)?.length ?? 0);
+    let allowed = false;
+    for (let l = startLine; l <= endLine && !allowed; l++) if (allowLines.has(l)) allowed = true;
+    if (allowed) continue;
+
+    const decl = chunk.replace(/\s+/g, ' ').trim();
+    const at = { file: name, line: startLine + 1, text: decl };
+    if (HEX.test(stripFns(decl))) findings.push({ ...at, rule: 'raw-hex' });
+    else if (hasRawFontSize(decl)) findings.push({ ...at, rule: 'raw-font-size' });
+    if (IMPORTANT.test(decl)) findings.push({ ...at, rule: 'important' });
+  }
   return findings;
 }
 
