@@ -125,18 +125,16 @@
 .source-links { margin: 8px 0; padding: 0; list-style: none; font-size: .78rem; }
 .source-links li + li { margin-top: 5px; }
 
-.guide-section-heading { display: grid; grid-template-columns: minmax(0, 1fr) minmax(150px, .8fr); gap: 24px; align-items: center; margin-bottom: 16px; }
-.guide-section-heading .eyebrow { margin-bottom: 4px; }
-.guide-section-heading progress { width: 100%; height: 12px; }
+.progress-heading { display: grid; grid-template-columns: minmax(0, 1fr) minmax(150px, .8fr); gap: 24px; align-items: center; margin-bottom: 16px; }
+.progress-heading .eyebrow { margin-bottom: 4px; }
+.progress-heading progress { width: 100%; height: 12px; }
 
-.guide-status { flex: 0 0 auto; padding: 3px 7px; border: 1px solid currentcolor; font: 700 .68rem var(--mono); }
 .status-not_started { color: var(--ink-soft); }.status-in_progress { color: var(--amber); }.status-completed { color: var(--green); }.status-stale { color: var(--amber); }.status-future { color: var(--danger); }
 
-.guide-domain-badges, .guide-statement-ids { display: flex; flex-wrap: wrap; gap: 7px; margin: 0; }
-.guide-statement-ids code { padding: 3px 6px; background: var(--cyan-pale); color: var(--cyan-dark); font: 700 .72rem var(--mono); }
+.domain-labels, .statement-ids { display: flex; flex-wrap: wrap; gap: 7px; margin: 0; }
+.statement-ids code { padding: 3px 6px; background: var(--cyan-pale); color: var(--cyan-dark); font: 700 .72rem var(--mono); }
 
-.guide-targets { display: flex; flex-wrap: wrap; gap: 8px; }
-.guide-targets button { min-height: 44px; padding: 0 10px; border: 1px solid var(--grid-strong); background: var(--surface); color: var(--cyan-dark); cursor: pointer; font: 700 .75rem var(--mono); }
+.target-list { display: flex; flex-wrap: wrap; gap: 8px; }
 
 .card-domain { padding: 3px 6px; background: var(--ink); color: #fff; }
 
@@ -156,5 +154,5 @@
   .section-heading > p { margin-top: 9px; }
   .page-header { padding: 26px 20px; box-shadow: 6px 6px 0 rgb(8 126 155 / 12%); }
   .page-header h2 { font-size: 2.2rem; }
-  .guide-section-heading { grid-template-columns: 1fr; gap: 12px; }
+  .progress-heading { grid-template-columns: 1fr; gap: 12px; }
 }

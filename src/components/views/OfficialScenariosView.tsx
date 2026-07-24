@@ -39,36 +39,36 @@ export function OfficialScenariosView({ locale, copy, onOpenCard, onOpenQuestion
 
   const domainBadges = (domainIds: string[]) =>
     domains.filter((domain) => domainIds.includes(domain.id)).map((domain) => (
-      <span class="card-domain" key={domain.id}>D{domain.number} {localize(domain.title, locale)}</span>
+      <span class="domain-label" key={domain.id}>D{domain.number} {localize(domain.title, locale)}</span>
     ));
 
   if (selected) {
     const axis = officialScenarioById[selected.id];
     return (
-      <section class="official-view" aria-labelledby="official-detail-title">
-        <p class="official-back"><button type="button" class="link-back" onClick={() => setSelectedId(null)}>{c.backToList}</button></p>
-        <header class="page-header">
+      <section class="official-view panel-stack" aria-labelledby="official-detail-title">
+        <p class="official-back"><button type="button" class="btn--text" onClick={() => setSelectedId(null)}>{c.backToList}</button></p>
+        <header class="panel--hero is-compact">
           <p class="eyebrow">{c.eyebrow}</p>
-          <p class="official-badge official-badge--official">{c.officialBadge}</p>
-          <h2 id="official-detail-title" tabIndex={-1} ref={detailHeadingRef}>{localize(axis.title, locale)}</h2>
-          <p>{localize(axis.summary, locale)}</p>
+          <p><span class="badge official-badge--official">{c.officialBadge}</span></p>
+          <h2 id="official-detail-title" class="page-title" tabIndex={-1} ref={detailHeadingRef}>{localize(axis.title, locale)}</h2>
+          <p class="hero-lede">{localize(axis.summary, locale)}</p>
           <p class="official-meta">
             <span class="official-minutes">{c.estimatedTime}: {c.minutes(selected.estimatedMinutes)}</span>
           </p>
-          <p class="official-source-note" role="note">{c.officialNote}</p>
+          <p class="note" role="note">{c.officialNote}</p>
         </header>
 
-        <div class="official-badges">
-          <div><h3>{c.domains}</h3><p class="guide-domain-badges">{domainBadges(selected.domainIds)}</p></div>
-          <div><h3>{c.taskStatements}</h3><p class="guide-statement-ids">{selected.taskStatementIds.map((id) => <code key={id}>{id}</code>)}</p></div>
-          <div><h3>{c.skills}</h3><p>{selected.skillIds.map((id) => skillById[id]).filter(Boolean).map((skill) => localize(skill.title, locale)).join('・')}</p></div>
+        <div class="panel meta-grid">
+          <div><h3 class="sub-title">{c.domains}</h3><p class="domain-labels">{domainBadges(selected.domainIds)}</p></div>
+          <div><h3 class="sub-title">{c.taskStatements}</h3><p class="statement-ids">{selected.taskStatementIds.map((id) => <code key={id}>{id}</code>)}</p></div>
+          <div><h3 class="sub-title">{c.skills}</h3><p>{selected.skillIds.map((id) => skillById[id]).filter(Boolean).map((skill) => localize(skill.title, locale)).join('・')}</p></div>
         </div>
 
-        <section aria-labelledby="official-objectives"><h3 id="official-objectives">{c.objectives}</h3><ul>{localize(selected.learningObjectives, locale).map((item) => <li key={item}>{item}</li>)}</ul></section>
-        <section aria-labelledby="official-requirements"><h3 id="official-requirements">{c.requirements}</h3><ul>{localize(selected.requirements, locale).map((item) => <li key={item}>{item}</li>)}</ul></section>
+        <section class="panel" aria-labelledby="official-objectives"><h3 id="official-objectives" class="section-title">{c.objectives}</h3><ul>{localize(selected.learningObjectives, locale).map((item) => <li key={item}>{item}</li>)}</ul></section>
+        <section class="panel" aria-labelledby="official-requirements"><h3 id="official-requirements" class="section-title">{c.requirements}</h3><ul>{localize(selected.requirements, locale).map((item) => <li key={item}>{item}</li>)}</ul></section>
 
-        <section aria-labelledby="official-decisions">
-          <h3 id="official-decisions">{c.decisionPoints}</h3>
+        <section class="panel" aria-labelledby="official-decisions">
+          <h3 id="official-decisions" class="section-title">{c.decisionPoints}</h3>
           <dl class="official-decisions">{selected.decisionPoints.map((point) => (
             <div key={point.id}>
               <dt>{localize(point.decision, locale)}</dt>
@@ -80,15 +80,15 @@ export function OfficialScenariosView({ locale, copy, onOpenCard, onOpenQuestion
           ))}</dl>
         </section>
 
-        <section aria-labelledby="official-recommended">
-          <h3 id="official-recommended">{c.recommendedApproach}</h3>
-          <p class="official-recommendation-note" role="note">{c.recommendationNote}</p>
+        <section class="panel" aria-labelledby="official-recommended">
+          <h3 id="official-recommended" class="section-title">{c.recommendedApproach}</h3>
+          <p class="note note--warn" role="note">{c.recommendationNote}</p>
           <ul>{localize(selected.recommendedApproach, locale).map((item) => <li key={item}>{item}</li>)}</ul>
         </section>
-        <section aria-labelledby="official-rationale"><h3 id="official-rationale">{c.rationale}</h3><ul>{localize(selected.rationale, locale).map((item) => <li key={item}>{item}</li>)}</ul></section>
+        <section class="panel" aria-labelledby="official-rationale"><h3 id="official-rationale" class="section-title">{c.rationale}</h3><ul>{localize(selected.rationale, locale).map((item) => <li key={item}>{item}</li>)}</ul></section>
 
-        <section aria-labelledby="official-antipatterns">
-          <h3 id="official-antipatterns">{c.antiPatterns}</h3>
+        <section class="panel" aria-labelledby="official-antipatterns">
+          <h3 id="official-antipatterns" class="section-title">{c.antiPatterns}</h3>
           <dl class="official-antipatterns">{selected.antiPatterns.map((pattern) => (
             <div key={pattern.id}>
               <dt><span class="official-sublabel">{c.antiPatternMistake}:</span> {localize(pattern.mistake, locale)}</dt>
@@ -97,8 +97,8 @@ export function OfficialScenariosView({ locale, copy, onOpenCard, onOpenQuestion
           ))}</dl>
         </section>
 
-        <section aria-labelledby="official-tradeoffs">
-          <h3 id="official-tradeoffs">{c.tradeoffs}</h3>
+        <section class="panel" aria-labelledby="official-tradeoffs">
+          <h3 id="official-tradeoffs" class="section-title">{c.tradeoffs}</h3>
           <dl class="official-tradeoffs">{selected.tradeoffs.map((tradeoff) => (
             <div key={tradeoff.id}>
               <dt><span class="official-sublabel">{c.tradeoffCondition}:</span> {localize(tradeoff.condition, locale)}</dt>
@@ -107,45 +107,45 @@ export function OfficialScenariosView({ locale, copy, onOpenCard, onOpenQuestion
           ))}</dl>
         </section>
 
-        <section aria-labelledby="official-practice">
-          <h3 id="official-practice">{c.relatedPracticeScenarios}</h3>
-          <p class="official-practice-note" role="note"><span class="official-badge official-badge--practice">{c.practiceBadge}</span> {c.relatedPracticeNote}</p>
-          <div class="guide-targets">{selected.relatedPracticeScenarioIds.map((id) => {
+        <section class="panel" aria-labelledby="official-practice">
+          <h3 id="official-practice" class="section-title">{c.relatedPracticeScenarios}</h3>
+          <p class="note note--warn" role="note"><span class="badge official-badge--practice">{c.practiceBadge}</span> {c.relatedPracticeNote}</p>
+          <div class="target-list">{selected.relatedPracticeScenarioIds.map((id) => {
             const scenario = scenarioById.get(id);
-            return scenario ? <button type="button" key={id} onClick={() => onOpenPracticeScenario(id)}>{localize(scenario.title, locale)}</button> : null;
+            return scenario ? <button type="button" class="btn btn--secondary" key={id} onClick={() => onOpenPracticeScenario(id)}>{localize(scenario.title, locale)}</button> : null;
           })}</div>
         </section>
 
-        <section aria-labelledby="official-handson">
-          <h3 id="official-handson">{c.relatedHandsOn}</h3>
+        <section class="panel" aria-labelledby="official-handson">
+          <h3 id="official-handson" class="section-title">{c.relatedHandsOn}</h3>
           {selected.relatedHandsOnGuideIds.length === 0
             ? <p class="official-empty">{c.noHandsOn}</p>
-            : <div class="guide-targets">{selected.relatedHandsOnGuideIds.map((id) => {
+            : <div class="target-list">{selected.relatedHandsOnGuideIds.map((id) => {
                 const guide = guideById.get(id);
-                return guide ? <button type="button" key={id} onClick={() => onOpenHandsOnGuide(id)}>{localize(guide.title, locale)}</button> : null;
+                return guide ? <button type="button" class="btn btn--secondary" key={id} onClick={() => onOpenHandsOnGuide(id)}>{localize(guide.title, locale)}</button> : null;
               })}</div>}
         </section>
 
-        <section aria-labelledby="official-cards"><h3 id="official-cards">{c.relatedCards}</h3><div class="guide-targets">{selected.relatedCardIds.map((id) => {
+        <section class="panel" aria-labelledby="official-cards"><h3 id="official-cards" class="section-title">{c.relatedCards}</h3><div class="target-list">{selected.relatedCardIds.map((id) => {
           const card = cardById.get(id);
-          return card ? <button type="button" key={id} onClick={() => onOpenCard(id)}>{localize(card.prompt, locale)} <code>{id}</code></button> : null;
+          return card ? <button type="button" class="btn btn--secondary" key={id} onClick={() => onOpenCard(id)}>{localize(card.prompt, locale)} <code>{id}</code></button> : null;
         })}</div></section>
-        <section aria-labelledby="official-questions"><h3 id="official-questions">{c.relatedQuestions}</h3><div class="guide-targets">{selected.relatedQuestionIds.map((id) => {
+        <section class="panel" aria-labelledby="official-questions"><h3 id="official-questions" class="section-title">{c.relatedQuestions}</h3><div class="target-list">{selected.relatedQuestionIds.map((id) => {
           const question = questionById.get(id);
-          return question ? <button type="button" key={id} onClick={() => onOpenQuestion(id)}>{localize(question.stem, locale)} <code>{id}</code></button> : null;
+          return question ? <button type="button" class="btn btn--secondary" key={id} onClick={() => onOpenQuestion(id)}>{localize(question.stem, locale)} <code>{id}</code></button> : null;
         })}</div></section>
-        <section aria-labelledby="official-sources"><h3 id="official-sources">{c.officialSources}</h3><SourceLinks ids={selected.sourceIds} copy={copy}/></section>
+        <section class="panel" aria-labelledby="official-sources"><h3 id="official-sources" class="section-title">{c.officialSources}</h3><SourceLinks ids={selected.sourceIds} copy={copy}/></section>
       </section>
     );
   }
 
   return (
-    <section class="official-view" aria-labelledby="official-title">
-      <header class="page-header">
+    <section class="official-view panel-stack" aria-labelledby="official-title">
+      <header class="panel--hero">
         <p class="eyebrow">{c.eyebrow}</p>
-        <h2 id="official-title" tabIndex={-1} ref={listHeadingRef}>{c.title}</h2>
-        <p>{c.introduction}</p>
-        <p class="official-source-note" role="note">{c.officialNote}</p>
+        <h2 id="official-title" class="page-title" tabIndex={-1} ref={listHeadingRef}>{c.title}</h2>
+        <p class="hero-lede">{c.introduction}</p>
+        <p class="note" role="note">{c.officialNote}</p>
       </header>
       <ul class="official-list">
         {officialScenarioLearnings.map((learning) => {
@@ -153,14 +153,14 @@ export function OfficialScenariosView({ locale, copy, onOpenCard, onOpenQuestion
           const practiceCount = learning.relatedPracticeScenarioIds.length;
           const handsOnCount = learning.relatedHandsOnGuideIds.length;
           return (
-            <li class="official-card" key={learning.id}>
-              <div class="official-card-head">
-                <span class="official-badge official-badge--official">{c.officialBadge}</span>
+            <li class="official-card panel panel--sm panel--accent" key={learning.id}>
+              <div class="entry-card-head">
+                <span class="badge official-badge--official">{c.officialBadge}</span>
                 <span class="official-card-minutes">{c.minutes(learning.estimatedMinutes)}</span>
               </div>
-              <h3><button type="button" class="official-open" onClick={() => setSelectedId(learning.id)}>{localize(axis.title, locale)}</button></h3>
+              <h3 class="card-title"><button type="button" class="btn--text" onClick={() => setSelectedId(learning.id)}>{localize(axis.title, locale)}</button></h3>
               <p class="official-card-summary">{localize(axis.summary, locale)}</p>
-              <p class="official-card-badges">{domainBadges(learning.domainIds)}</p>
+              <p class="domain-labels">{domainBadges(learning.domainIds)}</p>
               <p class="official-card-statements">{learning.taskStatementIds.map((id) => <code key={id}>{id}</code>)}</p>
               <p class="official-card-skills">{learning.skillIds.map((id) => skillById[id]).filter(Boolean).map((skill) => localize(skill.title, locale)).join('・')}</p>
               <p class="official-card-related">{c.relatedCounts(handsOnCount, practiceCount)}</p>

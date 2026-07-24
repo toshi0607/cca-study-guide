@@ -75,6 +75,8 @@ export type UiCopy = {
   };
   guide: {
     eyebrow: string;
+    // Eyebrow of the study-guide section list (design-system.md §4.1).
+    sectionsEyebrow: string;
     title: string;
     introduction: string;
     openExamGuide: string;
@@ -119,6 +121,8 @@ export type UiCopy = {
   };
   handsOn: {
     eyebrow: string;
+    // Eyebrow of the hands-on list progress heading (design-system.md §4.1).
+    listEyebrow: string;
     title: string;
     introduction: string;
     entryTitle: string;
@@ -667,6 +671,7 @@ export const ui = {
     },
     guide: {
       eyebrow: 'PUBLIC BLUEPRINT / 30 OBJECTIVES',
+      sectionsEyebrow: 'STUDY GUIDE',
       title: '学習ガイド',
       introduction: '公式Exam Guide v1.0の30タスク領域を、公開ドキュメントに基づく独自の短い要約で整理しています。原文は公式ガイドを確認してください。',
       openExamGuide: '公式Exam Guideを開く',
@@ -708,6 +713,7 @@ export const ui = {
     },
     handsOn: {
       eyebrow: 'HANDS-ON / BUILD IN YOUR OWN ENVIRONMENT',
+      listEyebrow: 'HANDS-ON PROGRESS',
       title: 'ハンズオン',
       introduction: '試験範囲に対応した設計・実装・検証を、ご自身の環境で再現できるガイドです。ブラウザ内に実行環境は作りません。手順は独自の推奨、技術的事実は公式資料に基づきます。',
       entryTitle: 'ハンズオンで実システムを試す',
@@ -1238,6 +1244,7 @@ export const ui = {
     },
     guide: {
       eyebrow: 'PUBLIC BLUEPRINT / 30 OBJECTIVES',
+      sectionsEyebrow: 'STUDY GUIDE',
       title: 'Study guide',
       introduction: 'Independent summaries of the 30 task areas in the official Exam Guide v1.0, grounded in public documentation. Refer to the official guide for the source wording.',
       openExamGuide: 'Open the official Exam Guide',
@@ -1279,6 +1286,7 @@ export const ui = {
     },
     handsOn: {
       eyebrow: 'HANDS-ON / BUILD IN YOUR OWN ENVIRONMENT',
+      listEyebrow: 'HANDS-ON PROGRESS',
       title: 'Hands-on',
       introduction: 'Reproducible guides for designing, building, and verifying real systems on the exam scope in your own environment. The app runs no runtime in the browser. The order of work is the recommended sequence; the technical facts are grounded in official sources.',
       entryTitle: 'Build real systems with hands-on guides',
