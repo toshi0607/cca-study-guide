@@ -121,20 +121,6 @@
 .node-progress { height: 24px; background: linear-gradient(90deg, var(--cyan-pale) var(--progress), var(--track) var(--progress)); border: 1px solid var(--grid); }
 .node-progress span { padding-left: 7px; font: var(--fs-micro)/22px var(--mono); }
 
-/* Aligns this view's `.section-heading h2` instances with the shared
-   `.section-title` scale (design-system.md §3.4) without editing the shared
-   rule in system.css, which other views still use at its default size. A
-   two-class selector is required for the specificity to win, and it is
-   scoped to these containers so it does not leak into other views that
-   also use `.section-heading`. */
-.blueprint .section-title,
-.weak-areas .section-title,
-.mock-exam-launch .section-title {
-  margin: 0 0 var(--space-3);
-  font-size: var(--fs-xl);
-  line-height: var(--lh-heading);
-  font-feature-settings: "palt";
-}
 
 .status-strip {
   margin-top: var(--space-6);

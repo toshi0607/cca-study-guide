@@ -41,6 +41,11 @@
 
 .panel-stack > * + * { margin-top: var(--space-6); }
 
+/* Lead paragraph under a hero title. Opt-in by class rather than a descendant
+   selector: hero headers also carry badges, meta rows and notes as sibling
+   <p> elements, and those must not inherit the lede measure and colour. */
+.hero-lede { max-width: 780px; margin: var(--space-5) 0 0; color: var(--ink-soft); }
+
 /* ------------------------------------------------------------------ notes */
 
 .note { padding: var(--space-3); border-left: 4px solid var(--grid-strong);
@@ -98,29 +103,10 @@
   padding-bottom: 14px;
   border-bottom: 2px solid var(--ink);
 }
-.section-heading h2 { margin: 0; font: 700 clamp(1.7rem, 3vw, 2.5rem)/1.15 var(--display); }
-.section-heading > p { margin: 0; color: var(--ink-soft); font-size: .8rem; }
-
-.page-header h2 {
-  margin: 0;
-  font-family: var(--display);
-  font-weight: 900;
-  font-feature-settings: "palt";
-  letter-spacing: .01em;
-  line-height: 1.16;
-  word-break: auto-phrase;
-}
-
-.page-header {
-  padding: clamp(28px, 4.5vw, 52px);
-  border: 2px solid var(--ink);
-  background: var(--surface);
-  box-shadow: var(--shadow-strong);
-}
-.page-header.compact { padding-block: 34px; }
-.page-header h2 { font-size: clamp(2.2rem, 4.6vw, 3.8rem); }
-.page-header > p:not(.eyebrow) { max-width: 780px; margin: 18px 0 0; color: var(--ink-soft); }
-.text-link { display: inline-block; margin-top: 14px; font-weight: 700; }
+/* Layout only. The type comes from `.section-title` on the heading itself —
+   a `.section-heading h2` font rule here would outrank that single class. */
+.section-heading h2 { margin: 0; }
+.section-heading > p { margin: 0; color: var(--ink-soft); font-size: var(--fs-xs); }
 
 .source-links { margin: 8px 0; padding: 0; list-style: none; font-size: .78rem; }
 .source-links li + li { margin-top: 5px; }
@@ -136,23 +122,14 @@
 
 .target-list { display: flex; flex-wrap: wrap; gap: 8px; }
 
-.card-domain { padding: 3px 6px; background: var(--ink); color: #fff; }
-
 .empty-state { padding: 48px; border: 1px dashed var(--grid-strong); background: var(--surface); text-align: center; }
 
 .skill-tags { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; padding: 0; list-style: none; }
 .skill-tags li { padding: 3px 8px; border: 1px solid var(--grid-strong); background: var(--cyan-pale); color: var(--cyan-dark); font-size: .74rem; font-weight: 700; }
 
-/* Re-applies "palt" after the `font` shorthand above resets font-feature-settings. */
-.page-header h2, .section-heading h2 {
-  font-feature-settings: "palt";
-  letter-spacing: .01em;
-}
-
 @media (max-width: 760px) {
-  .section-heading { display: block; padding-bottom: 12px; }
-  .section-heading > p { margin-top: 9px; }
-  .page-header { padding: 26px 20px; box-shadow: 6px 6px 0 rgb(8 126 155 / 12%); }
-  .page-header h2 { font-size: 2.2rem; }
-  .progress-heading { grid-template-columns: 1fr; gap: 12px; }
+  .section-heading { display: block; padding-bottom: var(--space-3); }
+  .section-heading > p { margin-top: var(--space-2); }
+  .panel--hero { padding: var(--space-6) var(--space-5); box-shadow: var(--shadow); }
+  .progress-heading { grid-template-columns: 1fr; gap: var(--space-3); }
 }

@@ -5,15 +5,6 @@
   margin: 0 auto;
 }
 
-/* Hero header intro paragraph: `.panel--hero` (system.css) has no built-in
-   treatment for the lead paragraph under the eyebrow/title, so each area that
-   adopts it supplies this locally scoped rule. */
-.practice-view > .panel--hero > p:not(.eyebrow),
-.quiz-view > .panel--hero > p:not(.eyebrow) {
-  max-width: 780px;
-  margin: var(--space-5) 0 0;
-  color: var(--ink-soft);
-}
 
 .card-sources small { color: var(--ink-soft); font: var(--fs-micro) var(--mono); }
 

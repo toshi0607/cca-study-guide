@@ -7,10 +7,8 @@
 .guide-view, .handson-view, .official-view,
 .guide-loading, .guide-load-error { width: min(1180px, 100%); margin-inline: auto; }
 
-/* Lede paragraph of a .panel--hero header and the equivalent body copy inside
-   the study-guide panels. */
-.hero-lede, .guide-context > p, .guide-path-note { max-width: 780px; color: var(--ink-soft); }
-.hero-lede { margin: var(--space-5) 0 0; }
+/* Body copy inside the study-guide panels shares the lede measure. */
+.guide-context > p, .guide-path-note { max-width: 780px; color: var(--ink-soft); }
 
 /* --------------------------------------------------------------- study guide */
 

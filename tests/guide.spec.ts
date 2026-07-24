@@ -15,9 +15,9 @@ test('uses the keyboard diagnosis, saves only explicit guide progress, and opens
 
   const first = page.locator('.guide-section').first();
   await first.locator('summary').press('Enter');
-  await expect(first.locator('.guide-domain-badges')).toContainText('D1');
-  await expect(first.locator('.guide-statement-ids')).toContainText('1.1');
-  await expect(first.locator('.guide-statement-ids')).toContainText('1.6');
+  await expect(first.locator('.domain-labels')).toContainText('D1');
+  await expect(first.locator('.statement-ids')).toContainText('1.1');
+  await expect(first.locator('.statement-ids')).toContainText('1.6');
   await expect(first.locator('.source-links a').first()).toHaveAttribute('href', /anthropic|everpath/);
   await first.getByRole('button', { name: 'このセクションを開始' }).press('Enter');
   await first.getByRole('button', { name: '完了として記録' }).press('Enter');
@@ -26,7 +26,7 @@ test('uses the keyboard diagnosis, saves only explicit guide progress, and opens
   await expect(page.locator('.guide-section').first().getByText('完了', { exact: true })).toBeVisible();
 
   await page.locator('.guide-section').first().locator('summary').press('Enter');
-  const relatedCard = page.locator('.guide-section').first().locator('.guide-targets button').first();
+  const relatedCard = page.locator('.guide-section').first().locator('.target-list button').first();
   await relatedCard.click();
   await expect(page.locator('.practice-target p')).toBeFocused();
   await page.getByRole('button', { name: 'カード一覧に戻る' }).click();
@@ -35,7 +35,7 @@ test('uses the keyboard diagnosis, saves only explicit guide progress, and opens
 
   await page.getByRole('button', { name: 'ガイド' }).first().click();
   await page.locator('.guide-section').first().locator('summary').press('Enter');
-  const relatedQuestion = page.locator('.guide-section').first().locator('.guide-targets').nth(1).getByRole('button').first();
+  const relatedQuestion = page.locator('.guide-section').first().locator('.target-list').nth(1).getByRole('button').first();
   await relatedQuestion.click();
   await expect(page.locator('.quiz-target')).toBeFocused();
   await expect(page.locator('.quiz-question')).toHaveCount(1);

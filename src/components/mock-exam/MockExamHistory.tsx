@@ -25,7 +25,7 @@ export function MockExamHistory({ attempts, headingRef, locale, copy, onOpen, on
       <header class="panel--hero is-compact">
         <p class="eyebrow">{copy.mockExam.eyebrow}</p>
         <h2 id="mock-exam-history-title" class="page-title" tabIndex={-1} ref={headingRef}>{copy.mockExam.historyTitle}</h2>
-        <p>{copy.mockExam.historyIntro}</p>
+        <p class="hero-lede">{copy.mockExam.historyIntro}</p>
       </header>
       {ordered.length === 0
         ? <p class="mock-exam-history-empty">{copy.mockExam.historyEmpty}</p>

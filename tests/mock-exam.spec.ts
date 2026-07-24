@@ -48,7 +48,7 @@ function makeSession(opts: {
 }
 
 async function openMockExam(page: Page): Promise<void> {
-  await page.locator('.mock-exam-launch-button').click();
+  await page.locator('.mock-exam-launch-actions .btn:not(.btn--secondary)').click();
 }
 
 async function answerCurrent(page: Page): Promise<void> {

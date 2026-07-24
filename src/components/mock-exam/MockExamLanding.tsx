@@ -20,7 +20,7 @@ export function MockExamLanding({ hasActiveSession, hasHistory, createError, cop
       <header class="panel--hero">
         <p class="eyebrow">{copy.mockExam.eyebrow}</p>
         <h2 id="mock-exam-title" class="page-title">{copy.mockExam.title}</h2>
-        <p>{copy.mockExam.introduction}</p>
+        <p class="hero-lede">{copy.mockExam.introduction}</p>
       </header>
       <ul class="mock-exam-specs">
         <li>{copy.mockExam.specQuestions(MOCK_EXAM_QUESTION_COUNT)}</li>

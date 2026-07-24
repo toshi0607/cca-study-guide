@@ -38,7 +38,7 @@ export function ProgressView({
 
   return (
     <section class="progress-view" aria-labelledby="progress-title">
-      <header class="panel--hero"><p class="eyebrow">{copy.progress.eyebrow}</p><h2 class="page-title" id="progress-title">{copy.progress.title}</h2><p>{copy.progress.introduction}</p></header>
+      <header class="panel--hero"><p class="eyebrow">{copy.progress.eyebrow}</p><h2 class="page-title" id="progress-title">{copy.progress.title}</h2><p class="hero-lede">{copy.progress.introduction}</p></header>
       <ProgressOverviewEntry
         locale={locale} copy={copy}
         reviews={reviews} studyGuideProgress={studyGuideProgress} handsOnProgress={handsOnProgress}

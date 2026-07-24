@@ -144,7 +144,7 @@ export function QuizView({ locale, copy, quizStats, onAnswer, targetQuestionId, 
   return (
     <section class="quiz-view" aria-labelledby="quiz-title">
       <header class="panel--hero">
-        <p class="eyebrow">{copy.quiz.eyebrow}</p><h2 id="quiz-title" class="page-title">{copy.quiz.title}</h2><p>{copy.quiz.introduction}</p>
+        <p class="eyebrow">{copy.quiz.eyebrow}</p><h2 id="quiz-title" class="page-title">{copy.quiz.title}</h2><p class="hero-lede">{copy.quiz.introduction}</p>
       </header>
       {targetAnnouncement && phase === 'question' && <p class="note note--info quiz-target" tabIndex={-1} role="status" aria-live="polite" ref={targetAnnouncementRef}>{targetAnnouncement}</p>}
 

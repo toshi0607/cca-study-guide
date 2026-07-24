@@ -16,7 +16,7 @@ async function answerCurrent(page: Page): Promise<void> {
 test('mock exam: start, answer, flag, resume after reload, submit exactly once, no pass/fail', async ({ page }) => {
   // #given — an empty state; open and start the exam from Today
   await page.goto('/');
-  await page.locator('.mock-exam-launch-button').click();
+  await page.locator('.mock-exam-launch-actions .btn:not(.btn--secondary)').click();
   await expect(page.getByRole('heading', { name: '60問の模試に挑戦する' })).toBeVisible();
   await page.getByRole('button', { name: '模試を開始' }).click();
   await expect(page.locator('.mock-exam-progress')).toHaveText('1 / 60');
@@ -31,7 +31,7 @@ test('mock exam: start, answer, flag, resume after reload, submit exactly once, 
 
   // #when — reload; the session persists and resumes with answer + flag intact
   await page.reload();
-  await page.locator('.mock-exam-launch-button').click();
+  await page.locator('.mock-exam-launch-actions .btn:not(.btn--secondary)').click();
   await expect(page.getByRole('heading', { name: '進行中の模試があります' })).toBeVisible();
   await page.getByRole('button', { name: '模試を再開' }).click();
   await expect(page.locator('.mock-exam-progress')).toHaveText('1 / 60');

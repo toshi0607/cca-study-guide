@@ -161,22 +161,22 @@ test('start-point selection expands and focuses the target guide section', async
 
 test('Today mock-exam CTA reflects the exam state', async ({ page }) => {
   // No session, no attempt → start.
-  await expect(page.locator('.mock-exam-launch-button')).toHaveText(/模試を開始/);
+  await expect(page.locator('.mock-exam-launch-actions .btn:not(.btn--secondary)')).toHaveText(/模試を開始/);
 
   // Active session → resume.
   await seed(page, { activeMockExam: makeSession() });
-  await expect(page.locator('.mock-exam-launch-button')).toHaveText(/模試を再開/);
+  await expect(page.locator('.mock-exam-launch-actions .btn:not(.btn--secondary)')).toHaveText(/模試を再開/);
 
   // Attempt but no active session → open results.
   await seed(page, { mockExamAttempts: [fullAttempt('a1', 1_690_000_000_000, 20)] });
-  await expect(page.locator('.mock-exam-launch-button')).toHaveText(/模試と結果を開く/);
+  await expect(page.locator('.mock-exam-launch-actions .btn:not(.btn--secondary)')).toHaveText(/模試と結果を開く/);
 });
 
 // --- Today opens learning analysis (§7.2, §12.11) ---
 
 test('Today opens the mock-exam learning analysis', async ({ page }) => {
   await seed(page, { mockExamAttempts: [fullAttempt('a1', 1_690_000_000_000, 30)] });
-  await page.locator('.mock-exam-launch-analysis').click();
+  await page.locator('.mock-exam-launch-actions .btn--secondary').click();
   await expect(page.getByRole('heading', { name: '模試結果を分析する' })).toBeVisible();
 });
 

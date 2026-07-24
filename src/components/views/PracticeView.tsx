@@ -65,7 +65,7 @@ export function PracticeView({
 
   return (
     <section class="practice-view" aria-labelledby="practice-title">
-      <header class="panel--hero"><p class="eyebrow">{copy.practice.eyebrow}</p><h2 id="practice-title" class="page-title">{copy.practice.title}</h2><p>{copy.practice.introduction}</p></header>
+      <header class="panel--hero"><p class="eyebrow">{copy.practice.eyebrow}</p><h2 id="practice-title" class="page-title">{copy.practice.title}</h2><p class="hero-lede">{copy.practice.introduction}</p></header>
       {activeTargetCardId && (() => {
         const target = cards.find((card) => card.id === activeTargetCardId);
         return target ? <div class="note note--info practice-target"><p tabIndex={-1} role="status" aria-live="polite" ref={targetNoticeRef}>{copy.practice.targetAnnouncement(localize(target.prompt, locale))}</p><button type="button" class="btn--text" onClick={() => { setActiveTargetCardId(null); requestAnimationFrame(() => searchInputRef.current?.focus()); }}>{copy.practice.showAll}</button></div> : null;

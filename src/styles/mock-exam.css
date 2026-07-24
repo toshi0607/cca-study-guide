@@ -6,23 +6,10 @@
    positioning for elements that must keep their own selector because they are
    rendered from TodayView.tsx (S4-owned; see Notes in task-12-design-consistency.md). */
 
-/* .mock-exam-launch/-button/-analysis are rendered by TodayView.tsx (S4), so the
-   selectors stay, but their declarations now mirror .panel/.btn/.btn--text
-   byte-for-byte so the CTA is visually identical to the shared components. */
+/* .mock-exam-launch is the Today view container for the exam CTA; its buttons
+   now use the shared .btn components. */
 .mock-exam-launch { margin-top: var(--space-6); padding: var(--pad-panel); border: 1px solid var(--grid-strong); background: var(--surface); }
-.mock-exam-launch-button {
-  min-height: 48px; padding: 0 var(--space-5); display: inline-flex; align-items: center; justify-content: center;
-  gap: var(--space-3); border: 1px solid var(--ink); border-radius: var(--radius); background: var(--ink);
-  color: var(--on-ink); font-weight: 700; cursor: pointer;
-}
-.mock-exam-launch-button:hover:not(:disabled) { background: var(--cyan-dark); border-color: var(--cyan-dark); }
-.mock-exam-launch-button:disabled { opacity: .45; cursor: not-allowed; }
 .mock-exam-launch-actions { margin-top: var(--space-5); display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3) var(--space-5); }
-.mock-exam-launch-analysis {
-  min-height: 44px; padding: 0 var(--space-1); border: 0; background: transparent; color: var(--cyan-dark);
-  font: inherit; font-weight: 700; text-align: left; text-decoration: underline; text-underline-offset: .2em; cursor: pointer;
-}
-.mock-exam-launch-analysis:hover { color: var(--ink); }
 
 .mock-exam-view { display: grid; gap: var(--space-1); }
 .mock-exam-notice { margin: 0 0 var(--space-3); }

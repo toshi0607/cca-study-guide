@@ -83,7 +83,7 @@ export function MockExamAnalysis({ locale, copy, attempts, headingRef, onOpenPra
       <header class="panel--hero is-compact">
         <p class="eyebrow">{a.eyebrow}</p>
         <h2 id="mock-exam-analysis-title" class="page-title" tabIndex={-1} ref={headingRef}>{a.title}</h2>
-        <p>{a.intro}</p>
+        <p class="hero-lede">{a.intro}</p>
       </header>
 
       {isEmpty
