@@ -17,10 +17,10 @@ export function MockExamLanding({ hasActiveSession, hasHistory, createError, cop
 }) {
   return (
     <section class="mock-exam-landing" aria-labelledby="mock-exam-title">
-      <header class="page-header compact">
+      <header class="panel--hero">
         <p class="eyebrow">{copy.mockExam.eyebrow}</p>
-        <h2 id="mock-exam-title">{copy.mockExam.title}</h2>
-        <p>{copy.mockExam.introduction}</p>
+        <h2 id="mock-exam-title" class="page-title">{copy.mockExam.title}</h2>
+        <p class="hero-lede">{copy.mockExam.introduction}</p>
       </header>
       <ul class="mock-exam-specs">
         <li>{copy.mockExam.specQuestions(MOCK_EXAM_QUESTION_COUNT)}</li>
@@ -33,21 +33,21 @@ export function MockExamLanding({ hasActiveSession, hasHistory, createError, cop
         <li>{copy.mockExam.disclaimerNoScaled}</li>
         <li>{copy.mockExam.disclaimerResumable}</li>
       </ul>
-      {createError && <p class="mock-exam-error" role="alert">{copy.mockExam.createFailed}</p>}
+      {createError && <p class="note note--danger mock-exam-error" role="alert">{copy.mockExam.createFailed}</p>}
       {hasActiveSession
-        ? <div class="mock-exam-resume">
-            <h3>{copy.mockExam.resumeHeading}</h3>
+        ? <div class="panel panel--sm mock-exam-resume">
+            <h3 class="card-title">{copy.mockExam.resumeHeading}</h3>
             <div class="mock-exam-landing-actions">
-              <button type="button" class="mock-exam-primary" onClick={onResume}>{copy.mockExam.resumeButton}</button>
-              <button type="button" class="mock-exam-secondary" onClick={onNewExam}>{copy.mockExam.newExamButton}</button>
+              <button type="button" class="btn" onClick={onResume}>{copy.mockExam.resumeButton}</button>
+              <button type="button" class="btn btn--secondary" onClick={onNewExam}>{copy.mockExam.newExamButton}</button>
             </div>
           </div>
         : <div class="mock-exam-landing-actions">
-            <button type="button" class="mock-exam-primary" onClick={onStart}>{copy.mockExam.startButton}</button>
+            <button type="button" class="btn" onClick={onStart}>{copy.mockExam.startButton}</button>
           </div>}
       <div class="mock-exam-landing-links">
-        {hasHistory && <button type="button" class="mock-exam-link" onClick={onOpenHistory}>{copy.mockExam.historyButton}</button>}
-        <button type="button" class="mock-exam-link" onClick={onOpenAnalysis}>{copy.mockExam.analysis.openButton}</button>
+        {hasHistory && <button type="button" class="btn--text mock-exam-link" onClick={onOpenHistory}>{copy.mockExam.historyButton}</button>}
+        <button type="button" class="btn--text mock-exam-link" onClick={onOpenAnalysis}>{copy.mockExam.analysis.openButton}</button>
       </div>
     </section>
   );

@@ -57,7 +57,7 @@ export function MockExamRunner({ session, question, remainingSeconds, submitting
       <div class="mock-exam-counts">
         <span>{copy.mockExam.answeredCount(progress.answeredCount)}</span>
         <span>{copy.mockExam.unansweredCount(progress.unansweredCount)}</span>
-        <button type="button" class="mock-exam-secondary" onClick={() => setPaletteOpen(true)}>{copy.mockExam.openPalette}</button>
+        <button type="button" class="btn btn--secondary" onClick={() => setPaletteOpen(true)}>{copy.mockExam.openPalette}</button>
       </div>
       <MockExamQuestion
         question={question}
@@ -70,9 +70,9 @@ export function MockExamRunner({ session, question, remainingSeconds, submitting
         onToggleFlag={() => onToggleFlag(question.id)}
       />
       <div class="mock-exam-runner-nav">
-        <button type="button" class="mock-exam-secondary" disabled={currentIndex === 0} onClick={() => onMove(currentIndex - 1)}>{copy.mockExam.prevQuestion}</button>
-        <button type="button" class="mock-exam-secondary" disabled={currentIndex >= progress.total - 1} onClick={() => onMove(currentIndex + 1)}>{copy.mockExam.nextQuestion}</button>
-        <button type="button" class="mock-exam-primary" onClick={() => setSubmitOpen(true)}>{copy.mockExam.submitExam}</button>
+        <button type="button" class="btn btn--secondary" disabled={currentIndex === 0} onClick={() => onMove(currentIndex - 1)}>{copy.mockExam.prevQuestion}</button>
+        <button type="button" class="btn btn--secondary" disabled={currentIndex >= progress.total - 1} onClick={() => onMove(currentIndex + 1)}>{copy.mockExam.nextQuestion}</button>
+        <button type="button" class="btn" onClick={() => setSubmitOpen(true)}>{copy.mockExam.submitExam}</button>
       </div>
       <MockExamPalette
         open={paletteOpen}

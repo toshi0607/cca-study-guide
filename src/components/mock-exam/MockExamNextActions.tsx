@@ -33,8 +33,8 @@ export function MockExamNextActions({ actions, copy, domainLabel, skillLabel, on
   };
 
   return (
-    <section class="mock-exam-next-actions" aria-labelledby="mock-exam-analysis-actions-title">
-      <h3 id="mock-exam-analysis-actions-title">{a.nextActionsHeading}</h3>
+    <section class="panel panel--sm mock-exam-next-actions" aria-labelledby="mock-exam-analysis-actions-title">
+      <h3 id="mock-exam-analysis-actions-title" class="card-title">{a.nextActionsHeading}</h3>
       {actions.length === 0
         ? <p class="mock-exam-axis-empty">{a.nextActionsEmpty}</p>
         : <ul class="mock-exam-next-actions-list">
@@ -43,7 +43,7 @@ export function MockExamNextActions({ actions, copy, domainLabel, skillLabel, on
               return (
                 <li key={`${action.type}:${action.key ?? index}`} class="mock-exam-next-action">
                   <span>{view.text}</span>
-                  <button type="button" class="mock-exam-secondary" onClick={view.onClick}>{view.label}</button>
+                  <button type="button" class="btn btn--secondary" onClick={view.onClick}>{view.label}</button>
                 </li>
               );
             })}

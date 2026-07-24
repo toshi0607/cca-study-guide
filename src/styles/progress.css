@@ -1,0 +1,90 @@
+/* Progress view, data controls, source register and the privacy page. */
+
+.progress-view {
+  width: min(1180px, 100%);
+  margin: 0 auto;
+}
+
+.source-register code { padding: 3px 6px; background: var(--cyan-pale); color: var(--cyan-dark); font: 700 var(--fs-xs) var(--mono); }
+
+/* .panel provides padding/border/background; these three variants only add layout. */
+.progress-overview, .progress-overview-loading, .progress-overview-error {
+  margin-top: var(--space-6);
+}
+.progress-overview-error { border-color: var(--danger); }
+
+/* Service-wide overview: responsive card grid, each with its own facts + CTA.
+   Nested inside the already-paneled .progress-overview, so it stays borderless. */
+.progress-panel { margin-top: var(--space-6); }
+.progress-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: var(--space-4); margin-top: var(--space-4); }
+.progress-card { display: flex; flex-direction: column; gap: var(--space-3); }
+.progress-card ul { margin: 0; padding: 0; list-style: none; display: grid; gap: var(--space-1); color: var(--ink-soft); font-size: var(--fs-sm); }
+.progress-card > .btn { margin-top: auto; }
+.progress-card-actions { margin-top: auto; display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.progress-row { min-height: 58px; display: grid; grid-template-columns: minmax(200px, 1fr) minmax(140px, 2fr) 54px; gap: var(--space-4); align-items: center; border-top: 1px solid var(--grid); }
+.progress-row progress { width: 100%; height: 11px; border: 0; border-radius: 0; background: var(--grid); }
+.progress-row progress::-webkit-progress-bar { background: var(--grid); }
+.progress-row progress::-webkit-progress-value { background: var(--cyan); }
+.progress-row progress::-moz-progress-bar { background: var(--cyan); }
+.progress-row strong { font: var(--fs-xs) var(--mono); text-align: right; }
+
+.data-panel { display: flex; justify-content: space-between; gap: var(--space-8); align-items: center; }
+.data-panel p { max-width: 650px; color: var(--ink-soft); }
+.data-actions { display: grid; min-width: 240px; }
+.data-actions > .btn { margin-top: var(--space-2); }
+
+.privacy-page { min-height: 100vh; }
+
+/* Shell-equivalent chrome (see design-system.md A3): not one of the panel
+   padding sizes, kept as its own bespoke header to match the rail/mobile-header. */
+.privacy-header {
+  padding: var(--space-6) clamp(20px, 5vw, 72px);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-5);
+  border-bottom: 1px solid var(--rail-edge);
+  background: var(--ink);
+  color: var(--rail-strong);
+}
+.privacy-header a { color: inherit; }
+.privacy-header > a:last-child { min-height: 44px; display: inline-flex; align-items: center; font: var(--fs-xs) var(--mono); }
+
+.privacy-main {
+  width: min(820px, calc(100% - 36px));
+  min-height: auto;
+  margin: 0 auto;
+  padding: clamp(38px, 7vw, 76px) 0 80px;
+}
+
+.privacy-article .lead { margin: var(--space-5) 0 var(--space-10); color: var(--ink-soft); font-size: var(--fs-base); }
+.privacy-article section { padding: var(--space-6) 0; border-top: 1px solid var(--grid); }
+.privacy-article p, .privacy-article li { color: var(--ink-soft); }
+.privacy-article ul { padding-left: 1.3em; }
+.privacy-updated { margin: var(--space-6) 0 0; font: var(--fs-micro) var(--mono); color: var(--ink-soft); }
+
+.sources-panel { display: grid; grid-template-columns: minmax(220px, .7fr) minmax(0, 1.3fr); gap: var(--space-12); }
+.sources-panel > div:first-child p:last-child { color: var(--ink-soft); }
+.source-register { border-top: 1px solid var(--grid); }
+.source-register article { padding: var(--space-3) 0; display: grid; grid-template-columns: 110px 1fr; gap: var(--space-4); border-bottom: 1px solid var(--grid); }
+.source-register a { font-weight: 700; }
+.source-register p { margin: var(--space-1) 0 0; color: var(--ink-soft); font: var(--fs-micro) var(--mono); }
+
+@media (max-width: 1000px) {
+  .sources-panel { grid-template-columns: 1fr; gap: var(--space-5); }
+}
+
+@media (max-width: 760px) {
+  .data-panel { align-items: stretch; flex-direction: column; }
+  .progress-row { grid-template-columns: 1fr 48px; gap: var(--space-3); padding: var(--space-3) 0; }
+  .progress-row progress { grid-column: 1 / -1; grid-row: 2; }
+  .source-register article { grid-template-columns: 1fr; gap: var(--space-2); }
+  .data-actions { min-width: 0; }
+  .privacy-header { flex-wrap: wrap; padding: var(--space-4); }
+  .privacy-header .language-switcher--privacy { margin-left: auto; }
+  .privacy-header > a:last-child { width: 100%; justify-content: flex-end; }
+}
+
+@media (max-width: 400px) {
+  .privacy-header .wordmark span { display: none; }
+}

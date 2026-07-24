@@ -19,8 +19,8 @@ export function MockExamAxisTable({ heading, headingId, rows, labelFor, copy, no
   const hasData = rows.some((row) => row.total > 0);
 
   return (
-    <section class="mock-exam-axis" aria-labelledby={headingId}>
-      <h3 id={headingId}>{heading}</h3>
+    <section class="panel panel--sm mock-exam-axis" aria-labelledby={headingId}>
+      <h3 id={headingId} class="card-title">{heading}</h3>
       {note && <p class="mock-exam-axis-note">{note}</p>}
       {!hasData
         ? <p class="mock-exam-axis-empty">{a.axisEmpty}</p>

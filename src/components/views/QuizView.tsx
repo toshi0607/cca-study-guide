@@ -19,7 +19,7 @@ const questionsByScenario = new Map(
 );
 
 const domainBadges = (domainIds: string[]) =>
-  domains.filter((domain) => domainIds.includes(domain.id)).map((domain) => <span key={domain.id} class="card-domain">D{domain.number}</span>);
+  domains.filter((domain) => domainIds.includes(domain.id)).map((domain) => <span key={domain.id} class="badge badge--ink">D{domain.number}</span>);
 
 export function QuizView({ locale, copy, quizStats, onAnswer, targetQuestionId, onTargetOpened, targetScenarioId, onTargetScenarioOpened }: { locale: Locale; copy: UiCopy; quizStats?: Record<string, QuizStat>; onAnswer: (questionId: string, correct: boolean) => boolean; targetQuestionId: string | null; onTargetOpened: () => void; targetScenarioId: string | null; onTargetScenarioOpened: () => void }) {
   const [phase, setPhase] = useState<'setup' | 'background' | 'question' | 'summary'>('setup');
@@ -143,10 +143,10 @@ export function QuizView({ locale, copy, quizStats, onAnswer, targetQuestionId, 
 
   return (
     <section class="quiz-view" aria-labelledby="quiz-title">
-      <header class="page-header compact">
-        <p class="eyebrow">{copy.quiz.eyebrow}</p><h2 id="quiz-title">{copy.quiz.title}</h2><p>{copy.quiz.introduction}</p>
+      <header class="panel--hero">
+        <p class="eyebrow">{copy.quiz.eyebrow}</p><h2 id="quiz-title" class="page-title">{copy.quiz.title}</h2><p class="hero-lede">{copy.quiz.introduction}</p>
       </header>
-      {targetAnnouncement && phase === 'question' && <p class="quiz-target" tabIndex={-1} role="status" aria-live="polite" ref={targetAnnouncementRef}>{targetAnnouncement}</p>}
+      {targetAnnouncement && phase === 'question' && <p class="note note--info quiz-target" tabIndex={-1} role="status" aria-live="polite" ref={targetAnnouncementRef}>{targetAnnouncement}</p>}
 
       {phase === 'setup' && <QuizSetup
         copy={copy} locale={locale} mode={mode} count={count} domainChoice={domainChoice}
@@ -157,11 +157,11 @@ export function QuizView({ locale, copy, quizStats, onAnswer, targetQuestionId, 
 
       {phase === 'background' && scenario && <article class="scenario-brief">
         <p class="eyebrow">{copy.quiz.backgroundTitle}</p>
-        <h3 tabIndex={-1} ref={backgroundHeadingRef}>{localize(scenario.title, locale)}</h3>
+        <h3 class="card-title" tabIndex={-1} ref={backgroundHeadingRef}>{localize(scenario.title, locale)}</h3>
         <div class="scenario-item-meta">{domainBadges(scenario.domainIds)}<span>{copy.quiz.scenarioQuestionCount((questionsByScenario.get(scenario.id) ?? []).length)}</span></div>
         <ScenarioBackground scenario={scenario} locale={locale}/>
-        <button class="quiz-start" onClick={() => launch(questionsByScenario.get(scenario.id) ?? [])}>{copy.quiz.proceedToQuestions} <span aria-hidden="true">→</span></button>
-        <button class="quiz-quit" onClick={reset}>{copy.quiz.quit}</button>
+        <button class="btn quiz-start" onClick={() => launch(questionsByScenario.get(scenario.id) ?? [])}>{copy.quiz.proceedToQuestions} <span aria-hidden="true">→</span></button>
+        <button class="btn--text quiz-quit" onClick={reset}>{copy.quiz.quit}</button>
       </article>}
 
       {current && <QuizQuestion

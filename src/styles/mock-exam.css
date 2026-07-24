@@ -1,0 +1,169 @@
+/* Mock Exam
+   Buttons/chips/panels/notes/headings use the shared system.css components
+   (.btn/.btn--secondary/.btn--text/.chip, .panel/.panel--sm, .note, .page-title/
+   .section-title/.card-title). Rules below are either state modifiers those
+   shared components don't model (e.g. the amber "flagged" state), or layout-only
+   positioning for elements that must keep their own selector because they are
+   rendered from TodayView.tsx (S4-owned; see Notes in task-12-design-consistency.md). */
+
+/* .mock-exam-launch is the Today view container for the exam CTA; its buttons
+   now use the shared .btn components. */
+.mock-exam-launch { margin-top: var(--space-6); padding: var(--pad-panel); border: 1px solid var(--grid-strong); background: var(--surface); }
+.mock-exam-launch-actions { margin-top: var(--space-5); display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3) var(--space-5); }
+
+.mock-exam-view { display: grid; gap: var(--space-1); }
+.mock-exam-notice { margin: 0 0 var(--space-3); }
+.mock-exam-loading, .mock-exam-load-error { margin-top: var(--space-6); padding: var(--space-8); border: 1px solid var(--grid-strong); background: var(--surface); text-align: center; }
+.mock-exam-load-error { border-color: var(--danger); }
+.mock-exam-error { margin: var(--space-3) 0; }
+
+.mock-exam-link { margin-top: var(--space-4); }
+
+.mock-exam-landing { margin-top: var(--space-6); }
+.mock-exam-specs { margin: var(--space-5) 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: var(--space-3) var(--space-5); list-style: none; font: 700 var(--fs-base) var(--mono); color: var(--cyan-dark); }
+.mock-exam-disclaimers { margin: var(--space-5) 0 0; padding-left: var(--space-5); display: grid; gap: var(--space-2); color: var(--ink-soft); font-size: var(--fs-sm); line-height: var(--lh-body); }
+.mock-exam-resume { margin-top: var(--space-6); background: var(--cyan-pale); }
+.mock-exam-resume .card-title { margin-bottom: var(--space-4); }
+.mock-exam-landing-actions { margin-top: var(--space-5); display: flex; flex-wrap: wrap; gap: var(--space-3); }
+
+/* .mock-exam-runner keeps its own selector: it has no outer padding by design
+   (the head/counts/question/nav sub-blocks each manage their own 20px inset with
+   dividers between them), so it is not wrapped in .panel. Only the border (already
+   --grid-strong) and shadow (removed, B5) matter here. */
+.mock-exam-runner { margin-top: var(--space-6); border: 1px solid var(--grid-strong); background: var(--surface); }
+.mock-exam-runner-head { min-height: 56px; padding: var(--space-3) var(--space-5); display: flex; align-items: center; justify-content: space-between; gap: var(--space-4); border-bottom: 1px solid var(--grid); flex-wrap: wrap; }
+.mock-exam-progress { font: 700 var(--fs-base) var(--mono); color: var(--ink); }
+.mock-exam-timer { display: flex; align-items: baseline; gap: var(--space-2); }
+.mock-exam-timer-label { font-size: var(--fs-xs); color: var(--ink-soft); }
+.mock-exam-timer-value { font: 700 var(--fs-xl) var(--mono); color: var(--ink); font-variant-numeric: tabular-nums; }
+.mock-exam-timer.is-low .mock-exam-timer-value { color: var(--danger); }
+.mock-exam-counts { padding: var(--space-3) var(--space-5); display: flex; align-items: center; gap: var(--space-3) var(--space-5); flex-wrap: wrap; border-bottom: 1px solid var(--grid); font: var(--fs-xs) var(--mono); color: var(--ink-soft); }
+.mock-exam-counts .btn--secondary { margin-left: auto; }
+.mock-exam-question { padding: var(--space-5); }
+.mock-exam-question .card-prompt { min-height: 0; padding-bottom: var(--space-3); }
+.mock-exam-question .choice-list { padding: 0 0 var(--space-5); }
+.mock-exam-question .quiz-hint { margin: 0 0 var(--space-5); }
+.mock-exam-flag { font-weight: 700; }
+.mock-exam-flag.is-flagged { border-color: var(--amber); background: var(--amber-pale); color: var(--amber); }
+.mock-exam-runner-nav { padding: var(--space-4) var(--space-5); display: flex; flex-wrap: wrap; gap: var(--space-3); border-top: 1px solid var(--grid); }
+/* Only the submit button (the non-secondary .btn) floats right; prev/next stay
+   grouped at the left. Scoped so the auto margin never lands on all three. */
+.mock-exam-runner-nav .btn:not(.btn--secondary) { margin-left: auto; }
+
+/* Dialogs keep --shadow-strong and --radius-dialog (design-system.md §3.2: "dialog
+   なので --shadow-strong を残してよい"). */
+.mock-exam-palette, .mock-exam-submit-dialog {
+  width: min(560px, 92vw); max-height: 86vh; padding: var(--space-6); border: 1px solid var(--grid-strong);
+  border-radius: var(--radius-dialog); background: var(--surface); color: var(--ink); box-shadow: var(--shadow-strong);
+}
+.mock-exam-palette::backdrop, .mock-exam-submit-dialog::backdrop { background: rgb(23 52 71 / 45%); }
+.mock-exam-palette { overflow: auto; }
+.mock-exam-palette-head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); }
+.mock-exam-palette-filters, .mock-exam-review-filters { margin: var(--space-4) 0; display: flex; flex-wrap: wrap; gap: var(--space-2); border: 0; padding: 0; }
+.mock-exam-palette-empty, .mock-exam-review-empty, .mock-exam-history-empty { margin: 0; padding: var(--space-6); border: 1px dashed var(--grid-strong); text-align: center; color: var(--ink-soft); }
+.mock-exam-palette-grid { margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(52px, 1fr)); gap: var(--space-2); list-style: none; }
+/* .chip supplies border/radius/background/color/cursor/min-height(44px); the cell
+   only adds the grid-slot layout, the mono index glyph, and the state overlays
+   .chip doesn't model (current outline, flagged corner mark). "answered" reuses
+   .chip's own .is-selected look instead of a bespoke rule. */
+.mock-exam-palette-cell { position: relative; width: 100%; display: flex; align-items: center; justify-content: center; font: 700 var(--fs-sm) var(--mono); }
+.mock-exam-palette-cell.is-flagged { border-left: 4px solid var(--amber); }
+.mock-exam-palette-cell.is-current { outline: 3px solid var(--focus); outline-offset: 1px; }
+.mock-exam-palette-flag { position: absolute; top: 2px; right: 3px; font-size: var(--fs-micro); color: var(--amber); }
+.mock-exam-palette-check { position: absolute; bottom: 1px; right: 3px; font-size: var(--fs-micro); color: var(--cyan-dark); }
+
+.mock-exam-submit-dialog .card-title { margin-bottom: var(--space-3); }
+.mock-exam-submit-summary { margin: var(--space-4) 0; padding-left: var(--space-5); display: grid; gap: var(--space-2); font: var(--fs-sm) var(--mono); }
+.mock-exam-submit-warn { margin: var(--space-2) 0 0; }
+.mock-exam-dialog-actions { margin-top: var(--space-5); display: flex; flex-wrap: wrap; gap: var(--space-3); justify-content: flex-end; }
+
+.mock-exam-result, .mock-exam-review, .mock-exam-history { margin-top: var(--space-6); }
+.mock-exam-outcome { margin: var(--space-2) 0 0; font: 700 var(--fs-base) var(--mono); color: var(--cyan-dark); }
+.mock-exam-disclaimer { margin: var(--space-4) 0; }
+.mock-exam-scoreboard { margin: 0 0 var(--space-6); display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: var(--space-4); }
+.mock-exam-scoreboard div { display: grid; gap: var(--space-1); }
+.mock-exam-scoreboard dt { font-size: var(--fs-xs); color: var(--ink-soft); }
+.mock-exam-scoreboard dd { margin: 0; font: 700 var(--fs-xl) var(--mono); }
+.mock-exam-tally { margin: 0 0 var(--space-5); }
+.mock-exam-tally .card-title { margin-bottom: var(--space-3); }
+.mock-exam-tally-note { margin: 0 0 var(--space-3); font-size: var(--fs-xs); color: var(--ink-soft); line-height: var(--lh-body); }
+.mock-exam-tally dl { margin: 0; display: grid; gap: var(--space-2); }
+.mock-exam-tally dl div { display: flex; justify-content: space-between; gap: var(--space-4); padding: var(--space-2) 0; border-bottom: 1px solid var(--grid); }
+.mock-exam-tally dt { color: var(--ink); }
+.mock-exam-tally dd { margin: 0; font: var(--fs-sm) var(--mono); color: var(--ink-soft); white-space: nowrap; }
+.mock-exam-result-actions { display: flex; flex-wrap: wrap; gap: var(--space-3); align-items: center; }
+
+.mock-exam-review-list { margin: 0; padding: 0; display: grid; gap: var(--space-5); list-style: none; }
+.mock-exam-review-item-head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); margin-bottom: var(--space-3); font: var(--fs-xs) var(--mono); color: var(--ink-soft); }
+.mock-exam-verdict { padding: 3px var(--space-2); font: 700 var(--fs-xs) var(--mono); border: 1px solid currentcolor; }
+.mock-exam-verdict.is-correct { color: var(--green); }
+.mock-exam-verdict.is-incorrect { color: var(--danger); }
+.mock-exam-verdict.is-unanswered { color: var(--ink-soft); }
+.mock-exam-your-answer, .mock-exam-correct-answer { margin: var(--space-3) 0 0; font-size: var(--fs-sm); line-height: var(--lh-body); }
+.mock-exam-review-missing { margin: var(--space-3) 0 0; color: var(--amber); font-size: var(--fs-sm); }
+
+.mock-exam-history-list { margin: 0; padding: 0; display: grid; gap: var(--space-3); list-style: none; }
+.mock-exam-history-item { display: flex; align-items: center; justify-content: space-between; gap: var(--space-4); flex-wrap: wrap; padding: var(--space-4) var(--space-5); border: 1px solid var(--grid-strong); background: var(--surface); }
+.mock-exam-history-meta { display: flex; align-items: baseline; gap: var(--space-2) var(--space-4); flex-wrap: wrap; font: var(--fs-sm) var(--mono); color: var(--ink-soft); }
+.mock-exam-history-meta strong { font-size: var(--fs-base); color: var(--ink); }
+
+.mock-exam-incompatible, .mock-exam-save-error { margin-top: var(--space-6); padding: var(--pad-panel); border: 1px solid var(--danger); background: var(--danger-pale); }
+.mock-exam-incompatible p, .mock-exam-save-error p { margin: 0 0 var(--space-5); line-height: var(--lh-relaxed); }
+
+@media (max-width: 640px) {
+  .mock-exam-runner-head { flex-direction: column; align-items: flex-start; gap: var(--space-2); }
+  .mock-exam-counts .btn--secondary { margin-left: 0; }
+  .mock-exam-runner-nav .btn:not(.btn--secondary) { margin-left: 0; width: 100%; }
+  .mock-exam-result-actions .btn, .mock-exam-result-actions .btn--secondary { flex: 1 1 auto; }
+}
+
+/* Task 9 — learning analysis */
+.mock-exam-landing-links { margin-top: var(--space-4); display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-5); }
+.mock-exam-analysis { margin-top: var(--space-6); display: grid; gap: var(--space-6); }
+.mock-exam-analysis-empty { padding: var(--pad-panel); border: 1px dashed var(--grid-strong); background: var(--surface); text-align: center; }
+.mock-exam-analysis-empty-title { margin: 0 0 var(--space-2); font-weight: 700; font-size: var(--fs-lg); }
+.mock-exam-analysis-counts { margin: 0; display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-5); font: var(--fs-sm) var(--mono); color: var(--ink-soft); }
+.mock-exam-analysis-note { margin: 0; }
+
+.mock-exam-range { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-3); }
+.mock-exam-range-legend { font-size: var(--fs-xs); color: var(--ink-soft); text-transform: uppercase; letter-spacing: .04em; }
+.mock-exam-range-summary { font: var(--fs-sm) var(--mono); color: var(--ink-soft); }
+
+/* .mock-exam-stability/-evidence/-priority/-axis/-trend/-next-actions/-tally are
+   .panel.panel--sm in their JSX (B5): border --grid → --grid-strong via .panel,
+   padding rounded to --pad-panel-sm. Their own selectors carry only content that
+   .panel doesn't model. */
+.mock-exam-analysis section > .card-title { margin-bottom: var(--space-3); }
+.mock-exam-stability-label { margin: 0 0 var(--space-2); font-size: var(--fs-lg); }
+.mock-exam-stability p { margin: 0 0 var(--space-3); line-height: var(--lh-body); }
+.mock-exam-stability-disclaimers { margin: 0; padding-left: var(--space-5); display: grid; gap: var(--space-2); color: var(--ink-soft); font-size: var(--fs-sm); line-height: var(--lh-body); }
+.mock-exam-evidence p { margin: 0 0 var(--space-3); line-height: var(--lh-body); font-size: var(--fs-sm); }
+.mock-exam-evidence-legend { margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-4); list-style: none; font: var(--fs-sm) var(--mono); color: var(--ink-soft); }
+
+.mock-exam-axis-note { margin: 0 0 var(--space-3); font-size: var(--fs-xs); color: var(--ink-soft); line-height: var(--lh-body); }
+.mock-exam-axis-empty { margin: 0; padding: var(--space-4); border: 1px dashed var(--grid-strong); text-align: center; color: var(--ink-soft); font-size: var(--fs-sm); }
+.mock-exam-table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.mock-exam-axis-table, .mock-exam-trend-table { width: 100%; border-collapse: collapse; font-size: var(--fs-sm); }
+.mock-exam-axis-table th, .mock-exam-axis-table td, .mock-exam-trend-table th, .mock-exam-trend-table td { padding: var(--space-2) var(--space-3); text-align: right; border-bottom: 1px solid var(--grid); white-space: nowrap; }
+.mock-exam-axis-table thead th, .mock-exam-trend-table thead th { font: 700 var(--fs-xs) var(--mono); color: var(--ink-soft); text-transform: uppercase; letter-spacing: .03em; border-bottom: 2px solid var(--grid-strong); }
+.mock-exam-axis-table th[scope="row"], .mock-exam-trend-table th[scope="row"], .mock-exam-axis-table thead th:first-child, .mock-exam-trend-table thead th:first-child { text-align: left; }
+.mock-exam-axis-table tbody td { font: var(--fs-sm) var(--mono); font-variant-numeric: tabular-nums; }
+.mock-exam-trend-table tbody td { font: var(--fs-sm) var(--mono); font-variant-numeric: tabular-nums; }
+.mock-exam-axis-row.evidence-insufficient th[scope="row"] { border-left: 3px solid var(--grid-strong); }
+.mock-exam-axis-row.evidence-limited th[scope="row"] { border-left: 3px solid var(--amber); }
+.mock-exam-axis-row.evidence-sufficient th[scope="row"] { border-left: 3px solid var(--cyan-dark); }
+.mock-exam-axis-table th[scope="row"] { padding-left: var(--space-3); }
+
+.mock-exam-review-group { margin-top: var(--space-4); }
+.mock-exam-review-group h4 { color: var(--ink); }
+.mock-exam-priority-list { margin: 0; padding: 0 0 0 var(--space-5); display: grid; gap: var(--space-2); }
+.mock-exam-priority-item { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: var(--space-1) var(--space-4); }
+.mock-exam-priority-name { font-weight: 700; }
+.mock-exam-priority-detail { font: var(--fs-xs) var(--mono); color: var(--ink-soft); }
+
+.mock-exam-next-actions-list { margin: 0; padding: 0; display: grid; gap: var(--space-3); list-style: none; }
+/* Inner list row inside the already-panelled .mock-exam-next-actions section: the
+   lighter --grid border is correct here, mirroring .panel--flat's "nested inner
+   block" rule (design-system.md §3.2). */
+.mock-exam-next-action { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-3) var(--space-4); padding: var(--space-3) var(--space-4); border: 1px solid var(--grid); background: var(--cyan-pale); }
+.mock-exam-next-action span { flex: 1 1 220px; line-height: var(--lh-body); font-size: var(--fs-sm); }

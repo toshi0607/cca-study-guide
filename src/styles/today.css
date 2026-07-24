@@ -1,0 +1,202 @@
+/* Today view: hero, due block, exam blueprint, status strip, weak areas. */
+
+.view-stack {
+  width: min(1180px, 100%);
+  margin: 0 auto;
+}
+
+.today-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 264px;
+  gap: clamp(30px, 5vw, 76px);
+  align-items: center;
+  padding: var(--pad-hero);
+  border: 2px solid var(--ink);
+  background: var(--surface);
+  box-shadow: var(--shadow-strong);
+  position: relative;
+  overflow: hidden;
+}
+
+.today-hero::after {
+  content: "CCAR-F / 01";
+  position: absolute;
+  right: -10px;
+  top: 16px;
+  color: rgb(8 126 155 / 8%);
+  font: 700 4rem/1 var(--display);
+  letter-spacing: .02em;
+}
+
+.today-hero h2 {
+  margin: 0;
+  font-family: var(--display);
+  font-weight: 900;
+  font-feature-settings: "palt";
+  letter-spacing: .01em;
+  line-height: 1.16;
+  word-break: auto-phrase;
+}
+
+.today-hero > div:first-child { container-type: inline-size; }
+.today-hero h2 { max-width: 740px; font-size: clamp(1.7rem, 4.2vw, 4.5rem); font-size: var(--fs-hero); }
+.today-hero h2 em { color: var(--cyan); font-style: normal; }
+.today-hero > div:first-child > p:last-child { max-width: 590px; margin: var(--space-5) 0 0; color: var(--ink-soft); }
+
+.due-block {
+  padding: var(--space-8) var(--space-6);
+  display: grid;
+  align-content: center;
+  border: 2px solid var(--cyan-dark);
+  background: var(--surface);
+  box-shadow: 6px 6px 0 rgb(8 126 155 / 14%);
+  position: relative;
+  z-index: 1;
+}
+
+.due-block > span { color: var(--ink-soft); font: var(--fs-micro) var(--mono); letter-spacing: .08em; text-transform: uppercase; }
+.due-block strong { margin: var(--space-1) 0 calc(-1 * var(--space-1)); font: 700 clamp(3.6rem, 6vw, 5.4rem)/1 var(--display); letter-spacing: -.01em; }
+.due-block .btn { margin-top: var(--space-6); }
+
+.blueprint {
+  margin-top: var(--space-6);
+  padding: var(--pad-panel);
+  border: 1px solid var(--grid-strong);
+  background: var(--blueprint-bg);
+  background-image:
+    linear-gradient(rgb(8 126 155 / 8%) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(8 126 155 / 8%) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+.blueprint-map {
+  min-height: 390px;
+  margin-top: var(--space-8);
+  display: grid;
+  grid-template-columns: repeat(5, minmax(120px, 1fr));
+  grid-template-rows: repeat(2, minmax(176px, auto));
+  gap: var(--space-8) var(--space-5);
+  align-items: stretch;
+  position: relative;
+}
+
+.blueprint-lines {
+  position: absolute;
+  z-index: 0;
+  inset: 10px 0 auto;
+  width: 100%;
+  height: 300px;
+  fill: none;
+  stroke: var(--rail-active-line);
+  stroke-width: 2;
+  stroke-dasharray: 7 6;
+  animation: draw-blueprint 900ms ease-out both;
+}
+
+@keyframes draw-blueprint { from { stroke-dashoffset: 110; opacity: 0; } to { stroke-dashoffset: 0; opacity: 1; } }
+
+.blueprint-node {
+  z-index: 1;
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  border: 2px solid var(--cyan-dark);
+  background: rgb(255 255 255 / 93%);
+  box-shadow: 5px 5px 0 rgb(8 126 155 / 13%);
+}
+
+.blueprint-node > p { order: 2; }
+.blueprint-node .node-progress { order: 3; margin-top: auto; }
+.node-1 { grid-column: 1 / 3; }
+.node-2 { grid-column: 3 / 4; }
+.node-3 { grid-column: 4 / 6; }
+.node-4 { grid-column: 2 / 4; grid-row: 2; }
+.node-5 { grid-column: 4 / 5; grid-row: 2; }
+
+.node-copy { display: flex; justify-content: space-between; align-items: start; }
+.node-copy span { padding: 2px 6px; background: var(--ink); color: var(--on-ink); font: 700 var(--fs-micro) var(--mono); }
+.node-copy strong { font: 700 var(--fs-xl)/1 var(--display); letter-spacing: .01em; color: var(--cyan-dark); }
+.blueprint-node > p { margin: 0; font-weight: 700; font-size: var(--fs-base); line-height: 1.45; word-break: auto-phrase; }
+.node-progress { height: 24px; background: linear-gradient(90deg, var(--cyan-pale) var(--progress), var(--track) var(--progress)); border: 1px solid var(--grid); }
+.node-progress span { padding-left: 7px; font: var(--fs-micro)/22px var(--mono); }
+
+
+.status-strip {
+  margin-top: var(--space-6);
+  padding: var(--pad-panel);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-8);
+  border: 1px solid var(--grid-strong);
+  background: var(--surface);
+}
+.status-strip dl { display: flex; gap: clamp(26px, 5vw, 74px); margin: 0; }
+.status-strip dl div { display: grid; }
+.status-strip dt { color: var(--ink-soft); font-size: var(--fs-xs); }
+.status-strip dd { margin: 0; font: 700 var(--fs-xl) var(--mono); }
+
+.weak-areas {
+  margin-top: var(--space-6);
+  padding: var(--pad-panel);
+  border: 1px solid var(--grid-strong);
+  background: var(--surface);
+}
+.weak-list { margin-top: var(--space-6); display: grid; gap: var(--space-2); }
+.weak-row {
+  min-height: 54px;
+  padding: var(--space-2) var(--space-4);
+  display: grid;
+  grid-template-columns: auto 1fr auto auto;
+  gap: var(--space-4);
+  align-items: center;
+  border: 1px solid var(--grid-strong);
+  border-left: 4px solid var(--amber);
+  background: var(--surface);
+  text-align: left;
+  cursor: pointer;
+}
+.weak-row:hover { border-color: var(--amber); background: var(--amber-pale); }
+.weak-row-domain { padding: 3px 6px; background: var(--amber); color: var(--on-ink); font: 700 var(--fs-xs) var(--mono); }
+.weak-row-title { font-weight: 700; word-break: auto-phrase; }
+.weak-row strong { font: var(--fs-xs) var(--mono); white-space: nowrap; }
+.weak-areas .empty-state { margin-top: var(--space-6); }
+.weak-count { margin-left: var(--space-3); color: var(--amber); font-weight: 700; font-size: var(--fs-xs); }
+
+/* Re-applies "palt" after the `font` shorthand above resets font-feature-settings. */
+.today-hero h2 {
+  font-feature-settings: "palt";
+  letter-spacing: .01em;
+}
+
+@media (max-width: 1120px) {
+  .today-hero { grid-template-columns: 1fr; gap: var(--space-6); }
+  .today-hero h2 { font-size: clamp(1.7rem, 11cqi, 3.2rem); }
+  .blueprint-map {
+    min-height: 0;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-rows: auto;
+  }
+  .blueprint-lines { display: none; }
+  .blueprint-node { grid-column: auto !important; grid-row: auto !important; min-height: 0; }
+  .blueprint-node.node-1 { grid-column: 1 / -1 !important; }
+}
+
+@media (max-width: 760px) {
+  .today-hero { grid-template-columns: 1fr; padding: var(--space-6) var(--space-5) var(--space-6); gap: var(--space-6); box-shadow: 6px 6px 0 rgb(8 126 155 / 12%); }
+  .today-hero::after { font-size: 2.4rem; top: 12px; }
+  .today-hero h2 { font-size: clamp(1.9rem, 8.5vw, 2.6rem); }
+  .due-block { padding: var(--space-6) var(--space-5); }
+  .blueprint { padding: var(--space-6) var(--space-4); }
+  .blueprint-map { margin-top: var(--space-6); grid-template-columns: 1fr; gap: var(--space-3); }
+  .blueprint-node { min-height: 0; }
+  .status-strip { align-items: stretch; flex-direction: column; }
+  .status-strip dl { justify-content: space-between; gap: var(--space-3); }
+  .status-strip dd { font-size: var(--fs-base); }
+}
+
+@media (max-width: 400px) {
+  .status-strip dl { display: grid; grid-template-columns: repeat(3, 1fr); }
+  .status-strip dt { font-size: var(--fs-micro); }
+}

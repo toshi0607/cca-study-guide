@@ -31,7 +31,7 @@ export function GuideEntry(props: {
     return () => { cancelled = true; };
   }, []);
 
-  if (error) return <section class="guide-load-error" role="alert" tabIndex={-1} ref={errorRef}><p>{props.copy.guide.loadError}</p><button type="button" onClick={() => window.location.reload()}>{props.copy.guide.retry}</button></section>;
-  if (!Guide) return <section class="guide-loading" role="status" aria-live="polite" aria-busy="true"><p>{props.copy.guide.loading}</p></section>;
+  if (error) return <section class="guide-load-error panel" role="alert" tabIndex={-1} ref={errorRef}><p>{props.copy.guide.loadError}</p><button type="button" class="btn" onClick={() => window.location.reload()}>{props.copy.guide.retry}</button></section>;
+  if (!Guide) return <section class="guide-loading panel" role="status" aria-live="polite" aria-busy="true"><p>{props.copy.guide.loading}</p></section>;
   return <Guide {...props}/>;
 }

@@ -7,7 +7,7 @@ import type { QuizStat } from '../../lib/storage';
 import type { QuizMode } from './types';
 
 const domainBadges = (domainIds: string[]) =>
-  domains.filter((domain) => domainIds.includes(domain.id)).map((domain) => <span key={domain.id} class="card-domain">D{domain.number}</span>);
+  domains.filter((domain) => domainIds.includes(domain.id)).map((domain) => <span key={domain.id} class="badge badge--ink">D{domain.number}</span>);
 
 export function QuizSetup({
   copy, locale, mode, count, domainChoice, scenarios, questionsByScenario, quizStats,
@@ -36,16 +36,16 @@ export function QuizSetup({
   return (
     <div class="quiz-setup">
       <fieldset><legend>{copy.quiz.modeLegend}</legend><div class="chips">
-        <button type="button" class={mode === 'random' ? 'selected' : ''} aria-pressed={mode === 'random'} onClick={() => onModeChange('random')}>{copy.quiz.modeRandom}</button>
-        <button type="button" class={mode === 'scenario' ? 'selected' : ''} aria-pressed={mode === 'scenario'} onClick={() => onModeChange('scenario')}>{copy.quiz.modeScenario}</button>
+        <button type="button" class={`chip${mode === 'random' ? ' is-selected' : ''}`} aria-pressed={mode === 'random'} onClick={() => onModeChange('random')}>{copy.quiz.modeRandom}</button>
+        <button type="button" class={`chip${mode === 'scenario' ? ' is-selected' : ''}`} aria-pressed={mode === 'scenario'} onClick={() => onModeChange('scenario')}>{copy.quiz.modeScenario}</button>
       </div></fieldset>
       {mode === 'random' && <>
-        <fieldset><legend>{copy.quiz.countLegend}</legend><div class="chips">{countOptions.map((option) => <button key={String(option.value)} type="button" class={count === option.value ? 'selected' : ''} aria-pressed={count === option.value} onClick={() => onCountChange(option.value)}>{option.label}</button>)}</div></fieldset>
-        <fieldset><legend>{copy.quiz.domainLegend}</legend><div class="chips"><button type="button" class={domainChoice === 'weighted' ? 'selected' : ''} aria-pressed={domainChoice === 'weighted'} onClick={() => onDomainChoiceChange('weighted')}>{copy.quiz.weightedDomains}</button>{domains.map((domain) => <button key={domain.id} type="button" class={domainChoice === domain.id ? 'selected' : ''} aria-pressed={domainChoice === domain.id} onClick={() => onDomainChoiceChange(domain.id)}>D{domain.number}</button>)}</div></fieldset>
-        <button class="quiz-start" onClick={onStart}>{copy.quiz.start} <span aria-hidden="true">→</span></button>
+        <fieldset><legend>{copy.quiz.countLegend}</legend><div class="chips">{countOptions.map((option) => <button key={String(option.value)} type="button" class={`chip${count === option.value ? ' is-selected' : ''}`} aria-pressed={count === option.value} onClick={() => onCountChange(option.value)}>{option.label}</button>)}</div></fieldset>
+        <fieldset><legend>{copy.quiz.domainLegend}</legend><div class="chips"><button type="button" class={`chip${domainChoice === 'weighted' ? ' is-selected' : ''}`} aria-pressed={domainChoice === 'weighted'} onClick={() => onDomainChoiceChange('weighted')}>{copy.quiz.weightedDomains}</button>{domains.map((domain) => <button key={domain.id} type="button" class={`chip${domainChoice === domain.id ? ' is-selected' : ''}`} aria-pressed={domainChoice === domain.id} onClick={() => onDomainChoiceChange(domain.id)}>D{domain.number}</button>)}</div></fieldset>
+        <button class="btn quiz-start" onClick={onStart}>{copy.quiz.start} <span aria-hidden="true">→</span></button>
       </>}
       {mode === 'scenario' && <>
-        <p class="scenario-note">{copy.quiz.scenarioIntroduction}</p>
+        <p class="note note--info scenario-note">{copy.quiz.scenarioIntroduction}</p>
         <ul class="scenario-list" aria-label={copy.quiz.scenarioListLabel}>{scenarios.map((entry) => {
           const linked = questionsByScenario.get(entry.id) ?? [];
           const answeredCount = linked.filter((question) => quizStats?.[question.id]).length;

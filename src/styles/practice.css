@@ -1,0 +1,219 @@
+/* Card practice and choice practice (quiz) views. */
+
+.practice-view {
+  width: min(1180px, 100%);
+  margin: 0 auto;
+}
+
+
+.card-sources small { color: var(--ink-soft); font: var(--fs-micro) var(--mono); }
+
+.practice-target, .quiz-target { margin: var(--space-5) 0; }
+.practice-target { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3); justify-content: space-between; }
+.practice-target p, .quiz-target { margin: 0; }
+
+.filter-panel {
+  margin-top: var(--space-6);
+  padding: var(--pad-panel-sm);
+  display: grid;
+  grid-template-columns: minmax(240px, 1fr) auto auto;
+  gap: var(--space-5);
+  align-items: end;
+  border: 1px solid var(--grid-strong);
+  background: var(--surface);
+}
+.search-label { display: grid; gap: var(--space-2); color: var(--ink-soft); font-size: var(--fs-xs); font-weight: 700; }
+.search-label input { min-height: var(--space-12); padding: 0 var(--space-3); border: 1px solid var(--grid-strong); border-radius: 0; background: var(--paper); color: var(--ink); }
+.filter-panel fieldset { margin: 0; padding: 0; border: 0; }
+.filter-panel legend { margin-bottom: var(--space-2); color: var(--ink-soft); font-size: var(--fs-xs); font-weight: 700; }
+.chips { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.result-count { margin: var(--space-5) 0 var(--space-3); color: var(--ink-soft); font: var(--fs-xs) var(--mono); }
+
+.card-stack { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-5); align-items: start; }
+.practice-card { border: 1px solid var(--grid-strong); background: var(--surface); }
+.practice-card > header { min-height: var(--space-12); padding: var(--space-2) var(--space-5); display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--grid); color: var(--ink-soft); font: var(--fs-micro) var(--mono); }
+.practice-card > header div { display: flex; align-items: center; gap: var(--space-3); }
+.card-prompt { min-height: 190px; padding: var(--space-8) var(--pad-panel-sm) var(--space-5); }
+.card-prompt h3 { margin: 0; font-size: clamp(var(--fs-lg), 2.5vw, var(--fs-xl)); line-height: 1.55; letter-spacing: -.015em; }
+.reveal-button.btn--wide { margin: var(--space-6) var(--pad-panel-sm) var(--pad-panel-sm); width: calc(100% - var(--pad-panel-sm) * 2); }
+.answer { padding: var(--pad-panel-sm); border-top: 2px solid var(--cyan); background: var(--reveal-bg); animation: reveal 180ms ease-out both; }
+@keyframes reveal { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: none; } }
+.answer-lead { font-size: var(--fs-base); font-weight: 700; }
+.answer > p:not(.eyebrow) { line-height: var(--lh-relaxed); }
+.pitfall { margin-top: var(--space-5); }
+.pitfall strong { font-size: var(--fs-xs); }
+.card-sources { margin-top: var(--space-6); padding-top: var(--space-5); border-top: 1px dashed var(--grid-strong); }
+.card-sources > strong { font-size: var(--fs-xs); }
+.rating { margin: var(--space-6) 0 0; padding: var(--space-5) 0 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-2); border: 0; border-top: 1px solid var(--grid); }
+.rating legend { padding-top: var(--space-5); font-size: var(--fs-xs); font-weight: 700; }
+.rating button { min-height: 62px; padding: var(--space-2); border: 1px solid var(--grid-strong); border-bottom-width: 3px; border-radius: var(--radius); background: var(--surface); cursor: pointer; font-weight: 700; }
+.rating button:nth-of-type(1) { border-bottom-color: color-mix(in srgb, var(--danger) 55%, #fff); }
+.rating button:nth-of-type(2) { border-bottom-color: color-mix(in srgb, var(--amber) 55%, #fff); }
+.rating button:nth-of-type(3) { border-bottom-color: color-mix(in srgb, var(--green) 55%, #fff); }
+.rating button:nth-of-type(1):hover { border-bottom-color: var(--danger); background: var(--danger-pale); }
+.rating button:nth-of-type(2):hover { border-bottom-color: var(--amber); background: var(--amber-pale); }
+.rating button:nth-of-type(3):hover { border-bottom-color: var(--green); background: var(--green-pale); }
+.rating small { display: block; color: var(--ink-soft); font-weight: 400; font-size: var(--fs-micro); }
+
+.quiz-setup {
+  margin-top: var(--space-6);
+  padding: var(--pad-panel);
+  display: grid;
+  justify-items: start;
+  gap: var(--space-5);
+  border: 1px solid var(--grid-strong);
+  background: var(--surface);
+}
+.quiz-setup fieldset { margin: 0; padding: 0; border: 0; }
+.quiz-setup legend { margin-bottom: var(--space-2); color: var(--ink-soft); font-size: var(--fs-xs); font-weight: 700; }
+
+/* Layout-only: `.quiz-start` positions the primary "start"/"proceed"/"retry" CTA
+   (min-width + space-between for the trailing arrow). Appearance comes from `.btn`. */
+.quiz-start { min-width: 240px; justify-content: space-between; }
+.scenario-note { max-width: 720px; }
+
+.scenario-list { width: 100%; margin: 0; padding: 0; display: grid; gap: var(--space-3); list-style: none; }
+.scenario-item {
+  width: 100%;
+  min-height: 44px;
+  padding: var(--space-4) var(--space-5);
+  display: grid;
+  gap: var(--space-2);
+  justify-items: start;
+  border: 1px solid var(--grid-strong);
+  border-radius: var(--radius);
+  background: var(--surface);
+  cursor: pointer;
+  text-align: left;
+}
+.scenario-item:hover { border-color: var(--cyan); }
+.scenario-item strong { font-size: var(--fs-base); line-height: 1.5; }
+.scenario-item-meta { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-4); color: var(--ink-soft); font: var(--fs-micro) var(--mono); }
+.scenario-brief { margin-top: var(--space-6); padding: var(--pad-panel); border: 1px solid var(--grid-strong); background: var(--surface); }
+.scenario-brief h3 { margin: var(--space-2) 0 var(--space-4); }
+.scenario-brief > p:not(.eyebrow) { line-height: var(--lh-relaxed); }
+.scenario-brief .quiz-start { margin-top: var(--space-5); }
+.scenario-brief .quiz-quit { display: block; margin: var(--space-4) 0 0; }
+.scenario-context { margin: var(--space-5) var(--pad-panel-sm); border: 1px solid var(--grid); background: var(--cyan-pale); }
+.scenario-context summary { padding: var(--space-3); cursor: pointer; font-size: var(--fs-sm); font-weight: 700; }
+.scenario-context[open] summary { border-bottom: 1px solid var(--grid); }
+.scenario-context > div { padding: var(--space-3) var(--space-4); display: grid; gap: var(--space-3); }
+.scenario-context p { margin: 0; font-size: var(--fs-sm); line-height: var(--lh-relaxed); }
+
+.quiz-question { margin-top: var(--space-6); border: 1px solid var(--grid-strong); background: var(--surface); }
+.quiz-question > header { min-height: var(--space-12); padding: var(--space-2) var(--space-5); display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); border-bottom: 1px solid var(--grid); color: var(--ink-soft); font: var(--fs-micro) var(--mono); }
+.quiz-question > header div { display: flex; align-items: center; gap: var(--space-3); }
+.quiz-question .card-prompt { min-height: 0; padding-bottom: var(--space-3); }
+.choice-list { margin: 0; padding: 0 var(--pad-panel-sm) var(--space-6); display: grid; gap: var(--space-3); border: 0; }
+.choice-button {
+  min-height: 56px;
+  padding: var(--space-3) var(--space-4);
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  border: 1px solid var(--grid-strong);
+  border-radius: var(--radius);
+  background: var(--surface);
+  cursor: pointer;
+  text-align: left;
+}
+.choice-button:hover:not(:disabled) { border-color: var(--cyan); }
+.choice-button.selected { border-color: var(--cyan-dark); background: var(--cyan-pale); }
+.choice-button:disabled { cursor: default; }
+.choice-button.correct { border-color: var(--green); background: var(--green-pale); box-shadow: inset 4px 0 var(--green); }
+.choice-button.incorrect { border-color: var(--danger); background: var(--danger-pale); box-shadow: inset 4px 0 var(--danger); }
+.choice-button.correct .choice-id { background: var(--green); color: var(--on-ink); }
+.choice-button.incorrect .choice-id { background: var(--danger); color: var(--on-ink); }
+.choice-id, .choice-mark { flex: 0 0 auto; }
+.choice-text { flex: 1; font-size: var(--fs-sm); line-height: 1.55; }
+.choice-mark { color: var(--ink-soft); }
+.choice-mark--correct { color: var(--green); }
+.quiz-submit.btn--wide { margin: 0 var(--pad-panel-sm) var(--space-6); width: calc(100% - var(--pad-panel-sm) * 2); justify-content: center; }
+.quiz-feedback { padding: var(--pad-panel-sm); border-top: 2px solid var(--cyan); background: var(--reveal-bg); animation: reveal 180ms ease-out both; }
+.quiz-verdict { margin: 0 0 var(--space-3); font: 700 var(--fs-lg) var(--display); }
+.quiz-verdict.is-correct { color: var(--green); }
+.quiz-verdict.is-incorrect { color: var(--danger); }
+.quiz-feedback > p:not(.quiz-verdict) { line-height: var(--lh-relaxed); }
+.quiz-next.btn--wide { margin-top: var(--space-6); }
+
+/* `.quiz-quit` is a `.btn--text` (system.css) with no built-in margin. These
+   contexts place it as a raw sibling in an unpadded card, so it needs a
+   context-scoped inset matching the card's own body padding. Contexts that
+   already sit inside a padded panel (`.scenario-brief`, `.session-summary-actions`)
+   reset it back to 0 just above. */
+.quiz-question > .quiz-quit,
+.session-card > .quiz-quit {
+  margin: var(--space-1) var(--pad-panel-sm) var(--space-6);
+}
+
+/* Question metadata: domain, cognitive level, and measured skills as localized
+   labels. Wraps freely so 360px never overflows; skills read as text tags, not
+   color-coded chips. */
+.question-meta { margin: 0; padding: var(--space-3) var(--pad-panel-sm) 0; display: grid; gap: var(--space-2); }
+.question-meta-row { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--space-2) var(--space-3); margin: 0; }
+.question-meta-row dt { flex: 0 0 auto; color: var(--ink-soft); font: 700 var(--fs-micro) var(--mono); letter-spacing: .04em; text-transform: uppercase; }
+.question-meta-row dd { margin: 0; display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); min-width: 0; }
+
+/* Post-answer / summary review: whole-question judgment and per-choice reasoning
+   under separate headings so the two explanations are never conflated. */
+.answer-section { margin-top: var(--space-5); }
+.answer-section > p { margin: 0; line-height: var(--lh-relaxed); }
+.choice-review { display: grid; gap: var(--space-3); }
+.choice-review-list { margin: 0; padding: 0; display: grid; gap: var(--space-3); list-style: none; }
+.choice-review-list .choice-button { min-height: 0; display: block; cursor: default; }
+.choice-review-head { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
+.choice-rationale { margin: var(--space-3) 0 0; font-size: var(--fs-sm); line-height: var(--lh-relaxed); color: var(--ink-soft); }
+.choice-mark--incorrect { color: var(--danger); }
+.choice-mark--picked { color: var(--ink); border-style: dashed; }
+.rationale-status { margin: 0; color: var(--ink-soft); font-size: var(--fs-sm); }
+
+/* Missed-question review inside the summary reuses the same review blocks,
+   collapsed per question so the summary is not crowded. */
+.quiz-review-item summary { min-height: 44px; display: flex; align-items: center; padding: var(--space-2) 0; cursor: pointer; font-weight: 700; }
+.quiz-review-body { padding-bottom: var(--space-2); }
+.quiz-review-body .question-meta { padding-inline: 0; }
+.quiz-review-body .quiz-correct-answer { margin: var(--space-3) 0 0; line-height: var(--lh-relaxed); }
+
+.quiz-summary { display: grid; gap: var(--space-6); margin-top: var(--space-6); }
+.quiz-score, .quiz-domains, .quiz-missed { padding: var(--pad-panel); border: 1px solid var(--grid-strong); background: var(--surface); }
+.quiz-score-figure { display: grid; justify-items: start; }
+.quiz-score-figure > span { color: var(--ink-soft); font: var(--fs-micro) var(--mono); letter-spacing: .08em; text-transform: uppercase; }
+.quiz-score-figure strong { color: var(--cyan-dark); font: 700 clamp(3rem, 6vw, 4.6rem)/1.15 var(--display); }
+.quiz-missed ul { margin: 0; padding: 0; list-style: none; }
+.quiz-missed li { padding: var(--space-4) 0; border-top: 1px solid var(--grid); }
+.quiz-missed li p { margin: 0 0 var(--space-2); }
+.quiz-missed li p:first-child { font-weight: 700; }
+.quiz-missed li p:not(:first-child) { color: var(--ink-soft); font-size: var(--fs-sm); }
+.quiz-missed li p:last-child { margin: 0; }
+.quiz-summary .quiz-start { justify-self: start; }
+
+.session-start-row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3); margin-top: var(--space-5); }
+.session-start-hint { margin: 0; color: var(--ink-soft); font-size: var(--fs-xs); }
+.session-view { display: grid; gap: var(--space-4); margin-top: var(--space-6); }
+.session-card { max-width: 760px; }
+.session-progress { display: flex; align-items: center; gap: var(--space-3); }
+.session-card .quiz-quit { align-self: start; }
+.session-shortcuts { margin: 0; color: var(--ink-soft); font: var(--fs-micro) var(--mono); }
+.session-summary { margin-top: var(--space-6); padding: var(--pad-panel); border: 1px solid var(--grid-strong); background: var(--surface); }
+.session-breakdown { display: flex; flex-wrap: wrap; gap: var(--space-3) var(--space-8); margin: var(--space-5) 0 0; }
+.session-breakdown div { display: grid; justify-items: start; }
+.session-breakdown dt { color: var(--ink-soft); font-size: var(--fs-xs); font-weight: 700; }
+.session-breakdown dd { margin: 0; color: var(--cyan-dark); font: 700 2rem/1.2 var(--display); font-variant-numeric: tabular-nums; }
+.session-summary-meta { margin: var(--space-4) 0 0; color: var(--ink-soft); font: var(--fs-xs) var(--mono); }
+.session-summary-actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-5); margin-top: var(--space-6); }
+
+@media (max-width: 1000px) {
+  .filter-panel { grid-template-columns: 1fr 1fr; }
+  .search-label { grid-column: 1 / -1; }
+  .card-stack { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 760px) {
+  .filter-panel { grid-template-columns: 1fr; }
+  .search-label { grid-column: auto; }
+  .practice-card > header { padding-inline: var(--space-4); }
+  .card-prompt { min-height: 0; padding-top: var(--space-6); padding-bottom: var(--space-6); }
+  .rating { grid-template-columns: 1fr; }
+  .rating button { min-height: 52px; }
+  .session-shortcuts { display: none; }
+}

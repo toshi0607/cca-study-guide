@@ -1,0 +1,88 @@
+/* Design tokens — the single source of truth for colour, spacing, type and shape.
+   Frozen after Phase 0: additions require an update to tasks/design-system.md first. */
+:root {
+  color-scheme: light;
+
+  /* --- surfaces --- */
+  --paper: #f4f7f9;
+  --surface: #ffffff;
+  --grid: #d7e4ea;
+  --grid-strong: #b5cbd5;
+
+  /* --- text --- */
+  --ink: #173447;
+  --ink-soft: #4c6574;
+  --on-ink: #ffffff;
+
+  /* --- accent --- */
+  --cyan: #087e9b;
+  --cyan-dark: #05657d;
+  --cyan-pale: #dff1f5;
+
+  /* --- status (all four carry a pale companion) --- */
+  --amber: #a85b18;
+  --amber-pale: #fff0df;
+  --green: #287158;
+  --green-pale: #eef7f2;
+  --danger: #a63f35;
+  --danger-pale: #fdf1f0;
+  --focus: #f5a33b;
+
+  /* --- rail --- */
+  --rail-bg: #173447;
+  --rail-text: #c8dce4;
+  --rail-strong: #eef8fb;
+  --rail-muted: #91b1bd;
+  --rail-line: #587f8f;
+  --rail-edge: #0a2738;
+  --rail-active: #0d6479;
+  --rail-active-line: #5fa8bc;
+
+  /* --- auxiliary surfaces --- */
+  --reveal-bg: #f9fcfd;
+  --blueprint-bg: #eaf3f6;
+  --track: #edf2f4;
+
+  /* --- spacing scale --- */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+
+  /* panel padding — three sizes only */
+  --pad-hero: clamp(26px, 4.5vw, 52px);
+  --pad-panel: clamp(20px, 4vw, 40px);
+  --pad-panel-sm: clamp(16px, 3vw, 24px);
+
+  /* --- type scale (8 steps) --- */
+  --fs-micro: .68rem;
+  --fs-xs: .78rem;
+  --fs-sm: .88rem;
+  --fs-base: 1rem;
+  --fs-lg: 1.25rem;
+  --fs-xl: 1.65rem;
+  --fs-2xl: clamp(2.2rem, 4.6vw, 3.8rem);
+  --fs-hero: clamp(1.7rem, 11cqi, 4.5rem);
+
+  --lh-tight: 1.2;
+  --lh-heading: 1.25;
+  --lh-body: 1.65;
+  --lh-relaxed: 1.8;
+
+  /* --- shape --- */
+  --radius: 2px;
+  --radius-dialog: 4px;
+  --rail: 244px;
+  --shadow: 6px 6px 0 rgb(23 52 71 / 7%);
+  --shadow-strong: 10px 10px 0 rgb(8 126 155 / 12%);
+
+  /* --- typefaces --- */
+  --display: "Barlow Condensed", "Avenir Next Condensed", "Zen Kaku Gothic New", "BIZ UDPGothic", sans-serif;
+  --body: "BIZ UDPGothic", "Hiragino Sans", "Yu Gothic UI", system-ui, sans-serif;
+  --mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+}

@@ -12,8 +12,8 @@ type TallyRow = { key: string; label: string; tally: MockExamTally };
 function TallyTable({ heading, rows, note, copy }: { heading: string; rows: TallyRow[]; note?: string; copy: UiCopy }) {
   if (rows.length === 0) return null;
   return (
-    <section class="mock-exam-tally" aria-label={heading}>
-      <h3>{heading}</h3>
+    <section class="panel panel--sm mock-exam-tally" aria-label={heading}>
+      <h3 class="card-title">{heading}</h3>
       {note && <p class="mock-exam-tally-note">{note}</p>}
       <dl>
         {rows.map((row) => (
@@ -63,14 +63,14 @@ export function MockExamResult({ attempt, result, stale, headingRef, locale, cop
 
   return (
     <section class="mock-exam-result" aria-labelledby="mock-exam-result-title">
-      <header class="page-header compact">
+      <header class="panel--hero is-compact">
         <p class="eyebrow">{copy.mockExam.resultEyebrow}</p>
-        <h2 id="mock-exam-result-title" tabIndex={-1} ref={headingRef}>{copy.mockExam.resultTitle}</h2>
+        <h2 id="mock-exam-result-title" class="page-title" tabIndex={-1} ref={headingRef}>{copy.mockExam.resultTitle}</h2>
         <p class="mock-exam-outcome">{attempt.outcome === 'expired' ? copy.mockExam.outcomeExpired : copy.mockExam.outcomeSubmitted}</p>
       </header>
-      {stale && <p class="mock-exam-notice" role="note">{copy.mockExam.staleAttemptNotice}</p>}
-      <p class="mock-exam-disclaimer">{copy.mockExam.resultDisclaimer}</p>
-      <dl class="mock-exam-scoreboard">
+      {stale && <p class="note note--warn mock-exam-notice" role="note">{copy.mockExam.staleAttemptNotice}</p>}
+      <p class="note note--info mock-exam-disclaimer">{copy.mockExam.resultDisclaimer}</p>
+      <dl class="panel panel--sm mock-exam-scoreboard">
         <div><dt>{copy.mockExam.rawAccuracyLabel}</dt><dd>{copy.mockExam.rawAccuracyValue(percent)}</dd></div>
         <div><dt>{copy.mockExam.correctLabel}</dt><dd>{result.correctAnswers}</dd></div>
         <div><dt>{copy.mockExam.totalQuestionsLabel}</dt><dd>{result.totalQuestions}</dd></div>
@@ -89,9 +89,9 @@ export function MockExamResult({ attempt, result, stale, headingRef, locale, cop
             <TallyTable heading={copy.mockExam.bySkillHeading} rows={skillRows} note={copy.mockExam.skillMultiNote} copy={copy}/>
           </>}
       <div class="mock-exam-result-actions">
-        <button type="button" class="mock-exam-primary" onClick={onReview}>{copy.mockExam.reviewButton}</button>
-        {onOpenHistory && <button type="button" class="mock-exam-secondary" onClick={onOpenHistory}>{copy.mockExam.historyButton}</button>}
-        <button type="button" class="mock-exam-link" onClick={onBackToLanding}>{copy.mockExam.backToLanding}</button>
+        <button type="button" class="btn" onClick={onReview}>{copy.mockExam.reviewButton}</button>
+        {onOpenHistory && <button type="button" class="btn btn--secondary" onClick={onOpenHistory}>{copy.mockExam.historyButton}</button>}
+        <button type="button" class="btn--text mock-exam-link" onClick={onBackToLanding}>{copy.mockExam.backToLanding}</button>
       </div>
     </section>
   );

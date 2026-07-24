@@ -75,6 +75,8 @@ export type UiCopy = {
   };
   guide: {
     eyebrow: string;
+    // Eyebrow of the study-guide section list (design-system.md §4.1).
+    sectionsEyebrow: string;
     title: string;
     introduction: string;
     openExamGuide: string;
@@ -119,6 +121,8 @@ export type UiCopy = {
   };
   handsOn: {
     eyebrow: string;
+    // Eyebrow of the hands-on list progress heading (design-system.md §4.1).
+    listEyebrow: string;
     title: string;
     introduction: string;
     entryTitle: string;
@@ -386,7 +390,6 @@ export type UiCopy = {
     importJson: string;
     reset: string;
     weakCount: (count: number) => string;
-    sourcesEyebrow: string;
     sourcesTitle: string;
     sourcesDescription: string;
     verified: (date: string) => string;
@@ -634,7 +637,7 @@ export const ui = {
       dataUnreadable: 'この端末の保存データを読み込めませんでした。新しい変更は保存できません。データはこの端末に残っている場合があるため、復元できる可能性があります。リセットは行わないでください。',
     },
     today: {
-      eyebrow: '今日',
+      eyebrow: 'TODAY',
       titleLead: '思い出してから、',
       titleEmphasis: '答えを開く。',
       introduction: '公開されている出題範囲を、短い想起練習にしました。カードはすべて独自作成です。',
@@ -667,6 +670,7 @@ export const ui = {
     },
     guide: {
       eyebrow: 'PUBLIC BLUEPRINT / 30 OBJECTIVES',
+      sectionsEyebrow: 'STUDY GUIDE',
       title: '学習ガイド',
       introduction: '公式Exam Guide v1.0の30タスク領域を、公開ドキュメントに基づく独自の短い要約で整理しています。原文は公式ガイドを確認してください。',
       openExamGuide: '公式Exam Guideを開く',
@@ -708,6 +712,7 @@ export const ui = {
     },
     handsOn: {
       eyebrow: 'HANDS-ON / BUILD IN YOUR OWN ENVIRONMENT',
+      listEyebrow: 'HANDS-ON PROGRESS',
       title: 'ハンズオン',
       introduction: '試験範囲に対応した設計・実装・検証を、ご自身の環境で再現できるガイドです。ブラウザ内に実行環境は作りません。手順は独自の推奨、技術的事実は公式資料に基づきます。',
       entryTitle: 'ハンズオンで実システムを試す',
@@ -871,7 +876,7 @@ export const ui = {
       scenarioListLabel: 'シナリオ一覧',
       scenarioQuestionCount: (count) => `設問${count}問`,
       scenarioAnswered: (answered, total) => `解答済み ${answered}/${total}`,
-      backgroundTitle: 'ケース記述',
+      backgroundTitle: 'CASE BACKGROUND',
       proceedToQuestions: '設問へ進む',
       backgroundToggle: 'ケース記述を開く',
       countLegend: '出題数',
@@ -967,7 +972,6 @@ export const ui = {
       importJson: '進捗をJSONから読み込む',
       reset: 'この端末の進捗を削除',
       weakCount: (count) => `苦手 ${count}`,
-      sourcesEyebrow: 'SOURCE REGISTER',
       sourcesTitle: '公式資料',
       sourcesDescription: '説明は公開資料の要約です。仕様変更に備え、学習時はリンク先の最新版も確認してください。',
       verified: (date) => `最終確認 ${date}`,
@@ -981,7 +985,7 @@ export const ui = {
       loading: '模試を読み込んでいます…',
       loadError: '模試の読み込みに失敗しました。',
       retry: '再読み込み',
-      eyebrow: '模擬試験',
+      eyebrow: 'MOCK EXAM / 60 QUESTIONS',
       title: '60問の模試に挑戦する',
       introduction: '本番と同じ規模で、時間配分と全体像をつかむための練習模試です。',
       specQuestions: (count) => `${count}問`,
@@ -1038,7 +1042,7 @@ export const ui = {
       submitDialogWarnUnanswered: '未回答の問題も不正解として全60問中に数えられます。',
       submitDialogConfirm: '提出する',
       submitDialogCancel: 'キャンセル',
-      resultEyebrow: '模試結果',
+      resultEyebrow: 'EXAM RESULT',
       resultTitle: '結果',
       outcomeSubmitted: '提出済み',
       outcomeExpired: '時間切れ',
@@ -1102,7 +1106,7 @@ export const ui = {
       saveErrorRetry: '保存をやり直す',
       analysis: {
         openButton: '学習分析',
-        eyebrow: '学習分析',
+        eyebrow: 'LEARNING ANALYSIS',
         title: '模試結果を分析する',
         intro: '端末内に保存された模試結果から、次に復習すべき領域を確認します。公式試験の合否や点数を予測するものではありません。',
         back: '模試トップへ戻る',
@@ -1238,6 +1242,7 @@ export const ui = {
     },
     guide: {
       eyebrow: 'PUBLIC BLUEPRINT / 30 OBJECTIVES',
+      sectionsEyebrow: 'STUDY GUIDE',
       title: 'Study guide',
       introduction: 'Independent summaries of the 30 task areas in the official Exam Guide v1.0, grounded in public documentation. Refer to the official guide for the source wording.',
       openExamGuide: 'Open the official Exam Guide',
@@ -1279,6 +1284,7 @@ export const ui = {
     },
     handsOn: {
       eyebrow: 'HANDS-ON / BUILD IN YOUR OWN ENVIRONMENT',
+      listEyebrow: 'HANDS-ON PROGRESS',
       title: 'Hands-on',
       introduction: 'Reproducible guides for designing, building, and verifying real systems on the exam scope in your own environment. The app runs no runtime in the browser. The order of work is the recommended sequence; the technical facts are grounded in official sources.',
       entryTitle: 'Build real systems with hands-on guides',
@@ -1442,7 +1448,7 @@ export const ui = {
       scenarioListLabel: 'Scenario list',
       scenarioQuestionCount: (count) => `${count} ${count === 1 ? 'question' : 'questions'}`,
       scenarioAnswered: (answered, total) => `Answered ${answered}/${total}`,
-      backgroundTitle: 'Case background',
+      backgroundTitle: 'CASE BACKGROUND',
       proceedToQuestions: 'Start the questions',
       backgroundToggle: 'Show the case background',
       countLegend: 'Questions',
@@ -1538,7 +1544,6 @@ export const ui = {
       importJson: 'Import progress from JSON',
       reset: 'Delete progress on this device',
       weakCount: (count) => `${count} struggling`,
-      sourcesEyebrow: 'SOURCE REGISTER',
       sourcesTitle: 'Official sources',
       sourcesDescription: 'Explanations summarize public sources. Check the latest linked documentation as you study in case specifications have changed.',
       verified: (date) => `Last verified ${date}`,
@@ -1552,7 +1557,7 @@ export const ui = {
       loading: 'Loading the mock exam…',
       loadError: 'The mock exam failed to load.',
       retry: 'Reload',
-      eyebrow: 'Mock exam',
+      eyebrow: 'MOCK EXAM / 60 QUESTIONS',
       title: 'Take the 60-question mock exam',
       introduction: 'A practice exam at full scale, to rehearse pacing and see the whole picture.',
       specQuestions: (count) => `${count} questions`,
@@ -1609,7 +1614,7 @@ export const ui = {
       submitDialogWarnUnanswered: 'Unanswered questions count as incorrect within the 60-question total.',
       submitDialogConfirm: 'Submit',
       submitDialogCancel: 'Cancel',
-      resultEyebrow: 'Mock exam result',
+      resultEyebrow: 'EXAM RESULT',
       resultTitle: 'Result',
       outcomeSubmitted: 'Submitted',
       outcomeExpired: 'Time expired',
@@ -1673,7 +1678,7 @@ export const ui = {
       saveErrorRetry: 'Retry saving',
       analysis: {
         openButton: 'Learning analysis',
-        eyebrow: 'Learning analysis',
+        eyebrow: 'LEARNING ANALYSIS',
         title: 'Analyze your mock exam results',
         intro: 'From the mock exam results saved on this device, see which areas to review next. It does not predict the official exam’s pass/fail result or score.',
         back: 'Back to the mock exam start',

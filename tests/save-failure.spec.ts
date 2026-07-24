@@ -58,7 +58,7 @@ test('leaves an exact-target quiz question answerable when its stat cannot be sa
   await page.getByRole('button', { name: 'ガイド' }).first().click();
   const first = page.locator('.guide-section').first();
   await first.locator('summary').press('Enter');
-  await first.locator('.guide-targets').nth(1).getByRole('button').first().click();
+  await first.locator('.target-list').nth(1).getByRole('button').first().click();
   const choice = page.locator('.choice-button').first();
   await choice.click();
   await expect(page.getByText('進捗を保存できませんでした。ブラウザのサイトデータ設定または空き容量を確認してください。')).toBeFocused();

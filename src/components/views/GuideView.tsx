@@ -77,34 +77,34 @@ export function GuideView({ locale, copy, records, hasMockExamAttempts, onProgre
   };
 
   return (
-    <section class="guide-view" aria-labelledby="guide-title">
-      <header class="page-header">
-        <p class="eyebrow">{copy.guide.eyebrow}</p><h2 id="guide-title">{copy.guide.title}</h2><p>{copy.guide.introduction}</p>
+    <section class="guide-view panel-stack" aria-labelledby="guide-title">
+      <header class="panel--hero">
+        <p class="eyebrow">{copy.guide.eyebrow}</p><h2 id="guide-title" class="page-title">{copy.guide.title}</h2><p class="hero-lede">{copy.guide.introduction}</p>
       </header>
 
-      <section class="guide-context" aria-labelledby="guide-service-title">
-        <h3 id="guide-service-title">{copy.guide.serviceTitle}</h3><p>{copy.guide.serviceBody}</p>
+      <section class="guide-context panel panel--accent" aria-labelledby="guide-service-title">
+        <h3 id="guide-service-title" class="section-title">{copy.guide.serviceTitle}</h3><p>{copy.guide.serviceBody}</p>
         <p class="guide-availability">{copy.guide.availableFeatures}</p>
       </section>
 
-      <section class="guide-path" aria-labelledby="guide-path-title">
-        <h3 id="guide-path-title">{copy.guide.pathTitle}</h3>
+      <section class="guide-path panel" aria-labelledby="guide-path-title">
+        <h3 id="guide-path-title" class="section-title">{copy.guide.pathTitle}</h3>
         <p class="guide-path-note">{copy.guide.pathNote}</p>
 
-        <div class="guide-diagnosis" aria-labelledby="guide-diagnosis-title">
-          <h4 id="guide-diagnosis-title" tabIndex={-1} ref={diagnosisHeadingRef}>{copy.guide.diagnosisLegend}</h4>
+        <div class="guide-diagnosis panel panel--sm panel--accent" aria-labelledby="guide-diagnosis-title">
+          <h4 id="guide-diagnosis-title" class="card-title" tabIndex={-1} ref={diagnosisHeadingRef}>{copy.guide.diagnosisLegend}</h4>
           <form onSubmit={recommend}>
             <fieldset><legend>{copy.guide.diagnosisQuestion}</legend>
               {copy.guide.diagnosisOptions.map((option, index) => <label key={option}><input type="radio" name="guide-diagnosis" value={String(index)} checked={diagnosis === String(index)} onChange={() => setDiagnosis(String(index))}/>{option}</label>)}
             </fieldset>
-            <button type="submit" disabled={!diagnosis}>{copy.guide.diagnosisSubmit}</button>
+            <button type="submit" class="btn" disabled={!diagnosis}>{copy.guide.diagnosisSubmit}</button>
           </form>
           {recommendation && (() => {
             const section = studyGuideSections.find((candidate) => candidate.id === recommendation);
             if (!section) return null;
-            return <div class="guide-recommendation" tabIndex={-1} ref={resultRef}>
+            return <div class="note note--success guide-recommendation" tabIndex={-1} ref={resultRef}>
               <p>{copy.guide.diagnosisResult(localize(section.title, locale))}</p>
-              <button type="button" class="guide-recommendation-open" onClick={() => openSection(section.id)}>{copy.guide.diagnosisOpenSection(localize(section.title, locale))}</button>
+              <button type="button" class="btn guide-recommendation-open" onClick={() => openSection(section.id)}>{copy.guide.diagnosisOpenSection(localize(section.title, locale))}</button>
             </div>;
           })()}
         </div>
@@ -117,44 +117,44 @@ export function GuideView({ locale, copy, records, hasMockExamAttempts, onProgre
           const cta = stage.id === 'analysis' && !hasMockExamAttempts ? copy.guide.analysisCtaNoAttempt : text.cta;
           return <li key={stage.id}>
             <div class="guide-path-copy"><strong>{text.title}</strong><span>{text.description}</span></div>
-            <button type="button" class="guide-path-link" onClick={() => openStage(stage.target)}>{cta} <span aria-hidden="true">→</span></button>
+            <button type="button" class="btn--text" onClick={() => openStage(stage.target)}>{cta} <span aria-hidden="true">→</span></button>
           </li>;
         })}</ol>
 
         <p class="guide-path-aux">{copy.officialScenarios.entryBody}{' '}
-          <button type="button" class="guide-path-link" onClick={onOpenOfficialScenarios}>{copy.officialScenarios.openList}</button>
+          <button type="button" class="btn--text" onClick={onOpenOfficialScenarios}>{copy.officialScenarios.openList}</button>
         </p>
       </section>
 
-      <section class="guide-sections" id="guide-sections" aria-labelledby="guide-sections-title">
-        <div class="guide-section-heading"><div><p class="eyebrow">STUDY GUIDE</p><h3 id="guide-sections-title" tabIndex={-1} ref={sectionsHeadingRef}>{copy.guide.progress(summary.completed, summary.totalSections)}</h3></div><progress value={summary.completionRate} max="1">{Math.round(summary.completionRate * 100)}%</progress></div>
+      <section class="guide-sections panel" id="guide-sections" aria-labelledby="guide-sections-title">
+        <div class="progress-heading"><div><p class="eyebrow">{copy.guide.sectionsEyebrow}</p><h3 id="guide-sections-title" class="section-title" tabIndex={-1} ref={sectionsHeadingRef}>{copy.guide.progress(summary.completed, summary.totalSections)}</h3></div><progress value={summary.completionRate} max="1">{Math.round(summary.completionRate * 100)}%</progress></div>
         {studyGuideSections.map((section) => {
           const record = records[section.id];
           const status = getStudyGuideSectionStatus(record, section.revision);
           const title = localize(section.title, locale);
           return <details class="guide-section" id={`guide-section-${section.id}`} key={section.id}>
-            <summary><span><code>{section.recommendedOrder}</code> {title}</span><span class={`guide-status status-${status}`}>{copy.guide.status[status]}</span></summary>
+            <summary><span><code>{section.recommendedOrder}</code> {title}</span><span class={`status status-${status}`}>{copy.guide.status[status]}</span></summary>
             <div class="guide-section-body">
               <p>{localize(section.summary, locale)}</p>
-              {status === 'stale' && record && <p class="guide-state-note">{copy.guide.staleNote(copy.guide.status[record.status])}</p>}
-              {status === 'future' && record && <p class="guide-state-note">{copy.guide.futureNote(copy.guide.status[record.status])}</p>}
-              <h4>{copy.guide.domains}</h4><p class="guide-domain-badges">{domains.filter((domain) => section.domainIds.includes(domain.id)).map((domain) => <span class="card-domain" key={domain.id}>D{domain.number} {localize(domain.title, locale)}</span>)}</p>
-              <h4>{copy.guide.statements}</h4><p class="guide-statement-ids">{section.taskStatementIds.map((id) => <code key={id}>{id}</code>)}</p>
-              <h4>{copy.guide.mustKnow}</h4><ul>{localize(section.learningObjectives, locale).map((item) => <li key={item}>{item}</li>)}</ul>
-              <h4>{copy.guide.keyPoints}</h4><ul>{localize(section.keyPoints, locale).map((item) => <li key={item}>{item}</li>)}</ul>
-              <h4>{copy.guide.relatedCards}</h4><div class="guide-targets">{section.relatedCardIds.map((id) => {
+              {status === 'stale' && record && <p class="note note--warn guide-state-note">{copy.guide.staleNote(copy.guide.status[record.status])}</p>}
+              {status === 'future' && record && <p class="note note--warn guide-state-note">{copy.guide.futureNote(copy.guide.status[record.status])}</p>}
+              <h4 class="sub-title">{copy.guide.domains}</h4><p class="domain-labels">{domains.filter((domain) => section.domainIds.includes(domain.id)).map((domain) => <span class="domain-label" key={domain.id}>D{domain.number} {localize(domain.title, locale)}</span>)}</p>
+              <h4 class="sub-title">{copy.guide.statements}</h4><p class="statement-ids">{section.taskStatementIds.map((id) => <code key={id}>{id}</code>)}</p>
+              <h4 class="sub-title">{copy.guide.mustKnow}</h4><ul>{localize(section.learningObjectives, locale).map((item) => <li key={item}>{item}</li>)}</ul>
+              <h4 class="sub-title">{copy.guide.keyPoints}</h4><ul>{localize(section.keyPoints, locale).map((item) => <li key={item}>{item}</li>)}</ul>
+              <h4 class="sub-title">{copy.guide.relatedCards}</h4><div class="target-list">{section.relatedCardIds.map((id) => {
                 const card = cards.find((candidate) => candidate.id === id);
-                return card ? <button type="button" key={id} onClick={() => onOpenCard(id)}>{localize(card.prompt, locale)} <code>{id}</code></button> : null;
+                return card ? <button type="button" class="btn btn--secondary" key={id} onClick={() => onOpenCard(id)}>{localize(card.prompt, locale)} <code>{id}</code></button> : null;
               })}</div>
-              {section.relatedQuestionIds.length > 0 && <><h4>{copy.guide.relatedQuestions}</h4><div class="guide-targets">{section.relatedQuestionIds.map((id) => {
+              {section.relatedQuestionIds.length > 0 && <><h4 class="sub-title">{copy.guide.relatedQuestions}</h4><div class="target-list">{section.relatedQuestionIds.map((id) => {
                 const question = questions.find((candidate) => candidate.id === id);
-                return question ? <button type="button" key={id} onClick={() => onOpenQuestion(id)}>{localize(question.stem, locale)} <code>{id}</code></button> : null;
+                return question ? <button type="button" class="btn btn--secondary" key={id} onClick={() => onOpenQuestion(id)}>{localize(question.stem, locale)} <code>{id}</code></button> : null;
               })}</div></>}
-              <h4>{copy.guide.officialSources}</h4><SourceLinks ids={section.sourceIds} copy={copy}/>
+              <h4 class="sub-title">{copy.guide.officialSources}</h4><SourceLinks ids={section.sourceIds} copy={copy}/>
               <div class="guide-actions">
-                {status === 'not_started' && <button type="button" onClick={() => onProgressAction(section.id, section.revision, 'start')}>{copy.guide.start}</button>}
-                {status === 'in_progress' && <button type="button" onClick={() => onProgressAction(section.id, section.revision, 'complete')}>{copy.guide.complete}</button>}
-                {status === 'stale' && <button type="button" onClick={() => onProgressAction(section.id, section.revision, 'reconfirm')}>{copy.guide.reconfirm}</button>}
+                {status === 'not_started' && <button type="button" class="btn" onClick={() => onProgressAction(section.id, section.revision, 'start')}>{copy.guide.start}</button>}
+                {status === 'in_progress' && <button type="button" class="btn" onClick={() => onProgressAction(section.id, section.revision, 'complete')}>{copy.guide.complete}</button>}
+                {status === 'stale' && <button type="button" class="btn" onClick={() => onProgressAction(section.id, section.revision, 'reconfirm')}>{copy.guide.reconfirm}</button>}
               </div>
             </div>
           </details>;

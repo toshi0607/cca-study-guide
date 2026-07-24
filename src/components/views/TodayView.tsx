@@ -49,23 +49,23 @@ export function TodayView({ locale, copy, now, ready, reviews, dueCount, session
           <span>{copy.today.dueTitle}</span>
           <strong>{ready && now ? formatNumber(dueCount, locale) : '—'}</strong>
           <span>{ready && now ? copy.today.dueCount(dueCount) : '—'}</span>
-          <button disabled={!ready} onClick={onStartDueReview}>{copy.today.startReview} <span aria-hidden="true">→</span></button>
+          <button class="btn btn--wide" disabled={!ready} onClick={onStartDueReview}>{copy.today.startReview} <span aria-hidden="true">→</span></button>
         </div>
       </section>
       <Blueprint reviews={reviews} ready={ready} locale={locale} copy={copy}/>
       <section class="mock-exam-launch" aria-labelledby="mock-exam-launch-title">
         <div class="section-heading">
-          <div><p class="eyebrow">{copy.mockExam.eyebrow}</p><h2 id="mock-exam-launch-title">{copy.mockExam.title}</h2></div>
+          <div><p class="eyebrow">{copy.mockExam.eyebrow}</p><h2 id="mock-exam-launch-title" class="section-title">{copy.mockExam.title}</h2></div>
           <p>{copy.mockExam.introduction}</p>
         </div>
         <div class="mock-exam-launch-actions">
-          <button type="button" class="mock-exam-launch-button" disabled={!ready} onClick={onOpenMockExam}>{mockExamCtaLabel} <span aria-hidden="true">→</span></button>
-          {ready && hasAttempt && <button type="button" class="mock-exam-launch-analysis" onClick={onOpenMockExamAnalysis}>{copy.mockExam.todayAnalysisLink} <span aria-hidden="true">→</span></button>}
+          <button type="button" class="btn mock-exam-launch-button" disabled={!ready} onClick={onOpenMockExam}>{mockExamCtaLabel} <span aria-hidden="true">→</span></button>
+          {ready && hasAttempt && <button type="button" class="btn btn--secondary mock-exam-launch-analysis" onClick={onOpenMockExamAnalysis}>{copy.mockExam.todayAnalysisLink} <span aria-hidden="true">→</span></button>}
         </div>
       </section>
       <section class="weak-areas" aria-labelledby="weak-areas-title">
         <div class="section-heading">
-          <div><p class="eyebrow">{copy.weakAreas.eyebrow}</p><h2 id="weak-areas-title">{copy.weakAreas.title}</h2></div>
+          <div><p class="eyebrow">{copy.weakAreas.eyebrow}</p><h2 id="weak-areas-title" class="section-title">{copy.weakAreas.title}</h2></div>
           <p>{copy.weakAreas.note}</p>
         </div>
         {ready && weakByDomain.length > 0
@@ -81,7 +81,7 @@ export function TodayView({ locale, copy, now, ready, reviews, dueCount, session
             </div>}
       </section>
       <section class="status-strip" aria-labelledby="status-title">
-        <div><p class="eyebrow">{copy.status.eyebrow}</p><h2 id="status-title">{copy.status.title}</h2></div>
+        <div><p class="eyebrow">{copy.status.eyebrow}</p><h2 id="status-title" class="section-title">{copy.status.title}</h2></div>
         <dl>
           <div><dt>{copy.status.started}</dt><dd>{ready ? formatNumber(reviewedCount, locale) : '—'}</dd></div>
           <div><dt>{copy.status.notStarted}</dt><dd>{ready ? formatNumber(cardIndex.length - reviewedCount, locale) : '—'}</dd></div>

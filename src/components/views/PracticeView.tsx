@@ -65,19 +65,19 @@ export function PracticeView({
 
   return (
     <section class="practice-view" aria-labelledby="practice-title">
-      <header class="page-header compact"><p class="eyebrow">{copy.practice.eyebrow}</p><h2 id="practice-title">{copy.practice.title}</h2><p>{copy.practice.introduction}</p></header>
+      <header class="panel--hero"><p class="eyebrow">{copy.practice.eyebrow}</p><h2 id="practice-title" class="page-title">{copy.practice.title}</h2><p class="hero-lede">{copy.practice.introduction}</p></header>
       {activeTargetCardId && (() => {
         const target = cards.find((card) => card.id === activeTargetCardId);
-        return target ? <div class="practice-target"><p tabIndex={-1} role="status" aria-live="polite" ref={targetNoticeRef}>{copy.practice.targetAnnouncement(localize(target.prompt, locale))}</p><button type="button" onClick={() => { setActiveTargetCardId(null); requestAnimationFrame(() => searchInputRef.current?.focus()); }}>{copy.practice.showAll}</button></div> : null;
+        return target ? <div class="note note--info practice-target"><p tabIndex={-1} role="status" aria-live="polite" ref={targetNoticeRef}>{copy.practice.targetAnnouncement(localize(target.prompt, locale))}</p><button type="button" class="btn--text" onClick={() => { setActiveTargetCardId(null); requestAnimationFrame(() => searchInputRef.current?.focus()); }}>{copy.practice.showAll}</button></div> : null;
       })()}
       {sessionCards && <PracticeSession locale={locale} copy={copy} initialCards={sessionCards.flatMap((id) => { const card = cards.find((value) => value.id === id); return card ? [card] : []; })} reviews={reviews} dueCount={dueCount} onRate={onRateInSession} onExit={onExitSession}/>}
       {!sessionCards && <><div class="filter-panel">
         <label class="search-label" for="card-search">{copy.practice.searchLabel}<input ref={searchInputRef} id="card-search" type="search" value={query} onInput={(event) => onQueryChange(event.currentTarget.value)} placeholder={copy.practice.searchPlaceholder}/></label>
-        <fieldset><legend>{copy.practice.stateLegend}</legend><div class="chips">{stateFilters.map((key) => <button key={key} type="button" class={stateFilter === key ? 'selected' : ''} aria-pressed={stateFilter === key} onClick={() => onStateFilterChange(key)}>{copy.practice.filters[key]}</button>)}</div></fieldset>
-        <fieldset><legend>{copy.practice.domainLegend}</legend><div class="chips"><button type="button" class={domainFilter === 'all' ? 'selected' : ''} aria-pressed={domainFilter === 'all'} onClick={() => onDomainFilterChange('all')}>{copy.practice.allDomains}</button>{domains.map((domain) => <button key={domain.id} type="button" class={domainFilter === domain.id ? 'selected' : ''} aria-pressed={domainFilter === domain.id} onClick={() => onDomainFilterChange(domain.id)}>D{domain.number}</button>)}</div></fieldset>
+        <fieldset><legend>{copy.practice.stateLegend}</legend><div class="chips">{stateFilters.map((key) => <button key={key} type="button" class={`chip${stateFilter === key ? ' is-selected' : ''}`} aria-pressed={stateFilter === key} onClick={() => onStateFilterChange(key)}>{copy.practice.filters[key]}</button>)}</div></fieldset>
+        <fieldset><legend>{copy.practice.domainLegend}</legend><div class="chips"><button type="button" class={`chip${domainFilter === 'all' ? ' is-selected' : ''}`} aria-pressed={domainFilter === 'all'} onClick={() => onDomainFilterChange('all')}>{copy.practice.allDomains}</button>{domains.map((domain) => <button key={domain.id} type="button" class={`chip${domainFilter === domain.id ? ' is-selected' : ''}`} aria-pressed={domainFilter === domain.id} onClick={() => onDomainFilterChange(domain.id)}>D{domain.number}</button>)}</div></fieldset>
       </div>
       <div class="session-start-row">
-        <button class="quiz-start session-start" disabled={!filteredCards.length} onClick={() => onStartSession(filteredCards.map((card) => card.id))}>{copy.session.start} <span aria-hidden="true">→</span></button>
+        <button class="btn quiz-start" disabled={!filteredCards.length} onClick={() => onStartSession(filteredCards.map((card) => card.id))}>{copy.session.start} <span aria-hidden="true">→</span></button>
         {!filteredCards.length && <p class="session-start-hint">{copy.session.cannotStart}</p>}
       </div>
       <p class="result-count">{copy.practice.resultCount(filteredCards.length)}</p>
@@ -87,9 +87,9 @@ export function PracticeView({
         const isOpen = Boolean(revealed[card.id]);
         const review = reviews[card.id];
         return <article class="practice-card" key={card.id}>
-          <header><div><span class="card-domain">D{domain.number}</span><span>{copy.practice.kinds[card.kind]}</span></div><code>{String(index + 1).padStart(2, '0')} / {String(filteredCards.length).padStart(2, '0')}</code></header>
+          <header><div><span class="badge badge--ink">D{domain.number}</span><span>{copy.practice.kinds[card.kind]}</span></div><code>{String(index + 1).padStart(2, '0')} / {String(filteredCards.length).padStart(2, '0')}</code></header>
           <div class="card-prompt"><p class="eyebrow">{copy.practice.question}</p><h3>{localize(card.prompt, locale)}</h3></div>
-          <button class="reveal-button" aria-expanded={isOpen} aria-controls={answerId} onClick={() => onToggleRevealed(card.id)}>{isOpen ? copy.practice.hideAnswer : copy.practice.revealAnswer} <span aria-hidden="true">{isOpen ? '−' : '+'}</span></button>
+          <button class="btn btn--wide reveal-button" aria-expanded={isOpen} aria-controls={answerId} onClick={() => onToggleRevealed(card.id)}>{isOpen ? copy.practice.hideAnswer : copy.practice.revealAnswer} <span aria-hidden="true">{isOpen ? '−' : '+'}</span></button>
           {isOpen && <CardAnswer card={card} review={review} locale={locale} copy={copy} id={answerId} onRate={(rating) => onRateInList(card.id, rating)}/>}
         </article>;
       })}</div>
