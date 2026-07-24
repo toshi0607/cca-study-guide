@@ -1,0 +1,160 @@
+/* Shared component layer. Area files must not redefine anything declared here.
+   Frozen after Phase 0. */
+
+/* ---------------------------------------------------------------- buttons */
+
+.btn { min-height: 48px; padding: 0 var(--space-5); display: inline-flex; align-items: center;
+       justify-content: center; gap: var(--space-3); border: 1px solid var(--ink);
+       border-radius: var(--radius); background: var(--ink); color: var(--on-ink);
+       font-weight: 700; cursor: pointer; }
+.btn:hover:not(:disabled) { background: var(--cyan-dark); border-color: var(--cyan-dark); }
+.btn:disabled { opacity: .45; cursor: not-allowed; }
+
+.btn--wide      { width: 100%; justify-content: space-between; }
+.btn--secondary { background: var(--surface); border-color: var(--cyan-dark); color: var(--cyan-dark); }
+.btn--secondary:hover:not(:disabled) { background: var(--cyan-pale); }
+.btn--danger    { background: var(--surface); border-color: var(--danger); color: var(--danger); }
+.btn--danger:hover:not(:disabled) { background: var(--danger-pale); }
+
+.btn--text { min-height: 44px; padding: 0 var(--space-1); border: 0; background: transparent;
+             color: var(--cyan-dark); font: inherit; font-weight: 700; text-align: left;
+             text-decoration: underline; text-underline-offset: .2em; cursor: pointer; }
+.btn--text:hover { color: var(--ink); }
+
+.chip { min-height: 44px; padding: 0 var(--space-3); border: 1px solid var(--grid-strong);
+        border-radius: var(--radius); background: var(--surface); color: var(--ink); cursor: pointer; }
+.chip:hover { border-color: var(--cyan); }
+.chip.is-selected { border-color: var(--cyan-dark); background: var(--cyan-pale);
+                    color: var(--cyan-dark); font-weight: 700; }
+
+/* ----------------------------------------------------------------- panels */
+
+.panel { padding: var(--pad-panel); border: 1px solid var(--grid-strong);
+         background: var(--surface); }
+.panel--sm   { padding: var(--pad-panel-sm); }
+.panel--flat { border-color: var(--grid); }
+.panel--accent { border-left: 6px solid var(--ink); }
+
+.panel--hero { padding: var(--pad-hero); border: 2px solid var(--ink);
+               background: var(--surface); box-shadow: var(--shadow-strong); }
+.panel--hero.is-compact { padding-block: var(--space-8); }
+
+.panel-stack > * + * { margin-top: var(--space-6); }
+
+/* ------------------------------------------------------------------ notes */
+
+.note { padding: var(--space-3); border-left: 4px solid var(--grid-strong);
+        background: var(--surface); font-size: var(--fs-sm); line-height: var(--lh-relaxed); }
+.note--info    { border-left-color: var(--cyan);   background: var(--cyan-pale); }
+.note--warn    { border-left-color: var(--amber);  background: var(--amber-pale); }
+.note--success { border-left-color: var(--green);  background: var(--green-pale); }
+.note--danger  { border-left-color: var(--danger); background: var(--danger-pale); color: var(--danger); font-weight: 700; }
+
+/* --------------------------------------------------------------- headings */
+
+.page-title    { margin: 0; font-family: var(--display); font-weight: 900; font-size: var(--fs-2xl);
+                 font-feature-settings: "palt"; letter-spacing: .01em; line-height: var(--lh-heading);
+                 word-break: auto-phrase; }
+.section-title { margin: 0 0 var(--space-3); font-family: var(--display); font-weight: 700;
+                 font-size: var(--fs-xl); font-feature-settings: "palt"; line-height: var(--lh-heading); }
+.card-title    { margin: 0; font-family: var(--display); font-weight: 700; font-size: var(--fs-lg);
+                 line-height: var(--lh-heading); }
+.sub-title     { margin: var(--space-5) 0 var(--space-2); font-family: var(--display);
+                 font-weight: 700; font-size: var(--fs-base); }
+
+/* ------------------------------------------------------------ badges/tags */
+
+.badge { display: inline-block; padding: 3px 6px; font: 700 var(--fs-micro) var(--mono); }
+.badge--ink    { background: var(--ink);  color: var(--on-ink); }
+.badge--cyan   { background: var(--cyan-pale); color: var(--cyan-dark); }
+.badge--amber  { background: var(--amber); color: var(--on-ink); }
+.badge--outline{ border: 1px solid currentcolor; }
+
+.domain-label { display: inline-block; padding: var(--space-1) var(--space-2);
+                border: 1px solid var(--grid-strong); background: var(--cyan-pale);
+                color: var(--cyan-dark); font-size: var(--fs-xs); font-weight: 700; }
+
+/* ----------------------------------------------------------------- status */
+
+.status { flex: 0 0 auto; padding: 3px 7px; border: 1px solid currentcolor;
+          font: 700 var(--fs-micro) var(--mono); }
+
+/* ------------------------------------------------- existing shared pieces */
+/* Moved verbatim from global.css in Phase 0. Renames happen in later streams. */
+
+.eyebrow {
+  margin: 0 0 8px;
+  color: var(--cyan-dark);
+  font: 700 .7rem/1.3 var(--mono);
+  letter-spacing: .14em;
+  text-transform: uppercase;
+}
+
+.section-heading {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 20px;
+  padding-bottom: 14px;
+  border-bottom: 2px solid var(--ink);
+}
+.section-heading h2 { margin: 0; font: 700 clamp(1.7rem, 3vw, 2.5rem)/1.15 var(--display); }
+.section-heading > p { margin: 0; color: var(--ink-soft); font-size: .8rem; }
+
+.page-header h2 {
+  margin: 0;
+  font-family: var(--display);
+  font-weight: 900;
+  font-feature-settings: "palt";
+  letter-spacing: .01em;
+  line-height: 1.16;
+  word-break: auto-phrase;
+}
+
+.page-header {
+  padding: clamp(28px, 4.5vw, 52px);
+  border: 2px solid var(--ink);
+  background: var(--surface);
+  box-shadow: var(--shadow-strong);
+}
+.page-header.compact { padding-block: 34px; }
+.page-header h2 { font-size: clamp(2.2rem, 4.6vw, 3.8rem); }
+.page-header > p:not(.eyebrow) { max-width: 780px; margin: 18px 0 0; color: var(--ink-soft); }
+.text-link { display: inline-block; margin-top: 14px; font-weight: 700; }
+
+.source-links { margin: 8px 0; padding: 0; list-style: none; font-size: .78rem; }
+.source-links li + li { margin-top: 5px; }
+
+.guide-section-heading { display: grid; grid-template-columns: minmax(0, 1fr) minmax(150px, .8fr); gap: 24px; align-items: center; margin-bottom: 16px; }
+.guide-section-heading .eyebrow { margin-bottom: 4px; }
+.guide-section-heading progress { width: 100%; height: 12px; }
+
+.guide-status { flex: 0 0 auto; padding: 3px 7px; border: 1px solid currentcolor; font: 700 .68rem var(--mono); }
+.status-not_started { color: var(--ink-soft); }.status-in_progress { color: var(--amber); }.status-completed { color: var(--green); }.status-stale { color: var(--amber); }.status-future { color: var(--danger); }
+
+.guide-domain-badges, .guide-statement-ids { display: flex; flex-wrap: wrap; gap: 7px; margin: 0; }
+.guide-statement-ids code { padding: 3px 6px; background: var(--cyan-pale); color: var(--cyan-dark); font: 700 .72rem var(--mono); }
+
+.guide-targets { display: flex; flex-wrap: wrap; gap: 8px; }
+.guide-targets button { min-height: 44px; padding: 0 10px; border: 1px solid var(--grid-strong); background: var(--surface); color: var(--cyan-dark); cursor: pointer; font: 700 .75rem var(--mono); }
+
+.card-domain { padding: 3px 6px; background: var(--ink); color: #fff; }
+
+.empty-state { padding: 48px; border: 1px dashed var(--grid-strong); background: var(--surface); text-align: center; }
+
+.skill-tags { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.skill-tags li { padding: 3px 8px; border: 1px solid var(--grid-strong); background: var(--cyan-pale); color: var(--cyan-dark); font-size: .74rem; font-weight: 700; }
+
+/* Re-applies "palt" after the `font` shorthand above resets font-feature-settings. */
+.page-header h2, .section-heading h2 {
+  font-feature-settings: "palt";
+  letter-spacing: .01em;
+}
+
+@media (max-width: 760px) {
+  .section-heading { display: block; padding-bottom: 12px; }
+  .section-heading > p { margin-top: 9px; }
+  .page-header { padding: 26px 20px; box-shadow: 6px 6px 0 rgb(8 126 155 / 12%); }
+  .page-header h2 { font-size: 2.2rem; }
+  .guide-section-heading { grid-template-columns: 1fr; gap: 12px; }
+}
