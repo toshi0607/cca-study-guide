@@ -12,7 +12,7 @@ export function Blueprint({ reviews, ready, locale, copy }: { reviews: Record<st
   return (
     <section class="blueprint" aria-labelledby="coverage-title">
       <div class="section-heading">
-        <div><p class="eyebrow">{copy.blueprint.eyebrow}</p><h2 id="coverage-title">{copy.blueprint.title}</h2></div>
+        <div><p class="eyebrow">{copy.blueprint.eyebrow}</p><h2 id="coverage-title" class="section-title">{copy.blueprint.title}</h2></div>
         <p>{copy.blueprint.progressNote}</p>
       </div>
       <div class="blueprint-map">

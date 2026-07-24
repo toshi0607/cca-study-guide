@@ -69,8 +69,8 @@ S2-S6 は担当ファイルが排他。`src/i18n/ui.ts` のみ共有だが、各
 - [ ] C3 ハードコードアイブロウ2箇所を i18n 化
 
 ### S4 今日+シェル
-- [ ] D3 `.mock-exam-launch` の影を削除 / A1 ボタン / B1・B4 ラダー適用
-- [ ] C1 `today.eyebrow` を `TODAY` へ / レール色をトークン化
+- [x] D3 `.mock-exam-launch` の影を削除 / A1 ボタン / B1・B4 ラダー適用（影の削除のみ未達 — 下記 Notes 参照。ボタン統一とラダー適用は完了）
+- [x] C1 `today.eyebrow` を `TODAY` へ / レール色をトークン化
 
 ### S5 練習+演習
 - [ ] A1 ボタン（`.quiz-start` `.quiz-submit` `.quiz-next` `.reveal-button` `.rating`）/ B2 注記 / A3 hero
@@ -118,6 +118,31 @@ S2-S6 は担当ファイルが排他。`src/i18n/ui.ts` のみ共有だが、各
 - 宣言レベルの機械比較（旧 global.css vs 新9ファイル連結）: 欠落 71 宣言 = 削除対象のデッドCSSと完全一致、追加 161 宣言 = 新規トークンと `system.css` の新規共有クラスのみ。既存宣言の値変更・消失ゼロ。
 - 新規クラス名（`btn` `chip` `panel` `note` `page-title` `section-title` `card-title` `sub-title` `badge` `domain-label` `status`）は `src/` の class トークン全310種と1件も衝突しないことを確認済み（＝この Phase では描画に一切影響しない）。
 - スクリーンショット: 同一スクリプトで「分割前 global.css」と「分割後」を撮り分けて比較 → 全10ビューで **0px 差**。
+
+### S4 今日+シェル
+
+**worktree のセットアップに関する対応**: 本ストリームの worktree (`agent-a8992e73fe1a778f5`) は `main`（Phase 0 分割前）から作成されており、`tasks/design-system.md` `tasks/design-consistency-audit.md` 本ファイル、および分割済み `src/styles/*.css` を含む Phase 0 コミット（`53f6c5a`）を含んでいなかった。他の2つの並列 worktree（`agent-a856e620a152e4ebb` / `agent-afa4f27e330d8b4a5`）は `53f6c5a` から分岐しており、本 worktree だけが取り残されていた。`53f6c5a` の親コミットが本 worktree の HEAD と完全一致し、作業ツリーもクリーンだったため、`git merge --ff-only 53f6c5a` で安全に取り込んでから着手した（新規コミットの作成・履歴の書き換えなし）。
+
+**D3（`.mock-exam-launch` の影）が未解決な理由**: `.mock-exam-launch` の `box-shadow: var(--shadow)` は `src/styles/mock-exam.css` の2行目で宣言されており、この行の削除は MUST NOT DO で明示的に禁止されているファイル（`mock-exam.css`）への編集を要する。同じ MUST DO 内に「`mock-exam.css` の `.mock-exam-launch*` ルール削除は S2 の担当」という明記もあり、担当ファイル制約（他ストリームの CSS を触らない）と D3 の完了指示が矛盾する。ファイル制約を優先し、`.mock-exam-launch` 自体の CSS には一切触れていない。実測（computed style）で `.mock-exam-launch` の `box-shadow` が `rgba(23, 52, 71, 0.07) 6px 6px 0px 0px`（= `var(--shadow)`）のまま残っていることを確認済み。**S2 が `mock-exam.css` から `.mock-exam-launch` の `box-shadow` 宣言を削除する必要がある。** それ以外の D3 対象（`.blueprint` `.weak-areas` `.status-strip` は元々影なし、`.today-hero` は `--shadow-strong` を維持）はすべて自ファイル内で完了。
+
+**セクション見出しの統一（40px → 26.4px）**: `.blueprint` `.mock-exam-launch` `.weak-areas` 配下の見出しは共有ラッパー `.section-heading`（`system.css`、凍結）の子孫セレクタ `.section-heading h2`（specificity 0,0,1,1）でスタイルされており、単に h2 へ `class="section-title"`（specificity 0,0,1,0）を足すだけでは古いルールに負けて上書きできない。`system.css` は編集禁止のため、`today.css` 側に `.blueprint .section-title` のような2クラス構成のスコープ付きセレクタ（specificity 0,0,2,0 で `.section-heading h2` に勝つ）を追加し、他ビューの `.section-heading` 利用箇所（ガイド・模試・練習・進捗）には影響しないようスコープした。`.status-strip` の h2 は `.section-heading` でラップされていなかったため、旧来のベタ書きルールを削除するだけで `.section-title` がそのまま効いた。4見出しとも `26.4px` / `Barlow Condensed` / `line-height:33px` に統一されたことを computed style で確認済み（旧: blueprint/mock-exam-launch/weak-areas = 40px, status-strip = 28.8px）。
+
+**主要な丸め判断**:
+- `main`（ページ本文の外側 padding）は監査 B1 の実測対象（今日ビューの5パネル）に含まれておらず、`--space-*` に丸めると最大値（`--space-12`=48px）でも実測 74px から -35% の落差になるため、意図しない見た目変更を避けて生値のまま残した（1000px ブレークポイントの `padding-inline: 28px` のみ、丸め幅が小さい(+14%)ため `--space-8` に変換）。
+- モバイルの `main` 下部 padding（115px）、`.bottom-nav` の位置・高さ・safe-area 計算、`.persistent-disclaimer` の高さ、`.notice` の `top:70px`（`.mobile-header` の高さに連動）はすべて固定ナビ／セーフエリアと連動する機能的な値のため、ラダー化の対象から明示的に除外した（丸めるとボトムナビの下にコンテンツが隠れる等のレイアウト崩れになるため）。
+- バッジ状の極小 padding（`.node-copy span` `.weak-row-domain` の `2px 6px` `3px 6px` など）は、凍結済み `system.css` の `.badge`（`padding: 3px 6px`）`.status`（`padding: 3px 7px`）が同様に生値のままである前例に倣い、`--space-*` に丸めずそのまま残した。
+- 色は `shell.css` のレール系14色をすべて `--rail-*` 8トークンへ、`today.css` の `#eaf3f6`→`--blueprint-bg`、`#edf2f4`→`--track`、`#fdf1f0`（`.data-alert`）→`--danger-pale` を変換。`.blueprint-lines` の `stroke:#70a8b8`（MUST DO に列挙のない色）は最近傍トークン `--rail-active-line` に寄せた。ホバー等の半透明合成色（`rgb(255 255 255 / x%)` `rgb(23 52 71 / 10%)` など）はトークンの分解値そのままの意匠的パターン（`--shadow` `--shadow-strong` も同じ手法）のため据え置いた。design-system.md への新規トークン追記は不要だった（レール色8種で全件収まった）。
+- `.data-alert` は design-system.md §3.3 の置換表で `.note .note--danger` への変更対象だが、B2（注記統合）は本ストリームの担当監査文字（A1/B1/B3/B4/B6/C1/D3）に含まれないため、クラス名は変更せず、B1/B3（余白・色のトークン化）のみ適用した。
+
+### 検証（S4）
+
+- `pnpm build`: exit 0（`astro check` 込み、0 errors）
+- `pnpm test`: 445 pass
+- `pnpm test:bundle`: OK — 9 eagerly-loaded chunks, none forbidden
+- `pnpm test:e2e:a11y`（`accessibility.spec.ts`）: 9 passed / 1 failed。失敗は `.quiz-feedback` の色コントラスト（Quiz 回答レビュー画面）で、`shell.css` `today.css` を含む本ストリームの担当ファイルに当該クラス・色は一切存在しないことを `grep` で確認、かつ本ストリームの変更を `git stash` で一時的に外して同じ失敗が再現することを確認済み（変更前から存在する S5/S3 領域の既知の問題）。`'/' has no serious accessibility violations` と `'/en/' has no serious accessibility violations`（今日ビューを含む）はいずれも pass。
+- 44px 未満の対話要素スキャン（1440/1000/760/375 の4幅、JS で `button,a,[role=button],input,select,textarea` を走査）: 唯一の該当は `.site-footer nav` の GitHub リンク（19.96px）。`App.tsx` のこのリンク自体は元々サイズ指定を持たず、変更前の `.site-footer` の行間・フォントサイズ（`.72rem/1.6`）でも同様に44px未満だったことを計算で確認済み（変更前 ≈18px → 変更後 ≈20px、既存の問題でありむしろ僅かに改善）。今日ビュー・レール・モバイルヘッダー・ボトムナビの対話要素はすべて44px以上。
+- スクリーンショット（自worktree の `pnpm dev --port 4404` から取得、1440×1000 / 1000×900 / 760×900 / 375×812、ja/en 両方）を確認: 760px 未満でレールが消えモバイルヘッダー＋ボトムナビに切り替わる境界を確認。D3 は `.mock-exam-launch` のみ影が残存（上記の理由により未解決、S2待ち）、`.blueprint` `.weak-areas` `.status-strip` は影なしで統一。4つのセクション見出し（設計図・模試・苦手領域・進捗）のサイズが揃ったことを目視でも確認。
+- `git diff --name-only`: `src/components/app/Blueprint.tsx` `src/components/views/TodayView.tsx` `src/i18n/ui.ts` `src/styles/shell.css` `src/styles/today.css` の5件のみ（担当ファイル外の変更なし）。
 
 ## Review
 

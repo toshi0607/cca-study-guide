@@ -10,7 +10,7 @@
   grid-template-columns: minmax(0, 1fr) 264px;
   gap: clamp(30px, 5vw, 76px);
   align-items: center;
-  padding: clamp(26px, 4.5vw, 56px);
+  padding: var(--pad-hero);
   border: 2px solid var(--ink);
   background: var(--surface);
   box-shadow: var(--shadow-strong);
@@ -39,12 +39,12 @@
 }
 
 .today-hero > div:first-child { container-type: inline-size; }
-.today-hero h2 { max-width: 740px; font-size: clamp(1.7rem, 4.2vw, 4.5rem); font-size: clamp(1.7rem, 11cqi, 4.5rem); }
+.today-hero h2 { max-width: 740px; font-size: clamp(1.7rem, 4.2vw, 4.5rem); font-size: var(--fs-hero); }
 .today-hero h2 em { color: var(--cyan); font-style: normal; }
-.today-hero > div:first-child > p:last-child { max-width: 590px; margin: 18px 0 0; color: var(--ink-soft); }
+.today-hero > div:first-child > p:last-child { max-width: 590px; margin: var(--space-5) 0 0; color: var(--ink-soft); }
 
 .due-block {
-  padding: 28px 24px;
+  padding: var(--space-8) var(--space-6);
   display: grid;
   align-content: center;
   border: 2px solid var(--cyan-dark);
@@ -54,27 +54,15 @@
   z-index: 1;
 }
 
-.due-block > span { color: var(--ink-soft); font: .7rem var(--mono); letter-spacing: .08em; text-transform: uppercase; }
-.due-block strong { margin: 4px 0 -4px; font: 700 clamp(3.6rem, 6vw, 5.4rem)/1 var(--display); letter-spacing: -.01em; }
-.due-block button {
-  min-height: 48px;
-  margin-top: 22px;
-  padding: 0 18px;
-  border: 1px solid var(--ink);
-  border-radius: 2px;
-  background: var(--ink);
-  color: #fff;
-  cursor: pointer;
-}
-
-.due-block button { display: flex; justify-content: space-between; align-items: center; }
-.due-block button:hover { background: var(--cyan-dark); border-color: var(--cyan-dark); }
+.due-block > span { color: var(--ink-soft); font: var(--fs-micro) var(--mono); letter-spacing: .08em; text-transform: uppercase; }
+.due-block strong { margin: var(--space-1) 0 calc(-1 * var(--space-1)); font: 700 clamp(3.6rem, 6vw, 5.4rem)/1 var(--display); letter-spacing: -.01em; }
+.due-block .btn { margin-top: var(--space-6); }
 
 .blueprint {
-  margin-top: 24px;
-  padding: clamp(24px, 4vw, 48px);
+  margin-top: var(--space-6);
+  padding: var(--pad-panel);
   border: 1px solid var(--grid-strong);
-  background: #eaf3f6;
+  background: var(--blueprint-bg);
   background-image:
     linear-gradient(rgb(8 126 155 / 8%) 1px, transparent 1px),
     linear-gradient(90deg, rgb(8 126 155 / 8%) 1px, transparent 1px);
@@ -83,11 +71,11 @@
 
 .blueprint-map {
   min-height: 390px;
-  margin-top: 34px;
+  margin-top: var(--space-8);
   display: grid;
   grid-template-columns: repeat(5, minmax(120px, 1fr));
   grid-template-rows: repeat(2, minmax(176px, auto));
-  gap: 30px 18px;
+  gap: var(--space-8) var(--space-5);
   align-items: stretch;
   position: relative;
 }
@@ -99,7 +87,7 @@
   width: 100%;
   height: 300px;
   fill: none;
-  stroke: #70a8b8;
+  stroke: var(--rail-active-line);
   stroke-width: 2;
   stroke-dasharray: 7 6;
   animation: draw-blueprint 900ms ease-out both;
@@ -109,10 +97,10 @@
 
 .blueprint-node {
   z-index: 1;
-  padding: 16px;
+  padding: var(--space-4);
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: var(--space-3);
   border: 2px solid var(--cyan-dark);
   background: rgb(255 255 255 / 93%);
   box-shadow: 5px 5px 0 rgb(8 126 155 / 13%);
@@ -127,41 +115,55 @@
 .node-5 { grid-column: 4 / 5; grid-row: 2; }
 
 .node-copy { display: flex; justify-content: space-between; align-items: start; }
-.node-copy span { padding: 2px 6px; background: var(--ink); color: #fff; font: 700 .7rem var(--mono); }
-.node-copy strong { font: 700 1.6rem/1 var(--display); letter-spacing: .01em; color: var(--cyan-dark); }
-.blueprint-node > p { margin: 0; font-weight: 700; font-size: 1.02rem; line-height: 1.45; word-break: auto-phrase; }
-.node-progress { height: 24px; background: linear-gradient(90deg, var(--cyan-pale) var(--progress), #edf2f4 var(--progress)); border: 1px solid var(--grid); }
-.node-progress span { padding-left: 7px; font: .65rem/22px var(--mono); }
+.node-copy span { padding: 2px 6px; background: var(--ink); color: #fff; font: 700 var(--fs-micro) var(--mono); }
+.node-copy strong { font: 700 var(--fs-xl)/1 var(--display); letter-spacing: .01em; color: var(--cyan-dark); }
+.blueprint-node > p { margin: 0; font-weight: 700; font-size: var(--fs-base); line-height: 1.45; word-break: auto-phrase; }
+.node-progress { height: 24px; background: linear-gradient(90deg, var(--cyan-pale) var(--progress), var(--track) var(--progress)); border: 1px solid var(--grid); }
+.node-progress span { padding-left: 7px; font: var(--fs-micro)/22px var(--mono); }
+
+/* Aligns this view's `.section-heading h2` instances with the shared
+   `.section-title` scale (design-system.md §3.4) without editing the shared
+   rule in system.css, which other views still use at its default size. A
+   two-class selector is required for the specificity to win, and it is
+   scoped to these containers so it does not leak into other views that
+   also use `.section-heading`. */
+.blueprint .section-title,
+.weak-areas .section-title,
+.mock-exam-launch .section-title {
+  margin: 0 0 var(--space-3);
+  font-size: var(--fs-xl);
+  line-height: var(--lh-heading);
+  font-feature-settings: "palt";
+}
 
 .status-strip {
-  margin-top: 24px;
-  padding: 28px 32px;
+  margin-top: var(--space-6);
+  padding: var(--pad-panel);
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 30px;
+  gap: var(--space-8);
   border: 1px solid var(--grid-strong);
   background: var(--surface);
 }
-.status-strip h2 { margin: 0; font: 700 1.8rem var(--display); }
 .status-strip dl { display: flex; gap: clamp(26px, 5vw, 74px); margin: 0; }
 .status-strip dl div { display: grid; }
-.status-strip dt { color: var(--ink-soft); font-size: .75rem; }
-.status-strip dd { margin: 0; font: 700 1.5rem var(--mono); }
+.status-strip dt { color: var(--ink-soft); font-size: var(--fs-xs); }
+.status-strip dd { margin: 0; font: 700 var(--fs-xl) var(--mono); }
 
 .weak-areas {
-  margin-top: 24px;
-  padding: clamp(24px, 4vw, 48px);
+  margin-top: var(--space-6);
+  padding: var(--pad-panel);
   border: 1px solid var(--grid-strong);
   background: var(--surface);
 }
-.weak-list { margin-top: 26px; display: grid; gap: 8px; }
+.weak-list { margin-top: var(--space-6); display: grid; gap: var(--space-2); }
 .weak-row {
   min-height: 54px;
-  padding: 8px 16px;
+  padding: var(--space-2) var(--space-4);
   display: grid;
   grid-template-columns: auto 1fr auto auto;
-  gap: 14px;
+  gap: var(--space-4);
   align-items: center;
   border: 1px solid var(--grid-strong);
   border-left: 4px solid var(--amber);
@@ -170,20 +172,20 @@
   cursor: pointer;
 }
 .weak-row:hover { border-color: var(--amber); background: var(--amber-pale); }
-.weak-row-domain { padding: 3px 6px; background: var(--amber); color: #fff; font: 700 .72rem var(--mono); }
+.weak-row-domain { padding: 3px 6px; background: var(--amber); color: #fff; font: 700 var(--fs-xs) var(--mono); }
 .weak-row-title { font-weight: 700; word-break: auto-phrase; }
-.weak-row strong { font: .8rem var(--mono); white-space: nowrap; }
-.weak-areas .empty-state { margin-top: 26px; }
-.weak-count { margin-left: 10px; color: var(--amber); font-weight: 700; font-size: .72rem; }
+.weak-row strong { font: var(--fs-xs) var(--mono); white-space: nowrap; }
+.weak-areas .empty-state { margin-top: var(--space-6); }
+.weak-count { margin-left: var(--space-3); color: var(--amber); font-weight: 700; font-size: var(--fs-xs); }
 
 /* Re-applies "palt" after the `font` shorthand above resets font-feature-settings. */
-.today-hero h2, .status-strip h2 {
+.today-hero h2 {
   font-feature-settings: "palt";
   letter-spacing: .01em;
 }
 
 @media (max-width: 1120px) {
-  .today-hero { grid-template-columns: 1fr; gap: 26px; }
+  .today-hero { grid-template-columns: 1fr; gap: var(--space-6); }
   .today-hero h2 { font-size: clamp(1.7rem, 11cqi, 3.2rem); }
   .blueprint-map {
     min-height: 0;
@@ -196,19 +198,19 @@
 }
 
 @media (max-width: 760px) {
-  .today-hero { grid-template-columns: 1fr; padding: 24px 20px 22px; gap: 22px; box-shadow: 6px 6px 0 rgb(8 126 155 / 12%); }
+  .today-hero { grid-template-columns: 1fr; padding: var(--space-6) var(--space-5) var(--space-6); gap: var(--space-6); box-shadow: 6px 6px 0 rgb(8 126 155 / 12%); }
   .today-hero::after { font-size: 2.4rem; top: 12px; }
   .today-hero h2 { font-size: clamp(1.9rem, 8.5vw, 2.6rem); }
-  .due-block { padding: 22px 20px; }
-  .blueprint { padding: 22px 16px; }
-  .blueprint-map { margin-top: 22px; grid-template-columns: 1fr; gap: 12px; }
+  .due-block { padding: var(--space-6) var(--space-5); }
+  .blueprint { padding: var(--space-6) var(--space-4); }
+  .blueprint-map { margin-top: var(--space-6); grid-template-columns: 1fr; gap: var(--space-3); }
   .blueprint-node { min-height: 0; }
   .status-strip { align-items: stretch; flex-direction: column; }
-  .status-strip dl { justify-content: space-between; gap: 12px; }
-  .status-strip dd { font-size: 1.05rem; }
+  .status-strip dl { justify-content: space-between; gap: var(--space-3); }
+  .status-strip dd { font-size: var(--fs-base); }
 }
 
 @media (max-width: 400px) {
   .status-strip dl { display: grid; grid-template-columns: repeat(3, 1fr); }
-  .status-strip dt { font-size: .65rem; }
+  .status-strip dt { font-size: var(--fs-micro); }
 }

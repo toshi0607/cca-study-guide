@@ -634,7 +634,7 @@ export const ui = {
       dataUnreadable: 'この端末の保存データを読み込めませんでした。新しい変更は保存できません。データはこの端末に残っている場合があるため、復元できる可能性があります。リセットは行わないでください。',
     },
     today: {
-      eyebrow: '今日',
+      eyebrow: 'TODAY',
       titleLead: '思い出してから、',
       titleEmphasis: '答えを開く。',
       introduction: '公開されている出題範囲を、短い想起練習にしました。カードはすべて独自作成です。',
