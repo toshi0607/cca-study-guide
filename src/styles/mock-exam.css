@@ -1,173 +1,180 @@
-/* Mock Exam */
-.mock-exam-launch { margin-top: 24px; padding: clamp(20px, 3.5vw, 40px); border: 1px solid var(--grid-strong); background: var(--surface); box-shadow: var(--shadow); }
+/* Mock Exam
+   Buttons/chips/panels/notes/headings use the shared system.css components
+   (.btn/.btn--secondary/.btn--text/.chip, .panel/.panel--sm, .note, .page-title/
+   .section-title/.card-title). Rules below are either state modifiers those
+   shared components don't model (e.g. the amber "flagged" state), or layout-only
+   positioning for elements that must keep their own selector because they are
+   rendered from TodayView.tsx (S4-owned; see Notes in task-12-design-consistency.md). */
+
+/* .mock-exam-launch/-button/-analysis are rendered by TodayView.tsx (S4), so the
+   selectors stay, but their declarations now mirror .panel/.btn/.btn--text
+   byte-for-byte so the CTA is visually identical to the shared components. */
+.mock-exam-launch { margin-top: var(--space-6); padding: var(--pad-panel); border: 1px solid var(--grid-strong); background: var(--surface); }
 .mock-exam-launch-button {
-  min-height: 48px; margin-top: 20px; padding: 0 20px; display: inline-flex; align-items: center; gap: 12px;
-  border: 1px solid var(--ink); border-radius: 2px; background: var(--ink); color: #fff; cursor: pointer; font-weight: 700;
+  min-height: 48px; padding: 0 var(--space-5); display: inline-flex; align-items: center; justify-content: center;
+  gap: var(--space-3); border: 1px solid var(--ink); border-radius: var(--radius); background: var(--ink);
+  color: var(--on-ink); font-weight: 700; cursor: pointer;
 }
-.mock-exam-launch-button:hover { background: var(--cyan-dark); border-color: var(--cyan-dark); }
-.mock-exam-launch-actions { margin-top: 20px; display: flex; flex-wrap: wrap; align-items: center; gap: 12px 20px; }
-.mock-exam-launch-button { margin-top: 0; }
+.mock-exam-launch-button:hover:not(:disabled) { background: var(--cyan-dark); border-color: var(--cyan-dark); }
+.mock-exam-launch-button:disabled { opacity: .45; cursor: not-allowed; }
+.mock-exam-launch-actions { margin-top: var(--space-5); display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3) var(--space-5); }
 .mock-exam-launch-analysis {
-  min-height: 44px; padding: 0 12px; display: inline-flex; align-items: center; gap: 8px;
-  border: 1px solid var(--cyan-dark); background: var(--surface); color: var(--cyan-dark); cursor: pointer; font-weight: 700;
+  min-height: 44px; padding: 0 var(--space-1); border: 0; background: transparent; color: var(--cyan-dark);
+  font: inherit; font-weight: 700; text-align: left; text-decoration: underline; text-underline-offset: .2em; cursor: pointer;
 }
-.mock-exam-launch-analysis:hover { background: var(--cyan-pale); }
+.mock-exam-launch-analysis:hover { color: var(--ink); }
 
-.mock-exam-view { display: grid; gap: 4px; }
-.mock-exam-notice { margin: 0 0 12px; padding: 12px 14px; border-left: 4px solid var(--amber); background: var(--amber-pale); font-size: .84rem; }
-.mock-exam-loading, .mock-exam-load-error { margin-top: 24px; padding: 32px; border: 1px solid var(--grid-strong); background: var(--surface); text-align: center; }
+.mock-exam-view { display: grid; gap: var(--space-1); }
+.mock-exam-notice { margin: 0 0 var(--space-3); }
+.mock-exam-loading, .mock-exam-load-error { margin-top: var(--space-6); padding: var(--space-8); border: 1px solid var(--grid-strong); background: var(--surface); text-align: center; }
 .mock-exam-load-error { border-color: var(--danger); }
-.mock-exam-error { margin: 12px 0; padding: 10px 12px; border-left: 4px solid var(--danger); background: #fdf1f0; color: var(--danger); font-weight: 700; }
+.mock-exam-error { margin: var(--space-3) 0; }
 
-.mock-exam-primary, .mock-exam-secondary {
-  min-height: 48px; padding: 0 20px; display: inline-flex; align-items: center; justify-content: center; gap: 10px;
-  border-radius: 2px; cursor: pointer; font-weight: 700;
-}
-.mock-exam-primary { border: 1px solid var(--ink); background: var(--ink); color: #fff; }
-.mock-exam-primary:hover:not(:disabled) { background: var(--cyan-dark); border-color: var(--cyan-dark); }
-.mock-exam-secondary { border: 1px solid var(--grid-strong); background: var(--surface); color: var(--ink); }
-.mock-exam-secondary:hover:not(:disabled) { border-color: var(--cyan); }
-.mock-exam-primary:disabled, .mock-exam-secondary:disabled { opacity: .45; cursor: not-allowed; }
-.mock-exam-link { margin-top: 14px; padding: 8px 4px; border: 0; background: none; color: var(--cyan-dark); cursor: pointer; font-weight: 700; text-decoration: underline; }
+.mock-exam-link { margin-top: var(--space-4); }
 
-.mock-exam-landing { margin-top: 24px; }
-.mock-exam-specs { margin: 20px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 10px 18px; list-style: none; font: 700 1rem var(--mono); color: var(--cyan-dark); }
-.mock-exam-disclaimers { margin: 18px 0 0; padding-left: 20px; display: grid; gap: 6px; color: var(--ink-soft); font-size: .86rem; line-height: 1.7; }
-.mock-exam-resume { margin-top: 24px; padding: 20px; border: 1px solid var(--grid-strong); background: var(--cyan-pale); }
-.mock-exam-resume h3 { margin: 0 0 14px; font-size: 1.15rem; }
-.mock-exam-landing-actions { margin-top: 20px; display: flex; flex-wrap: wrap; gap: 12px; }
+.mock-exam-landing { margin-top: var(--space-6); }
+.mock-exam-specs { margin: var(--space-5) 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: var(--space-3) var(--space-5); list-style: none; font: 700 var(--fs-base) var(--mono); color: var(--cyan-dark); }
+.mock-exam-disclaimers { margin: var(--space-5) 0 0; padding-left: var(--space-5); display: grid; gap: var(--space-2); color: var(--ink-soft); font-size: var(--fs-sm); line-height: var(--lh-body); }
+.mock-exam-resume { margin-top: var(--space-6); background: var(--cyan-pale); }
+.mock-exam-resume .card-title { margin-bottom: var(--space-4); }
+.mock-exam-landing-actions { margin-top: var(--space-5); display: flex; flex-wrap: wrap; gap: var(--space-3); }
 
-.mock-exam-runner { margin-top: 24px; border: 1px solid var(--grid-strong); background: var(--surface); box-shadow: var(--shadow); }
-.mock-exam-runner-head { min-height: 56px; padding: 12px 20px; display: flex; align-items: center; justify-content: space-between; gap: 16px; border-bottom: 1px solid var(--grid); flex-wrap: wrap; }
-.mock-exam-progress { font: 700 1rem var(--mono); color: var(--ink); }
-.mock-exam-timer { display: flex; align-items: baseline; gap: 8px; }
-.mock-exam-timer-label { font-size: .72rem; color: var(--ink-soft); }
-.mock-exam-timer-value { font: 700 1.4rem var(--mono); color: var(--ink); font-variant-numeric: tabular-nums; }
+/* .mock-exam-runner keeps its own selector: it has no outer padding by design
+   (the head/counts/question/nav sub-blocks each manage their own 20px inset with
+   dividers between them), so it is not wrapped in .panel. Only the border (already
+   --grid-strong) and shadow (removed, B5) matter here. */
+.mock-exam-runner { margin-top: var(--space-6); border: 1px solid var(--grid-strong); background: var(--surface); }
+.mock-exam-runner-head { min-height: 56px; padding: var(--space-3) var(--space-5); display: flex; align-items: center; justify-content: space-between; gap: var(--space-4); border-bottom: 1px solid var(--grid); flex-wrap: wrap; }
+.mock-exam-progress { font: 700 var(--fs-base) var(--mono); color: var(--ink); }
+.mock-exam-timer { display: flex; align-items: baseline; gap: var(--space-2); }
+.mock-exam-timer-label { font-size: var(--fs-xs); color: var(--ink-soft); }
+.mock-exam-timer-value { font: 700 var(--fs-xl) var(--mono); color: var(--ink); font-variant-numeric: tabular-nums; }
 .mock-exam-timer.is-low .mock-exam-timer-value { color: var(--danger); }
-.mock-exam-counts { padding: 12px 20px; display: flex; align-items: center; gap: 10px 18px; flex-wrap: wrap; border-bottom: 1px solid var(--grid); font: .8rem var(--mono); color: var(--ink-soft); }
-.mock-exam-counts button { margin-left: auto; min-height: 40px; padding: 0 14px; }
-.mock-exam-question { padding: 20px; }
-.mock-exam-question .card-prompt { min-height: 0; padding-bottom: 10px; }
-.mock-exam-question .choice-list { padding: 0 0 20px; }
-.mock-exam-question .quiz-hint { margin: 0 0 18px; }
-.mock-exam-flag { min-height: 44px; padding: 0 16px; border: 1px solid var(--grid-strong); border-radius: 2px; background: var(--surface); color: var(--ink); cursor: pointer; font-weight: 700; }
+.mock-exam-counts { padding: var(--space-3) var(--space-5); display: flex; align-items: center; gap: var(--space-3) var(--space-5); flex-wrap: wrap; border-bottom: 1px solid var(--grid); font: var(--fs-xs) var(--mono); color: var(--ink-soft); }
+.mock-exam-counts .btn--secondary { margin-left: auto; }
+.mock-exam-question { padding: var(--space-5); }
+.mock-exam-question .card-prompt { min-height: 0; padding-bottom: var(--space-3); }
+.mock-exam-question .choice-list { padding: 0 0 var(--space-5); }
+.mock-exam-question .quiz-hint { margin: 0 0 var(--space-5); }
+.mock-exam-flag { font-weight: 700; }
 .mock-exam-flag.is-flagged { border-color: var(--amber); background: var(--amber-pale); color: var(--amber); }
-.mock-exam-runner-nav { padding: 16px 20px; display: flex; flex-wrap: wrap; gap: 12px; border-top: 1px solid var(--grid); }
-.mock-exam-runner-nav .mock-exam-primary { margin-left: auto; }
+.mock-exam-runner-nav { padding: var(--space-4) var(--space-5); display: flex; flex-wrap: wrap; gap: var(--space-3); border-top: 1px solid var(--grid); }
+.mock-exam-runner-nav .btn { margin-left: auto; }
 
+/* Dialogs keep --shadow-strong and --radius-dialog (design-system.md §3.2: "dialog
+   なので --shadow-strong を残してよい"). */
 .mock-exam-palette, .mock-exam-submit-dialog {
-  width: min(560px, 92vw); max-height: 86vh; padding: 24px; border: 1px solid var(--grid-strong); border-radius: 4px; background: var(--surface); color: var(--ink); box-shadow: var(--shadow-strong);
+  width: min(560px, 92vw); max-height: 86vh; padding: var(--space-6); border: 1px solid var(--grid-strong);
+  border-radius: var(--radius-dialog); background: var(--surface); color: var(--ink); box-shadow: var(--shadow-strong);
 }
 .mock-exam-palette::backdrop, .mock-exam-submit-dialog::backdrop { background: rgb(23 52 71 / 45%); }
 .mock-exam-palette { overflow: auto; }
-.mock-exam-palette-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-.mock-exam-palette-head h2 { margin: 0; font-size: 1.2rem; }
-.mock-exam-palette-filters, .mock-exam-review-filters { margin: 16px 0; display: flex; flex-wrap: wrap; gap: 8px; border: 0; padding: 0; }
-.mock-exam-palette-filters button, .mock-exam-review-filters button { min-height: 40px; padding: 0 14px; border: 1px solid var(--grid-strong); border-radius: 2px; background: var(--surface); cursor: pointer; font-weight: 700; font-size: .82rem; }
-.mock-exam-palette-filters button.is-active, .mock-exam-review-filters button.is-active { border-color: var(--cyan-dark); background: var(--cyan-pale); color: var(--cyan-dark); }
-.mock-exam-palette-empty, .mock-exam-review-empty, .mock-exam-history-empty { margin: 0; padding: 24px; border: 1px dashed var(--grid-strong); text-align: center; color: var(--ink-soft); }
-.mock-exam-palette-grid { margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(52px, 1fr)); gap: 8px; list-style: none; }
-.mock-exam-palette-cell {
-  position: relative; min-height: 48px; width: 100%; display: flex; align-items: center; justify-content: center;
-  border: 1px solid var(--grid-strong); border-radius: 2px; background: var(--surface); cursor: pointer; font: 700 .9rem var(--mono);
-}
-.mock-exam-palette-cell.is-answered { border-color: var(--cyan-dark); background: var(--cyan-pale); }
+.mock-exam-palette-head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); }
+.mock-exam-palette-filters, .mock-exam-review-filters { margin: var(--space-4) 0; display: flex; flex-wrap: wrap; gap: var(--space-2); border: 0; padding: 0; }
+.mock-exam-palette-empty, .mock-exam-review-empty, .mock-exam-history-empty { margin: 0; padding: var(--space-6); border: 1px dashed var(--grid-strong); text-align: center; color: var(--ink-soft); }
+.mock-exam-palette-grid { margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(52px, 1fr)); gap: var(--space-2); list-style: none; }
+/* .chip supplies border/radius/background/color/cursor/min-height(44px); the cell
+   only adds the grid-slot layout, the mono index glyph, and the state overlays
+   .chip doesn't model (current outline, flagged corner mark). "answered" reuses
+   .chip's own .is-selected look instead of a bespoke rule. */
+.mock-exam-palette-cell { position: relative; width: 100%; display: flex; align-items: center; justify-content: center; font: 700 var(--fs-sm) var(--mono); }
 .mock-exam-palette-cell.is-flagged { border-left: 4px solid var(--amber); }
 .mock-exam-palette-cell.is-current { outline: 3px solid var(--focus); outline-offset: 1px; }
-.mock-exam-palette-flag { position: absolute; top: 2px; right: 3px; font-size: .7rem; color: var(--amber); }
-.mock-exam-palette-check { position: absolute; bottom: 1px; right: 3px; font-size: .7rem; color: var(--cyan-dark); }
+.mock-exam-palette-flag { position: absolute; top: 2px; right: 3px; font-size: var(--fs-micro); color: var(--amber); }
+.mock-exam-palette-check { position: absolute; bottom: 1px; right: 3px; font-size: var(--fs-micro); color: var(--cyan-dark); }
 
-.mock-exam-submit-dialog h2 { margin: 0 0 12px; font-size: 1.25rem; }
-.mock-exam-submit-summary { margin: 14px 0; padding-left: 20px; display: grid; gap: 6px; font: .9rem var(--mono); }
-.mock-exam-submit-warn { margin: 8px 0 0; padding: 8px 12px; border-left: 3px solid var(--amber); background: var(--amber-pale); font-size: .82rem; }
-.mock-exam-dialog-actions { margin-top: 20px; display: flex; flex-wrap: wrap; gap: 12px; justify-content: flex-end; }
+.mock-exam-submit-dialog .card-title { margin-bottom: var(--space-3); }
+.mock-exam-submit-summary { margin: var(--space-4) 0; padding-left: var(--space-5); display: grid; gap: var(--space-2); font: var(--fs-sm) var(--mono); }
+.mock-exam-submit-warn { margin: var(--space-2) 0 0; }
+.mock-exam-dialog-actions { margin-top: var(--space-5); display: flex; flex-wrap: wrap; gap: var(--space-3); justify-content: flex-end; }
 
-.mock-exam-result, .mock-exam-review, .mock-exam-history { margin-top: 24px; }
-.mock-exam-outcome { margin: 8px 0 0; font: 700 1rem var(--mono); color: var(--cyan-dark); }
-.mock-exam-disclaimer { margin: 16px 0; padding: 12px 14px; border-left: 4px solid var(--cyan); background: var(--cyan-pale); font-size: .84rem; line-height: 1.7; }
-.mock-exam-scoreboard { margin: 0 0 24px; padding: 20px; display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 16px; border: 1px solid var(--grid-strong); background: var(--surface); }
-.mock-exam-scoreboard div { display: grid; gap: 4px; }
-.mock-exam-scoreboard dt { font-size: .72rem; color: var(--ink-soft); }
-.mock-exam-scoreboard dd { margin: 0; font: 700 1.6rem var(--mono); }
-.mock-exam-tally { margin: 0 0 20px; padding: 18px 20px; border: 1px solid var(--grid); background: var(--surface); }
-.mock-exam-tally h3 { margin: 0 0 12px; font-size: 1.05rem; }
-.mock-exam-tally-note { margin: 0 0 12px; font-size: .8rem; color: var(--ink-soft); line-height: 1.6; }
-.mock-exam-tally dl { margin: 0; display: grid; gap: 8px; }
-.mock-exam-tally dl div { display: flex; justify-content: space-between; gap: 16px; padding: 6px 0; border-bottom: 1px solid var(--grid); }
+.mock-exam-result, .mock-exam-review, .mock-exam-history { margin-top: var(--space-6); }
+.mock-exam-outcome { margin: var(--space-2) 0 0; font: 700 var(--fs-base) var(--mono); color: var(--cyan-dark); }
+.mock-exam-disclaimer { margin: var(--space-4) 0; }
+.mock-exam-scoreboard { margin: 0 0 var(--space-6); display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: var(--space-4); }
+.mock-exam-scoreboard div { display: grid; gap: var(--space-1); }
+.mock-exam-scoreboard dt { font-size: var(--fs-xs); color: var(--ink-soft); }
+.mock-exam-scoreboard dd { margin: 0; font: 700 var(--fs-xl) var(--mono); }
+.mock-exam-tally { margin: 0 0 var(--space-5); }
+.mock-exam-tally .card-title { margin-bottom: var(--space-3); }
+.mock-exam-tally-note { margin: 0 0 var(--space-3); font-size: var(--fs-xs); color: var(--ink-soft); line-height: var(--lh-body); }
+.mock-exam-tally dl { margin: 0; display: grid; gap: var(--space-2); }
+.mock-exam-tally dl div { display: flex; justify-content: space-between; gap: var(--space-4); padding: var(--space-2) 0; border-bottom: 1px solid var(--grid); }
 .mock-exam-tally dt { color: var(--ink); }
-.mock-exam-tally dd { margin: 0; font: .84rem var(--mono); color: var(--ink-soft); white-space: nowrap; }
-.mock-exam-result-actions { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+.mock-exam-tally dd { margin: 0; font: var(--fs-sm) var(--mono); color: var(--ink-soft); white-space: nowrap; }
+.mock-exam-result-actions { display: flex; flex-wrap: wrap; gap: var(--space-3); align-items: center; }
 
-.mock-exam-review-list { margin: 0; padding: 0; display: grid; gap: 20px; list-style: none; }
-.mock-exam-review-item { padding: 20px; border: 1px solid var(--grid-strong); background: var(--surface); box-shadow: var(--shadow); }
-.mock-exam-review-item-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; font: .72rem var(--mono); color: var(--ink-soft); }
-.mock-exam-verdict { padding: 3px 8px; font: 700 .72rem var(--mono); border: 1px solid currentcolor; }
+.mock-exam-review-list { margin: 0; padding: 0; display: grid; gap: var(--space-5); list-style: none; }
+.mock-exam-review-item-head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); margin-bottom: var(--space-3); font: var(--fs-xs) var(--mono); color: var(--ink-soft); }
+.mock-exam-verdict { padding: 3px var(--space-2); font: 700 var(--fs-xs) var(--mono); border: 1px solid currentcolor; }
 .mock-exam-verdict.is-correct { color: var(--green); }
 .mock-exam-verdict.is-incorrect { color: var(--danger); }
 .mock-exam-verdict.is-unanswered { color: var(--ink-soft); }
-.mock-exam-your-answer, .mock-exam-correct-answer { margin: 10px 0 0; font-size: .9rem; line-height: 1.6; }
-.mock-exam-review-missing { margin: 10px 0 0; color: var(--amber); font-size: .84rem; }
+.mock-exam-your-answer, .mock-exam-correct-answer { margin: var(--space-3) 0 0; font-size: var(--fs-sm); line-height: var(--lh-body); }
+.mock-exam-review-missing { margin: var(--space-3) 0 0; color: var(--amber); font-size: var(--fs-sm); }
 
-.mock-exam-history-list { margin: 0; padding: 0; display: grid; gap: 12px; list-style: none; }
-.mock-exam-history-item { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; padding: 16px 18px; border: 1px solid var(--grid-strong); background: var(--surface); }
-.mock-exam-history-meta { display: flex; align-items: baseline; gap: 8px 16px; flex-wrap: wrap; font: .82rem var(--mono); color: var(--ink-soft); }
-.mock-exam-history-meta strong { font-size: .92rem; color: var(--ink); }
+.mock-exam-history-list { margin: 0; padding: 0; display: grid; gap: var(--space-3); list-style: none; }
+.mock-exam-history-item { display: flex; align-items: center; justify-content: space-between; gap: var(--space-4); flex-wrap: wrap; padding: var(--space-4) var(--space-5); border: 1px solid var(--grid-strong); background: var(--surface); }
+.mock-exam-history-meta { display: flex; align-items: baseline; gap: var(--space-2) var(--space-4); flex-wrap: wrap; font: var(--fs-sm) var(--mono); color: var(--ink-soft); }
+.mock-exam-history-meta strong { font-size: var(--fs-base); color: var(--ink); }
 
-.mock-exam-incompatible, .mock-exam-save-error { margin-top: 24px; padding: clamp(24px, 4vw, 42px); border: 1px solid var(--danger); background: #fdf1f0; }
-.mock-exam-incompatible h2, .mock-exam-save-error h2 { margin: 0 0 12px; font-size: 1.4rem; }
-.mock-exam-incompatible p, .mock-exam-save-error p { margin: 0 0 18px; line-height: 1.8; }
+.mock-exam-incompatible, .mock-exam-save-error { margin-top: var(--space-6); padding: var(--pad-panel); border: 1px solid var(--danger); background: var(--danger-pale); }
+.mock-exam-incompatible p, .mock-exam-save-error p { margin: 0 0 var(--space-5); line-height: var(--lh-relaxed); }
 
 @media (max-width: 640px) {
-  .mock-exam-runner-head { flex-direction: column; align-items: flex-start; gap: 8px; }
-  .mock-exam-counts button { margin-left: 0; }
-  .mock-exam-runner-nav .mock-exam-primary { margin-left: 0; width: 100%; }
-  .mock-exam-result-actions .mock-exam-primary, .mock-exam-result-actions .mock-exam-secondary { flex: 1 1 auto; }
+  .mock-exam-runner-head { flex-direction: column; align-items: flex-start; gap: var(--space-2); }
+  .mock-exam-counts .btn--secondary { margin-left: 0; }
+  .mock-exam-runner-nav .btn { margin-left: 0; width: 100%; }
+  .mock-exam-result-actions .btn, .mock-exam-result-actions .btn--secondary { flex: 1 1 auto; }
 }
 
 /* Task 9 — learning analysis */
-.mock-exam-landing-links { margin-top: 14px; display: flex; flex-wrap: wrap; gap: 4px 20px; }
-.mock-exam-analysis { margin-top: 24px; display: grid; gap: 24px; }
-.mock-exam-analysis > .page-header { margin: 0; }
-.mock-exam-analysis-empty { padding: clamp(24px, 4vw, 42px); border: 1px dashed var(--grid-strong); background: var(--surface); text-align: center; }
-.mock-exam-analysis-empty-title { margin: 0 0 8px; font-weight: 700; font-size: 1.1rem; }
-.mock-exam-analysis-counts { margin: 0; display: flex; flex-wrap: wrap; gap: 6px 18px; font: .82rem var(--mono); color: var(--ink-soft); }
-.mock-exam-analysis-note { margin: 0; padding: 12px 14px; border-left: 4px solid var(--cyan); background: var(--cyan-pale); font-size: .82rem; line-height: 1.7; }
+.mock-exam-landing-links { margin-top: var(--space-4); display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-5); }
+.mock-exam-analysis { margin-top: var(--space-6); display: grid; gap: var(--space-6); }
+.mock-exam-analysis-empty { padding: var(--pad-panel); border: 1px dashed var(--grid-strong); background: var(--surface); text-align: center; }
+.mock-exam-analysis-empty-title { margin: 0 0 var(--space-2); font-weight: 700; font-size: var(--fs-lg); }
+.mock-exam-analysis-counts { margin: 0; display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-5); font: var(--fs-sm) var(--mono); color: var(--ink-soft); }
+.mock-exam-analysis-note { margin: 0; }
 
-.mock-exam-range { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; }
-.mock-exam-range-legend { font-size: .78rem; color: var(--ink-soft); text-transform: uppercase; letter-spacing: .04em; }
-.mock-exam-range-option { min-height: 44px; padding: 0 16px; border: 1px solid var(--grid-strong); border-radius: 2px; background: var(--surface); color: var(--ink); cursor: pointer; font-weight: 700; font-size: .84rem; }
-.mock-exam-range-option[aria-pressed="true"] { border-color: var(--cyan-dark); background: var(--cyan-pale); color: var(--cyan-dark); }
-.mock-exam-range-summary { font: .82rem var(--mono); color: var(--ink-soft); }
+.mock-exam-range { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-3); }
+.mock-exam-range-legend { font-size: var(--fs-xs); color: var(--ink-soft); text-transform: uppercase; letter-spacing: .04em; }
+.mock-exam-range-summary { font: var(--fs-sm) var(--mono); color: var(--ink-soft); }
 
-.mock-exam-stability, .mock-exam-evidence, .mock-exam-priority, .mock-exam-axis, .mock-exam-trend, .mock-exam-next-actions { padding: 18px 20px; border: 1px solid var(--grid); background: var(--surface); }
-.mock-exam-analysis section > h3 { margin: 0 0 12px; font-size: 1.05rem; }
-.mock-exam-stability-label { margin: 0 0 6px; font-size: 1.1rem; }
-.mock-exam-stability p { margin: 0 0 12px; line-height: 1.7; }
-.mock-exam-stability-disclaimers { margin: 0; padding-left: 20px; display: grid; gap: 6px; color: var(--ink-soft); font-size: .82rem; line-height: 1.6; }
-.mock-exam-evidence p { margin: 0 0 12px; line-height: 1.7; font-size: .9rem; }
-.mock-exam-evidence-legend { margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px 16px; list-style: none; font: .82rem var(--mono); color: var(--ink-soft); }
+/* .mock-exam-stability/-evidence/-priority/-axis/-trend/-next-actions/-tally are
+   .panel.panel--sm in their JSX (B5): border --grid → --grid-strong via .panel,
+   padding rounded to --pad-panel-sm. Their own selectors carry only content that
+   .panel doesn't model. */
+.mock-exam-analysis section > .card-title { margin-bottom: var(--space-3); }
+.mock-exam-stability-label { margin: 0 0 var(--space-2); font-size: var(--fs-lg); }
+.mock-exam-stability p { margin: 0 0 var(--space-3); line-height: var(--lh-body); }
+.mock-exam-stability-disclaimers { margin: 0; padding-left: var(--space-5); display: grid; gap: var(--space-2); color: var(--ink-soft); font-size: var(--fs-sm); line-height: var(--lh-body); }
+.mock-exam-evidence p { margin: 0 0 var(--space-3); line-height: var(--lh-body); font-size: var(--fs-sm); }
+.mock-exam-evidence-legend { margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-4); list-style: none; font: var(--fs-sm) var(--mono); color: var(--ink-soft); }
 
-.mock-exam-axis-note { margin: 0 0 12px; font-size: .8rem; color: var(--ink-soft); line-height: 1.6; }
-.mock-exam-axis-empty { margin: 0; padding: 16px; border: 1px dashed var(--grid-strong); text-align: center; color: var(--ink-soft); font-size: .86rem; }
+.mock-exam-axis-note { margin: 0 0 var(--space-3); font-size: var(--fs-xs); color: var(--ink-soft); line-height: var(--lh-body); }
+.mock-exam-axis-empty { margin: 0; padding: var(--space-4); border: 1px dashed var(--grid-strong); text-align: center; color: var(--ink-soft); font-size: var(--fs-sm); }
 .mock-exam-table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-.mock-exam-axis-table, .mock-exam-trend-table { width: 100%; border-collapse: collapse; font-size: .86rem; }
-.mock-exam-axis-table th, .mock-exam-axis-table td, .mock-exam-trend-table th, .mock-exam-trend-table td { padding: 8px 12px; text-align: right; border-bottom: 1px solid var(--grid); white-space: nowrap; }
-.mock-exam-axis-table thead th, .mock-exam-trend-table thead th { font: 700 .74rem var(--mono); color: var(--ink-soft); text-transform: uppercase; letter-spacing: .03em; border-bottom: 2px solid var(--grid-strong); }
+.mock-exam-axis-table, .mock-exam-trend-table { width: 100%; border-collapse: collapse; font-size: var(--fs-sm); }
+.mock-exam-axis-table th, .mock-exam-axis-table td, .mock-exam-trend-table th, .mock-exam-trend-table td { padding: var(--space-2) var(--space-3); text-align: right; border-bottom: 1px solid var(--grid); white-space: nowrap; }
+.mock-exam-axis-table thead th, .mock-exam-trend-table thead th { font: 700 var(--fs-xs) var(--mono); color: var(--ink-soft); text-transform: uppercase; letter-spacing: .03em; border-bottom: 2px solid var(--grid-strong); }
 .mock-exam-axis-table th[scope="row"], .mock-exam-trend-table th[scope="row"], .mock-exam-axis-table thead th:first-child, .mock-exam-trend-table thead th:first-child { text-align: left; }
-.mock-exam-axis-table tbody td { font: .84rem var(--mono); font-variant-numeric: tabular-nums; }
-.mock-exam-trend-table tbody td { font: .82rem var(--mono); font-variant-numeric: tabular-nums; }
+.mock-exam-axis-table tbody td { font: var(--fs-sm) var(--mono); font-variant-numeric: tabular-nums; }
+.mock-exam-trend-table tbody td { font: var(--fs-sm) var(--mono); font-variant-numeric: tabular-nums; }
 .mock-exam-axis-row.evidence-insufficient th[scope="row"] { border-left: 3px solid var(--grid-strong); }
 .mock-exam-axis-row.evidence-limited th[scope="row"] { border-left: 3px solid var(--amber); }
 .mock-exam-axis-row.evidence-sufficient th[scope="row"] { border-left: 3px solid var(--cyan-dark); }
-.mock-exam-axis-table th[scope="row"] { padding-left: 12px; }
+.mock-exam-axis-table th[scope="row"] { padding-left: var(--space-3); }
 
-.mock-exam-review-group { margin-top: 14px; }
-.mock-exam-review-group h4 { margin: 0 0 8px; font-size: .92rem; color: var(--ink); }
-.mock-exam-priority-list { margin: 0; padding: 0 0 0 20px; display: grid; gap: 8px; }
-.mock-exam-priority-item { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 16px; }
+.mock-exam-review-group { margin-top: var(--space-4); }
+.mock-exam-review-group h4 { margin: 0 0 var(--space-2); font-size: var(--fs-base); color: var(--ink); }
+.mock-exam-priority-list { margin: 0; padding: 0 0 0 var(--space-5); display: grid; gap: var(--space-2); }
+.mock-exam-priority-item { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: var(--space-1) var(--space-4); }
 .mock-exam-priority-name { font-weight: 700; }
-.mock-exam-priority-detail { font: .78rem var(--mono); color: var(--ink-soft); }
+.mock-exam-priority-detail { font: var(--fs-xs) var(--mono); color: var(--ink-soft); }
 
-.mock-exam-next-actions-list { margin: 0; padding: 0; display: grid; gap: 12px; list-style: none; }
-.mock-exam-next-action { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 16px; padding: 12px 14px; border: 1px solid var(--grid); background: var(--cyan-pale); }
-.mock-exam-next-action span { flex: 1 1 220px; line-height: 1.6; font-size: .9rem; }
+.mock-exam-next-actions-list { margin: 0; padding: 0; display: grid; gap: var(--space-3); list-style: none; }
+/* Inner list row inside the already-panelled .mock-exam-next-actions section: the
+   lighter --grid border is correct here, mirroring .panel--flat's "nested inner
+   block" rule (design-system.md §3.2). */
+.mock-exam-next-action { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-3) var(--space-4); padding: var(--space-3) var(--space-4); border: 1px solid var(--grid); background: var(--cyan-pale); }
+.mock-exam-next-action span { flex: 1 1 220px; line-height: var(--lh-body); font-size: var(--fs-sm); }

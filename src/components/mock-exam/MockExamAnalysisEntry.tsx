@@ -23,7 +23,7 @@ export function MockExamAnalysisEntry(props: MockExamAnalysisProps & { copy: UiC
     return () => { cancelled = true; };
   }, []);
 
-  if (error) return <section class="mock-exam-load-error" role="alert" tabIndex={-1} ref={errorRef}><p>{props.copy.mockExam.loadError}</p><button type="button" onClick={() => window.location.reload()}>{props.copy.mockExam.retry}</button></section>;
+  if (error) return <section class="mock-exam-load-error" role="alert" tabIndex={-1} ref={errorRef}><p>{props.copy.mockExam.loadError}</p><button type="button" class="btn btn--secondary" onClick={() => window.location.reload()}>{props.copy.mockExam.retry}</button></section>;
   if (!View) return <section class="mock-exam-loading" role="status" aria-live="polite" aria-busy="true"><p>{props.copy.mockExam.loading}</p></section>;
   return <View {...props}/>;
 }

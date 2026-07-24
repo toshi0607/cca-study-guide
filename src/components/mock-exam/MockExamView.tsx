@@ -226,15 +226,15 @@ export function MockExamView({ locale, copy, session, attempts, storageAvailable
 
   const incompatibleSection = (
     <section class="mock-exam-incompatible" aria-labelledby="mock-exam-incompatible-title" tabIndex={-1} ref={incompatibleRef}>
-      <h2 id="mock-exam-incompatible-title">{copy.mockExam.incompatibleTitle}</h2>
+      <h2 id="mock-exam-incompatible-title" class="section-title">{copy.mockExam.incompatibleTitle}</h2>
       <p>{copy.mockExam.incompatibleBody}</p>
-      <button type="button" class="mock-exam-secondary" onClick={handleIncompatibleDiscard}>{copy.mockExam.incompatibleDiscard}</button>
+      <button type="button" class="btn btn--secondary" onClick={handleIncompatibleDiscard}>{copy.mockExam.incompatibleDiscard}</button>
     </section>
   );
 
   return (
     <div class="mock-exam-view">
-      {!storageAvailable && <p class="mock-exam-notice" role="note">{copy.mockExam.storageUnavailable}</p>}
+      {!storageAvailable && <p class="note note--warn mock-exam-notice" role="note">{copy.mockExam.storageUnavailable}</p>}
 
       {phase === 'landing' && <MockExamLanding
         hasActiveSession={!!session}
@@ -265,11 +265,11 @@ export function MockExamView({ locale, copy, session, attempts, storageAvailable
       {phase === 'incompatible' && incompatibleSection}
 
       {phase === 'save-error' && <section class="mock-exam-save-error" aria-labelledby="mock-exam-save-error-title" tabIndex={-1} ref={saveErrorRef}>
-        <h2 id="mock-exam-save-error-title">{copy.mockExam.saveErrorTitle}</h2>
+        <h2 id="mock-exam-save-error-title" class="section-title">{copy.mockExam.saveErrorTitle}</h2>
         <p>{copy.mockExam.saveErrorBody}</p>
         <div class="mock-exam-landing-actions">
-          <button type="button" class="mock-exam-primary" onClick={retryFinalize}>{copy.mockExam.saveErrorRetry}</button>
-          {pendingMode === 'submit' && <button type="button" class="mock-exam-secondary" onClick={() => { finalizingRef.current = false; setPhase('running'); }}>{copy.mockExam.resumeButton}</button>}
+          <button type="button" class="btn" onClick={retryFinalize}>{copy.mockExam.saveErrorRetry}</button>
+          {pendingMode === 'submit' && <button type="button" class="btn btn--secondary" onClick={() => { finalizingRef.current = false; setPhase('running'); }}>{copy.mockExam.resumeButton}</button>}
         </div>
       </section>}
 

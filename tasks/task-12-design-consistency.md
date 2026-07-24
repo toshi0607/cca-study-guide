@@ -59,9 +59,9 @@ S2-S6 は担当ファイルが排他。`src/i18n/ui.ts` のみ共有だが、各
 - [x] 完了条件: `pnpm build` exit 0 / `pnpm test` 445 pass / `pnpm test:bundle` OK / 全ビューSSが分割前と 0px 差
 
 ### S2 模試
-- [ ] A2 見出しをディスプレイ書体へ / B5 枠線を `--grid-strong` へ / D1 `min-height` 44px
-- [ ] A1 ボタンを `.btn` 系へ / B2 注記を `.note` 系へ / A3 hero・compact の割り当て
-- [ ] C1 `mockExam.eyebrow` `resultEyebrow` `analysis.eyebrow` を英語大文字へ / C2 分析6セクションはアイブロウなし
+- [x] A2 見出しをディスプレイ書体へ / B5 枠線を `--grid-strong` へ / D1 `min-height` 44px
+- [x] A1 ボタンを `.btn` 系へ / B2 注記を `.note` 系へ / A3 hero・compact の割り当て
+- [x] C1 `mockExam.eyebrow` `resultEyebrow` `analysis.eyebrow` を英語大文字へ / C2 分析6セクションはアイブロウなし
 
 ### S3 ガイド系
 - [ ] A4 詳細ビュー本文を `.panel` へ / A5 `.domain-label` 化 / D5 カード意匠の統一 / D6 重複削除
@@ -153,6 +153,45 @@ S2-S6 は担当ファイルが排他。`src/i18n/ui.ts` のみ共有だが、各
 - **B3**: `.privacy-header` の `#0a2738`/`#eef8fb` は `shell.css` の `.rail` と全く同じ値だったため、トークン化済みの `--rail-edge` / `--rail-strong` に置換（新規トークンは追加していない）。`#fff0ef`（danger hover）と `.progress-card button` の `#fff` は該当ルールごと削除（`.btn--danger` / `.btn--secondary` が肩代わり）。
 - **44px スキャンで見つけた追加修正**: `.privacy-header > a:last-child`（「学習ノートへ戻る」リンク）はデスクトップ幅で 13px しかタップ領域が無かった（この状態は変更前から存在）。担当ファイル内で完結する修正だったため `min-height:44px` をベース宣言に追加し、760px メディアクエリ側の重複宣言は削除した。`.source-register a`（公式資料リンク一覧）と `.privacy-article` 本文中のインクリンク（「GitHub Issues」等）は地の文中のリンクで WCAG 2.5.8 の inline 除外に該当し、変更前から min-height 指定が無い状態だったため据え置いた。`.wordmark` は shell.css 所有の共有部品なので触っていない。
 - **e2e テストの範囲を限定**: `tests/import-export.spec.ts`（2件）と `tests/analytics.spec.ts`（1件）は個別実行して pass を確認した。`tests/accessibility.spec.ts` のプライバシーページ分を実行しようとしたところ、姉妹 worktree（`agent-a856e620a152e4ebb` ほか）が同時に `playwright.config.ts` の同一デフォルトポート（4325）で e2e を実行中で、こちらのプロセスが SIGTERM で終了した（ポート競合、相手側のプロセスやファイルには一切触れていない）。S6 の MUST DO 検証リストに `pnpm test:e2e` は含まれておらず（`pnpm test:bundle` は実施済み）、全体の `pnpm test:e2e:fast` は design-system.md §6 の「全ストリーム共通の受け入れ条件」として Phase 2 統合時に確認される想定のため、単体テスト（vitest 445件）・ビルド・上記2ファイルの e2e・スクリーンショット目視・JS走査で代替した。
+
+### S2 模試
+
+**担当ファイル**: `src/styles/mock-exam.css`、`src/components/mock-exam/**`（15ファイル）、`src/components/MockExamEntry.tsx`、`src/i18n/ui.ts` の `mockExam` オブジェクトのみ（ja/en 各3キー）。`git diff --name-only` で確認済み（この17ファイルのみ）。
+
+**worktree セットアップの前提修正**: このストリームの worktree（`worktree-agent-afa4f27e330d8b4a5`）は Phase 0 完了コミット（`53f6c5a`）ではなく、その親コミット（`347dc78`）から切られていた（`design-system.md` `design-consistency-audit.md` `mock-exam.css` 等が存在しない状態）。`53f6c5a` の親が現在の HEAD と完全一致していたため `git merge --ff-only 53f6c5a` で安全に取り込んでから着手した（オブジェクトDBは全 worktree 共有のため、他 worktree へ触れずに実行可能）。
+
+**A1（ボタン→`.btn`系）で見つけた実装バグ**: `system.css` の `.btn--secondary` / `.btn--danger` は純粋な modifier（`min-height` 等の基本プロパティを持たず、色だけ上書きする設計）で、単体では `min-height: 48px` 等が一切効かない。最初の実装で `class="btn--secondary"` 単体を使ってしまい、Playwright の min-height 走査で実測 32.39px（規定48px割れ、D1違反）を検出 → 全12箇所を `class="btn btn--secondary"`（base + modifier 併記）に修正して解消。`.btn--text` は単体で完結する設計なので対象外。`.panel--sm` も同型の modifier だが、こちらは最初から `panel panel--sm` で併記していたため問題なし。
+
+**A2 見出しクラスの割当て**: MUST DO は対象7セレクタを `.section-title` / `.card-title` の2択と明示していたため（`.sub-title` は指示に含まれない）、design-system.md §2 の丸め表で現在値を機械的に判定した上で、7セレクタ中もっとも大きい1.4rem（`.mock-exam-incompatible/-save-error h2`、丸め表で `--fs-xl` 行）だけ `.section-title`、残り5つ（1.05〜1.25rem、`--fs-lg` 相当）は `.card-title` とした。
+
+**A3 hero/compact**: `MockExamLanding` のみ `.panel--hero`（compact なし）、`Result/Review/History/Analysis` は `.panel--hero.is-compact`。`.panel--hero` は `.page-header h2` と違い見出しの `font-family` を自動付与しないため、5箇所すべての `<h2>` に明示で `class="page-title"` を追加（付け忘れると A2 以前より見出しが崩れる回帰になるところだった）。
+
+**B5 の適用範囲**: `.mock-exam-stability/-evidence/-priority/-axis/-trend/-next-actions/-tally` の7つは `panel panel--sm` を JSX に追加し、CSS 側の border/padding/background 宣言を削除（`--grid`→`--grid-strong` は `.panel` 経由で自動的に解消）。`.mock-exam-launch`（TodayView.tsx 側、S4 所有）と `.mock-exam-runner`（自ファイルだが構造上ヘッダー/設問/ナビが独自の内側パディングを持つため `.panel` 化すると二重パディングになる）は、クラス名は変えずに宣言だけ `.panel` 相当へ揃え、box-shadow のみ削除した。`.mock-exam-history-item` は B5 の指示リストに無かったため（実測ですでに `--grid-strong` 準拠だった）、`panel` 化はせず余白のトークン化のみに留めた。
+
+**`.mock-exam-launch` / `.mock-exam-launch-button` / `.mock-exam-launch-analysis`**: TodayView.tsx（S4 所有、編集禁止）から参照されるため、JSX 側のクラス名は変更できない。CSS 宣言だけを `.panel` / `.btn` / `.btn--text` と1宣言単位で完全一致させ、見た目を統一した（クラス名の重複自体は残っている＝Phase 2 で S4 側が TodayView.tsx を `.btn`/`.panel` に直接置き換えれば、このデッドコード化した宣言は削除できる）。
+
+**`.mock-exam-flag` / `.mock-exam-palette-cell`**: `.chip` をベースクラスとして追加した上で、`.chip` に無い状態（flag の amber 表示、palette cell の current outline / flagged corner mark）だけ独自ルールとして残した。palette cell の「回答済み」状態は `.chip.is-selected` をそのまま流用（`.is-answered` という独自クラスは削除）。
+
+**B2 の残存クラス**: `.note` は `margin` を一切宣言しない設計のため、旧クラスの `margin` 値だけをレイアウト専用の残存ルールとして保持（例: `.mock-exam-notice { margin: 0 0 var(--space-3); }`）。`margin: 0` だった `.mock-exam-analysis-note` も同様に明示で残した（省略すると `<p>` のブラウザ既定マージンが復活してしまうため）。
+
+**スコープ外で見つかった既知の問題（修正していない）**:
+1. `test:e2e:a11y` の `answer review and summary...` テストが色コントラスト不足で失敗する（`.quiz-next` 背景 `#6a7c88` / テキスト白、コントラスト比4.32、および `<small>` の日付テキスト）。これは Quiz/Practice 領域（S5 所有の `practice.css` とその配下コンポーネント）の問題で、`tests/accessibility.spec.ts` に模試関連のテストは1件も無く、模試エリアには一切触れていない。このリポジトリで模試以外のファイルを一切変更していないため、S2 の変更に起因するものではない（pre-existing）。
+2. `SourceLinks`（`src/components/app/SourceLinks.tsx` と `system.css` の `.source-links`、共有・凍結）は `min-height` が実測12px で D1 の44px基準を満たさない。模試の復習画面（各設問の「公式ソース」欄）でも使われているが、S2 の担当ファイルではないため未修正。全エリア共通の既知ギャップとして報告する。
+
+**検証結果**:
+- `pnpm install`: 完了（Node v26 engines警告のみ、無視）
+- `pnpm build`（astro check込み）: exit 0、エラー0・警告0（既存の hint 3件は Phase 0 由来、S2 の変更によるものではないことを確認済み）
+- `pnpm test`（vitest）: 445 pass / 445（Phase 0 と同数）
+- `pnpm test:bundle`: OK（9 eagerly-loaded chunks, none forbidden）
+- `pnpm test:e2e:a11y`: 9 pass / 10（1件失敗はスコープ外、上記参照）
+- Playwright で 60問模試を実際に完走（ランディング→開始→60問回答→パレット→提出ダイアログ→結果→復習→履歴→学習分析→進行中の再開状態）し、1440×1000・375×812 でスクリーンショットを取得。全画面を目視確認:
+  - A2: 模試エリアの全見出し（結果/履歴/復習/学習分析の各セクション見出し・カード見出し）が Barlow Condensed 表示書体でレンダリングされていることを確認
+  - B5: `.mock-exam-tally` `.mock-exam-stability` 等のパネル枠線が他エリアと同じ濃さ（`--grid-strong`）になっていることを確認
+  - A3: 模試ランディングがフルサイズ hero、結果/履歴/復習/学習分析が compact hero であることを確認
+  - C1/C2: 英語大文字アイブロウ（ja/en とも `MOCK EXAM / 60 QUESTIONS` `EXAM RESULT` `LEARNING ANALYSIS`）、学習分析の6セクションにアイブロウが無いことを確認
+- min-height 走査（`.mock-exam-view` / `.mock-exam-landing` / 両ダイアログ配下の button/a/[role=button]、全8画面）: 違反0件（上記の `SourceLinks` 由来の94件を除く。これらは model classなし・スコープ外の共有コンポーネント）
+- `git diff --name-only`: 担当17ファイルのみ（`mock-exam.css`・15コンポーネント・`MockExamEntry.tsx`・`ui.ts`・本ファイル）
+- 一時ファイル（`mock-exam-verify-tmp.mjs` 等）は削除済み、dev サーバーは停止済み
 
 ## Review
 

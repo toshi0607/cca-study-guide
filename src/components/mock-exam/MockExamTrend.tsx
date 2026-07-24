@@ -17,8 +17,8 @@ export function MockExamTrend({ points, locale, copy }: {
   const a = copy.mockExam.analysis;
 
   return (
-    <section class="mock-exam-trend" aria-labelledby="mock-exam-analysis-trend-title">
-      <h3 id="mock-exam-analysis-trend-title">{a.trendHeading}</h3>
+    <section class="panel panel--sm mock-exam-trend" aria-labelledby="mock-exam-analysis-trend-title">
+      <h3 id="mock-exam-analysis-trend-title" class="card-title">{a.trendHeading}</h3>
       {points.length === 0
         ? <p class="mock-exam-axis-empty">{a.trendEmpty}</p>
         : <div class="mock-exam-table-scroll">

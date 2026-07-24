@@ -22,9 +22,9 @@ export function MockExamHistory({ attempts, headingRef, locale, copy, onOpen, on
 
   return (
     <section class="mock-exam-history" aria-labelledby="mock-exam-history-title">
-      <header class="page-header compact">
+      <header class="panel--hero is-compact">
         <p class="eyebrow">{copy.mockExam.eyebrow}</p>
-        <h2 id="mock-exam-history-title" tabIndex={-1} ref={headingRef}>{copy.mockExam.historyTitle}</h2>
+        <h2 id="mock-exam-history-title" class="page-title" tabIndex={-1} ref={headingRef}>{copy.mockExam.historyTitle}</h2>
         <p>{copy.mockExam.historyIntro}</p>
       </header>
       {ordered.length === 0
@@ -42,14 +42,14 @@ export function MockExamHistory({ attempts, headingRef, locale, copy, onOpen, on
                     <span>{copy.mockExam.historyEntryScore(correct, total)}</span>
                     <span>{copy.mockExam.historyEntryAccuracy(percent)}</span>
                   </div>
-                  <button type="button" class="mock-exam-secondary" onClick={() => onOpen(attempt)}>{copy.mockExam.historyOpen}</button>
+                  <button type="button" class="btn btn--secondary" onClick={() => onOpen(attempt)}>{copy.mockExam.historyOpen}</button>
                 </li>
               );
             })}
           </ul>}
       <div class="mock-exam-landing-links">
-        {ordered.length > 0 && <button type="button" class="mock-exam-link" onClick={onOpenAnalysis}>{copy.mockExam.analysis.openButton}</button>}
-        <button type="button" class="mock-exam-link" onClick={onBack}>{copy.mockExam.backToLanding}</button>
+        {ordered.length > 0 && <button type="button" class="btn--text mock-exam-link" onClick={onOpenAnalysis}>{copy.mockExam.analysis.openButton}</button>}
+        <button type="button" class="btn--text mock-exam-link" onClick={onBack}>{copy.mockExam.backToLanding}</button>
       </div>
     </section>
   );

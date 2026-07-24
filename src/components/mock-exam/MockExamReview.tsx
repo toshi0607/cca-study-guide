@@ -54,14 +54,14 @@ export function MockExamReview({ attempt, questionById, headingRef, locale, copy
 
   return (
     <section class="mock-exam-review" aria-labelledby="mock-exam-review-title">
-      <header class="page-header compact">
+      <header class="panel--hero is-compact">
         <p class="eyebrow">{copy.mockExam.resultEyebrow}</p>
-        <h2 id="mock-exam-review-title" tabIndex={-1} ref={headingRef}>{copy.mockExam.reviewTitle}</h2>
+        <h2 id="mock-exam-review-title" class="page-title" tabIndex={-1} ref={headingRef}>{copy.mockExam.reviewTitle}</h2>
       </header>
-      {stale && <p class="mock-exam-notice" role="note">{copy.mockExam.staleAttemptNotice}</p>}
+      {stale && <p class="note note--warn mock-exam-notice" role="note">{copy.mockExam.staleAttemptNotice}</p>}
       <div class="mock-exam-review-filters" role="group" aria-label={copy.mockExam.reviewTitle}>
         {(['all', 'incorrect', 'unanswered', 'flagged'] as const).map((key) => (
-          <button key={key} type="button" class={filter === key ? 'is-active' : ''} aria-pressed={filter === key} onClick={() => setFilter(key)}>
+          <button key={key} type="button" class={`chip${filter === key ? ' is-selected' : ''}`} aria-pressed={filter === key} onClick={() => setFilter(key)}>
             {filterLabel[key]}
           </button>
         ))}
@@ -79,7 +79,7 @@ export function MockExamReview({ attempt, questionById, headingRef, locale, copy
               // the old verdict. Fresh rows render the full review.
               const rowStale = !row.question || row.question.revision !== row.answer.questionRevision;
               return (
-                <li key={row.answer.questionId} class="mock-exam-review-item">
+                <li key={row.answer.questionId} class="panel panel--sm mock-exam-review-item">
                   <div class="mock-exam-review-item-head">
                     <code>{copy.mockExam.reviewQuestionMeta(row.index + 1)}</code>
                     <span class={`mock-exam-verdict ${verdictClass}`}>{verdict}</span>
@@ -101,7 +101,7 @@ export function MockExamReview({ attempt, questionById, headingRef, locale, copy
               );
             })}
           </ol>}
-      <button type="button" class="mock-exam-link" onClick={onBack}>{copy.mockExam.reviewBack}</button>
+      <button type="button" class="btn--text mock-exam-link" onClick={onBack}>{copy.mockExam.reviewBack}</button>
     </section>
   );
 }
