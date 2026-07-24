@@ -15,7 +15,7 @@
 
 ## Fonts
 
-- Sources: Barlow Condensed 700 and Zen Kaku Gothic New 900, downloaded from the google/fonts repository (SIL OFL; license copies ship in `public/fonts/`).
+- Sources: Barlow Condensed 700 and Zen Kaku Gothic New 900, downloaded from the google/fonts repository (SIL OFL; license copies ship in `public/fonts/`). `scripts/subset-fonts.mjs` fetches from a pinned google/fonts commit (never the mutable `main` ref) and verifies each download's sha256 against a value recorded in the script before subsetting; update the font, its license, or the upstream source by editing the `PINNED_COMMIT`/`sha256`/`licenseSha256` constants in that script.
 - Outputs: content-hashed subset woff2 files plus `public/fonts/manifest.json`, all committed. The layout reads file names from the manifest, and `vercel.json` serves `/fonts/*.woff2` with immutable long-lived caching.
 - Subset scope: printable ASCII, kana, CJK punctuation, full-width forms, every `src/i18n/ui.ts` string literal, and the display-font text in the built HTML — the characters the `--display` stack (`.wordmark b`, `.today-hero h2`, `.page-header h2`) can render.
 - Regenerate with `pnpm build && pnpm fonts:subset` when `src/lib/fonts.test.ts` reports missing characters after copy changes.
