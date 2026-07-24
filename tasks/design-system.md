@@ -19,7 +19,8 @@
 - **型付きプリミティブ**: `src/components/app/{Button,Panel,Note}.tsx` とクラス関数
   `src/components/app/ui.ts`（`buttonClass`/`panelClass`/`noteClass`）。誤ったバリアントは
   コンパイルエラー。新しい UI はクラス手書きより優先して使う。
-- **エージェント向け規約**: `src/CLAUDE.md` がこのファイルを拘束力ある正として参照する。
+- **エージェント向け規約**: `src/AGENTS.md` がこのファイルを拘束力ある正として参照する
+  （`src/CLAUDE.md` はそのポインタ。Claude Code / Codex の双方から同じ規約が読まれる）。
 
 ---
 
