@@ -10,6 +10,7 @@
     "preview": "astro preview",
     "test": "vitest run",
     "test:no-analytics": "PUBLIC_GA_MEASUREMENT_ID= astro build && node scripts/check-no-analytics.mjs",
+    "test:csp": "PUBLIC_GA_MEASUREMENT_ID=G-TEST123456 astro build && node scripts/check-csp-hashes.mjs",
     "test:e2e": "playwright test",
     "test:e2e:fast": "PW_REUSE_SERVER=1 playwright test --grep-invert @slow",
     "test:e2e:a11y": "playwright test accessibility.spec.ts",
