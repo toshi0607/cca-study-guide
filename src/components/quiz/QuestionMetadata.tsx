@@ -23,11 +23,11 @@ export function QuestionMetadata({ question, locale, copy }: {
     <dl class="question-meta">
       {domain && <div class="question-meta-row">
         <dt>{copy.quiz.domainLabel}</dt>
-        <dd><span class="card-domain">D{domain.number}</span> <span>{localize(domain.title, locale)}</span></dd>
+        <dd><span class="badge badge--ink">D{domain.number}</span> <span>{localize(domain.title, locale)}</span></dd>
       </div>}
       <div class="question-meta-row">
         <dt>{copy.quiz.difficultyLegend}</dt>
-        <dd><span class="difficulty-badge">{copy.quiz.difficulty[question.difficulty]}</span></dd>
+        <dd><span class="badge badge--outline">{copy.quiz.difficulty[question.difficulty]}</span></dd>
       </div>
       {skills.length > 0 && <div class="question-meta-row">
         <dt>{copy.quiz.skillsLabel}</dt>
