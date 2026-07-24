@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
+import { Button } from './app/Button';
 
 type PracticeComponent = typeof import('./views/PracticeView').PracticeView;
 type PracticeProps = Parameters<PracticeComponent>[0];
@@ -22,7 +23,7 @@ export function PracticeEntry(props: PracticeProps) {
     return () => { cancelled = true; };
   }, []);
 
-  if (error) return <section class="practice-load-error" role="alert" tabIndex={-1} ref={errorRef}><p>{props.copy.practice.loadError}</p><button type="button" onClick={() => window.location.reload()}>{props.copy.practice.loadRetry}</button></section>;
-  if (!Practice) return <section class="practice-loading" role="status" aria-live="polite" aria-busy="true"><p>{props.copy.practice.loading}</p></section>;
+  if (error) return <section class="practice-load-error panel" role="alert" tabIndex={-1} ref={errorRef}><p>{props.copy.practice.loadError}</p><Button onClick={() => window.location.reload()}>{props.copy.practice.loadRetry}</Button></section>;
+  if (!Practice) return <section class="practice-loading panel" role="status" aria-live="polite" aria-busy="true"><p>{props.copy.practice.loading}</p></section>;
   return <Practice {...props}/>;
 }
