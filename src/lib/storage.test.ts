@@ -4,7 +4,9 @@ import {
   buildStudyDataExport,
   createEmptyStudyData,
   createStudyStorage,
+  isImportSizeAllowed,
   LEGACY_STORAGE_KEY,
+  MAX_IMPORT_TEXT_LENGTH,
   parseStudyDataImport,
   STORAGE_KEY,
   type StudyData,
@@ -437,6 +439,37 @@ describe('study data import and export', () => {
     expect(imported).toBeNull();
     expect(({} as Record<string, unknown>).polluted).toBeUndefined();
     expect(Object.prototype).not.toHaveProperty('polluted');
+  });
+});
+
+describe('import size guard', () => {
+  it('allows a length exactly at the limit and rejects one character past it', () => {
+    // #given / #when / #then — the boundary itself, independent of any JSON content
+    expect(isImportSizeAllowed(MAX_IMPORT_TEXT_LENGTH)).toBe(true);
+    expect(isImportSizeAllowed(MAX_IMPORT_TEXT_LENGTH + 1)).toBe(false);
+  });
+
+  it('parses a valid document whose padded length exactly meets the limit', () => {
+    // #given — real, valid export content padded with leading whitespace (which
+    // JSON.parse ignores) to land exactly on the limit
+    const data = withProgress({ ...createEmptyStudyData(), reviews: { card: review() }, quizStats: { question: stat } });
+    const json = JSON.stringify(buildStudyDataExport(data, new Date('2026-07-17T10:00:00Z')));
+    const atLimit = ' '.repeat(MAX_IMPORT_TEXT_LENGTH - json.length) + json;
+
+    // #when / #then
+    expect(atLimit.length).toBe(MAX_IMPORT_TEXT_LENGTH);
+    expect(parseStudyDataImport(atLimit)).not.toBeNull();
+  });
+
+  it('rejects the same valid document once its length exceeds the limit by one character', () => {
+    // #given — identical content to the previous case, padded one character further
+    const data = withProgress({ ...createEmptyStudyData(), reviews: { card: review() }, quizStats: { question: stat } });
+    const json = JSON.stringify(buildStudyDataExport(data, new Date('2026-07-17T10:00:00Z')));
+    const overLimit = ' '.repeat(MAX_IMPORT_TEXT_LENGTH + 1 - json.length) + json;
+
+    // #when / #then — the size guard rejects it before JSON.parse ever runs
+    expect(overLimit.length).toBe(MAX_IMPORT_TEXT_LENGTH + 1);
+    expect(parseStudyDataImport(overLimit)).toBeNull();
   });
 });
 
