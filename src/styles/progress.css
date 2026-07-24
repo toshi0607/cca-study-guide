@@ -5,115 +5,84 @@
   margin: 0 auto;
 }
 
-.data-actions button {
-  min-height: 48px;
-  margin-top: 22px;
-  padding: 0 18px;
-  border: 1px solid var(--ink);
-  border-radius: 2px;
-  background: var(--ink);
-  color: #fff;
-  cursor: pointer;
-}
-.data-actions button:hover { background: var(--cyan-dark); border-color: var(--cyan-dark); }
+.source-register code { padding: 3px 6px; background: var(--cyan-pale); color: var(--cyan-dark); font: 700 var(--fs-xs) var(--mono); }
 
-.source-register code { padding: 3px 6px; background: var(--cyan-pale); color: var(--cyan-dark); font: 700 .72rem var(--mono); }
-
-.progress-panel, .data-panel, .sources-panel, .disclaimer,
+/* .panel provides padding/border/background; these three variants only add layout. */
 .progress-overview, .progress-overview-loading, .progress-overview-error {
-  margin-top: 24px;
-  padding: clamp(24px, 4vw, 42px);
-  border: 1px solid var(--grid-strong);
-  background: var(--surface);
+  margin-top: var(--space-6);
 }
 .progress-overview-error { border-color: var(--danger); }
-.progress-panel h3, .data-panel h3, .sources-panel h3, .disclaimer h3, .progress-overview > h3 { margin-top: 0; font: 700 1.65rem var(--display); }
-/* Service-wide overview: responsive card grid, each with its own facts + CTA. */
-.progress-overview .progress-panel { margin-top: 24px; padding: 0; border: 0; background: transparent; }
-.progress-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 16px; margin-top: 16px; }
-.progress-card { display: flex; flex-direction: column; gap: 10px; padding: 18px; border: 1px solid var(--grid-strong); background: var(--surface); }
-.progress-card h4 { margin: 0; font: 700 1.1rem var(--display); }
-.progress-card ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 5px; color: var(--ink-soft); font-size: .9rem; }
-.progress-card button { min-height: 44px; margin-top: auto; padding: 0 12px; display: inline-flex; align-items: center; gap: 8px; border: 1px solid var(--cyan-dark); background: var(--cyan-dark); color: #fff; cursor: pointer; font-weight: 700; }
-.progress-card-actions { margin-top: auto; display: flex; flex-wrap: wrap; gap: 8px; }
-.progress-card-secondary { background: var(--surface) !important; color: var(--cyan-dark) !important; }
-.progress-row { min-height: 58px; display: grid; grid-template-columns: minmax(200px, 1fr) minmax(140px, 2fr) 54px; gap: 16px; align-items: center; border-top: 1px solid var(--grid); }
+
+/* Service-wide overview: responsive card grid, each with its own facts + CTA.
+   Nested inside the already-paneled .progress-overview, so it stays borderless. */
+.progress-panel { margin-top: var(--space-6); }
+.progress-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: var(--space-4); margin-top: var(--space-4); }
+.progress-card { display: flex; flex-direction: column; gap: var(--space-3); }
+.progress-card ul { margin: 0; padding: 0; list-style: none; display: grid; gap: var(--space-1); color: var(--ink-soft); font-size: var(--fs-sm); }
+.progress-card > .btn { margin-top: auto; }
+.progress-card-actions { margin-top: auto; display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.progress-row { min-height: 58px; display: grid; grid-template-columns: minmax(200px, 1fr) minmax(140px, 2fr) 54px; gap: var(--space-4); align-items: center; border-top: 1px solid var(--grid); }
 .progress-row progress { width: 100%; height: 11px; border: 0; border-radius: 0; background: var(--grid); }
 .progress-row progress::-webkit-progress-bar { background: var(--grid); }
 .progress-row progress::-webkit-progress-value { background: var(--cyan); }
 .progress-row progress::-moz-progress-bar { background: var(--cyan); }
-.progress-row strong { font: .8rem var(--mono); text-align: right; }
-.data-panel { display: flex; justify-content: space-between; gap: 30px; align-items: center; }
+.progress-row strong { font: var(--fs-xs) var(--mono); text-align: right; }
+
+.data-panel { display: flex; justify-content: space-between; gap: var(--space-8); align-items: center; }
 .data-panel p { max-width: 650px; color: var(--ink-soft); }
 .data-actions { display: grid; min-width: 240px; }
-.data-actions button { margin-top: 8px; }
-.data-actions .danger { border-color: var(--danger); background: var(--surface); color: var(--danger); }
-.data-actions-note { margin: 8px 0 0; color: var(--danger); font-size: 0.85rem; font-weight: 600; }
-.data-actions button:disabled { opacity: 0.5; cursor: not-allowed; }
-.data-actions .danger:hover { background: #fff0ef; border-color: var(--danger); }
-.analytics-disclosure { padding-left: 12px; border-left: 3px solid var(--cyan); font-size: .9rem; }
+.data-actions > .btn { margin-top: var(--space-2); }
 
 .privacy-page { min-height: 100vh; }
+
+/* Shell-equivalent chrome (see design-system.md A3): not one of the panel
+   padding sizes, kept as its own bespoke header to match the rail/mobile-header. */
 .privacy-header {
-  padding: 24px clamp(20px, 5vw, 72px);
+  padding: var(--space-6) clamp(20px, 5vw, 72px);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 20px;
-  border-bottom: 1px solid #0a2738;
+  gap: var(--space-5);
+  border-bottom: 1px solid var(--rail-edge);
   background: var(--ink);
-  color: #eef8fb;
+  color: var(--rail-strong);
 }
 .privacy-header a { color: inherit; }
-.privacy-header > a:last-child { font: .78rem var(--mono); }
+.privacy-header > a:last-child { min-height: 44px; display: inline-flex; align-items: center; font: var(--fs-xs) var(--mono); }
+
 .privacy-main {
   width: min(820px, calc(100% - 36px));
   min-height: auto;
   margin: 0 auto;
   padding: clamp(38px, 7vw, 76px) 0 80px;
 }
-.privacy-article {
-  padding: clamp(26px, 5vw, 52px);
-  border: 1px solid var(--grid-strong);
-  background: var(--surface);
-  box-shadow: var(--shadow);
-}
-.privacy-article h1 { margin: 0; font: 700 clamp(2.4rem, 7vw, 4.5rem)/1 var(--display); letter-spacing: -.035em; }
-.privacy-article .lead { margin: 18px 0 38px; color: var(--ink-soft); font-size: 1.05rem; }
-.privacy-article section { padding: 26px 0; border-top: 1px solid var(--grid); }
-.privacy-article h2 { margin: 0 0 10px; font: 700 1.55rem var(--display); }
+
+.privacy-article .lead { margin: var(--space-5) 0 var(--space-10); color: var(--ink-soft); font-size: var(--fs-base); }
+.privacy-article section { padding: var(--space-6) 0; border-top: 1px solid var(--grid); }
 .privacy-article p, .privacy-article li { color: var(--ink-soft); }
 .privacy-article ul { padding-left: 1.3em; }
-.privacy-updated { margin: 26px 0 0; font: .7rem var(--mono); color: var(--ink-soft); }
-.sources-panel { display: grid; grid-template-columns: minmax(220px, .7fr) minmax(0, 1.3fr); gap: 50px; }
+.privacy-updated { margin: var(--space-6) 0 0; font: var(--fs-micro) var(--mono); color: var(--ink-soft); }
+
+.sources-panel { display: grid; grid-template-columns: minmax(220px, .7fr) minmax(0, 1.3fr); gap: var(--space-12); }
 .sources-panel > div:first-child p:last-child { color: var(--ink-soft); }
 .source-register { border-top: 1px solid var(--grid); }
-.source-register article { padding: 13px 0; display: grid; grid-template-columns: 110px 1fr; gap: 14px; border-bottom: 1px solid var(--grid); }
+.source-register article { padding: var(--space-3) 0; display: grid; grid-template-columns: 110px 1fr; gap: var(--space-4); border-bottom: 1px solid var(--grid); }
 .source-register a { font-weight: 700; }
-.source-register p { margin: 3px 0 0; color: var(--ink-soft); font: .65rem var(--mono); }
-.disclaimer { border-left: 6px solid var(--ink); }
-.disclaimer p { color: var(--ink-soft); }
-
-/* Re-applies "palt" after the `font` shorthand above resets font-feature-settings. */
-.progress-panel h3, .data-panel h3, .sources-panel h3,
-.disclaimer h3, .privacy-article h1, .privacy-article h2 {
-  font-feature-settings: "palt";
-  letter-spacing: .01em;
-}
+.source-register p { margin: var(--space-1) 0 0; color: var(--ink-soft); font: var(--fs-micro) var(--mono); }
 
 @media (max-width: 1000px) {
-  .sources-panel { grid-template-columns: 1fr; gap: 20px; }
+  .sources-panel { grid-template-columns: 1fr; gap: var(--space-5); }
 }
 
 @media (max-width: 760px) {
   .data-panel { align-items: stretch; flex-direction: column; }
-  .progress-row { grid-template-columns: 1fr 48px; gap: 10px; padding: 11px 0; }
+  .progress-row { grid-template-columns: 1fr 48px; gap: var(--space-3); padding: var(--space-3) 0; }
   .progress-row progress { grid-column: 1 / -1; grid-row: 2; }
-  .source-register article { grid-template-columns: 1fr; gap: 7px; }
+  .source-register article { grid-template-columns: 1fr; gap: var(--space-2); }
   .data-actions { min-width: 0; }
-  .privacy-header { flex-wrap: wrap; padding: 14px 17px; }
+  .privacy-header { flex-wrap: wrap; padding: var(--space-4); }
   .privacy-header .language-switcher--privacy { margin-left: auto; }
-  .privacy-header > a:last-child { width: 100%; min-height: 44px; display: flex; align-items: center; justify-content: flex-end; }
+  .privacy-header > a:last-child { width: 100%; justify-content: flex-end; }
 }
 
 @media (max-width: 400px) {

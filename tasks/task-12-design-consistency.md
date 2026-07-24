@@ -77,8 +77,8 @@ S2-S6 は担当ファイルが排他。`src/i18n/ui.ts` のみ共有だが、各
 - [ ] `.card-domain` → `.badge` / B1・B4 ラダー適用
 
 ### S6 進捗
-- [ ] A1 ボタン（`.progress-card button` `.data-actions button` / `!important` 除去）/ B2 注記
-- [ ] C2 `sources-panel` のアイブロウ削除 / B1・B4 ラダー適用 / privacy ページも同様
+- [x] A1 ボタン（`.progress-card button` `.data-actions button` / `!important` 除去）/ B2 注記
+- [x] C2 `sources-panel` のアイブロウ削除 / B1・B4 ラダー適用 / privacy ページも同様
 
 ### Phase 2
 - [ ] 5ブランチをマージ
@@ -143,6 +143,16 @@ S2-S6 は担当ファイルが排他。`src/i18n/ui.ts` のみ共有だが、各
 - 44px 未満の対話要素スキャン（1440/1000/760/375 の4幅、JS で `button,a,[role=button],input,select,textarea` を走査）: 唯一の該当は `.site-footer nav` の GitHub リンク（19.96px）。`App.tsx` のこのリンク自体は元々サイズ指定を持たず、変更前の `.site-footer` の行間・フォントサイズ（`.72rem/1.6`）でも同様に44px未満だったことを計算で確認済み（変更前 ≈18px → 変更後 ≈20px、既存の問題でありむしろ僅かに改善）。今日ビュー・レール・モバイルヘッダー・ボトムナビの対話要素はすべて44px以上。
 - スクリーンショット（自worktree の `pnpm dev --port 4404` から取得、1440×1000 / 1000×900 / 760×900 / 375×812、ja/en 両方）を確認: 760px 未満でレールが消えモバイルヘッダー＋ボトムナビに切り替わる境界を確認。D3 は `.mock-exam-launch` のみ影が残存（上記の理由により未解決、S2待ち）、`.blueprint` `.weak-areas` `.status-strip` は影なしで統一。4つのセクション見出し（設計図・模試・苦手領域・進捗）のサイズが揃ったことを目視でも確認。
 - `git diff --name-only`: `src/components/app/Blueprint.tsx` `src/components/views/TodayView.tsx` `src/i18n/ui.ts` `src/styles/shell.css` `src/styles/today.css` の5件のみ（担当ファイル外の変更なし）。
+
+### S6 進捗 — 実施内容と判断
+
+- **worktree のセットアップ差分**: 担当 worktree（`agent-a957a113774703adf`、ブランチ `worktree-agent-a957a113774703adf`）は着手時点で Phase 0 コミット（`53f6c5a`）を含んでいなかった（`tasks/design-system.md` 等が存在しなかった）。他の姉妹 worktree は `53f6c5a` を含んでいたことを確認し、`53f6c5a` は現 HEAD（`347dc78`）の直接の子（fast-forward 可能）だったため `git merge --ff-only 53f6c5a` で取り込んだ。担当ファイル以外への変更は無し（`git diff --name-only 53f6c5a` で確認）。
+- **A1 ボタンの割り当て**: `.data-actions button`（Export/Import）は元々 ink 塗り 48px で `.btn` の仕様と一致していたため `.btn` に、`.data-actions .danger`（削除ボタン）は `.btn--danger` にした。`.progress-card button`（5枚のカードCTA + `.progress-card-secondary`）は全て `.btn--secondary` にした（cyan-dark 塗りをやめて枠線のみに変更）。理由: design-system.md §3.1 の「塗りボタンは1画面に1〜2個まで」に従うと、Export/Import の2個で塗りの予算を使い切るため、カード側の6個の同格アクションは非塗りに統一するのが一貫する。結果としてページ内のボタンは `.btn`（Export/Import）/ `.btn--secondary`（カードCTA・学習分析・再読み込み）/ `.btn--danger`（削除）の3系統に完全に集約された。
+- **B1/B4 の丸め**: 迷った値は design-system.md §2 の丸め規則表に従い、同点は切り上げ（例: `.progress-card` の `gap:10px`→`--space-3`(12)、`.progress-row` モバイルの `padding:11px`→`--space-3`(12)）。
+- **`.privacy-header` / `.privacy-main` は意図的に `--pad-panel` 系トークンへ寄せていない**: MUST DO で「`.privacy-header` はシェル相当」と明記されており、監査の B1 実測対象（`progress-overview` / `data-panel` / `sources-panel` / `disclaimer` / `progress-card` の5箇所、42px・18px）にも含まれていない。`--pad-panel`(clamp 20-40) / `--pad-panel-sm`(clamp 16-24) のどちらにも収まらない値（`.privacy-main` の `clamp(38px,7vw,76px) 0 80px` 等）を無理に丸めると視覚的に破綻するため、シェル層の独自値として残した。単純な等倍値（`padding:24px`→`--space-6`、`gap:20px`→`--space-5` 等）はトークン化した。
+- **B3**: `.privacy-header` の `#0a2738`/`#eef8fb` は `shell.css` の `.rail` と全く同じ値だったため、トークン化済みの `--rail-edge` / `--rail-strong` に置換（新規トークンは追加していない）。`#fff0ef`（danger hover）と `.progress-card button` の `#fff` は該当ルールごと削除（`.btn--danger` / `.btn--secondary` が肩代わり）。
+- **44px スキャンで見つけた追加修正**: `.privacy-header > a:last-child`（「学習ノートへ戻る」リンク）はデスクトップ幅で 13px しかタップ領域が無かった（この状態は変更前から存在）。担当ファイル内で完結する修正だったため `min-height:44px` をベース宣言に追加し、760px メディアクエリ側の重複宣言は削除した。`.source-register a`（公式資料リンク一覧）と `.privacy-article` 本文中のインクリンク（「GitHub Issues」等）は地の文中のリンクで WCAG 2.5.8 の inline 除外に該当し、変更前から min-height 指定が無い状態だったため据え置いた。`.wordmark` は shell.css 所有の共有部品なので触っていない。
+- **e2e テストの範囲を限定**: `tests/import-export.spec.ts`（2件）と `tests/analytics.spec.ts`（1件）は個別実行して pass を確認した。`tests/accessibility.spec.ts` のプライバシーページ分を実行しようとしたところ、姉妹 worktree（`agent-a856e620a152e4ebb` ほか）が同時に `playwright.config.ts` の同一デフォルトポート（4325）で e2e を実行中で、こちらのプロセスが SIGTERM で終了した（ポート競合、相手側のプロセスやファイルには一切触れていない）。S6 の MUST DO 検証リストに `pnpm test:e2e` は含まれておらず（`pnpm test:bundle` は実施済み）、全体の `pnpm test:e2e:fast` は design-system.md §6 の「全ストリーム共通の受け入れ条件」として Phase 2 統合時に確認される想定のため、単体テスト（vitest 445件）・ビルド・上記2ファイルの e2e・スクリーンショット目視・JS走査で代替した。
 
 ## Review
 

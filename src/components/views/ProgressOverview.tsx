@@ -75,51 +75,51 @@ export function ProgressOverview({
   const n = (value: number) => formatNumber(value, locale);
 
   return (
-    <section class="progress-overview" aria-labelledby="progress-overview-title">
-      <h3 id="progress-overview-title">{o.title}</h3>
+    <section class="progress-overview panel" aria-labelledby="progress-overview-title">
+      <h3 class="section-title" id="progress-overview-title">{o.title}</h3>
       <div class="progress-cards">
-        <article class="progress-card">
-          <h4>{o.guideTitle}</h4>
+        <article class="progress-card panel panel--sm">
+          <h4 class="card-title">{o.guideTitle}</h4>
           <ul>
             <li>{o.guideCompleted(guide.completed, guide.totalSections)}</li>
             <li>{o.guideInProgress(guide.inProgress)}</li>
             <li>{o.guideStale(guide.stale)}</li>
           </ul>
-          <button type="button" onClick={onOpenGuide}>{o.openGuide} <span aria-hidden="true">→</span></button>
+          <button type="button" class="btn btn--secondary" onClick={onOpenGuide}>{o.openGuide} <span aria-hidden="true">→</span></button>
         </article>
 
-        <article class="progress-card">
-          <h4>{o.handsOnTitle}</h4>
+        <article class="progress-card panel panel--sm">
+          <h4 class="card-title">{o.handsOnTitle}</h4>
           <ul>
             <li>{o.handsOnCompleted(handsOn.completed, handsOn.totalGuides)}</li>
             <li>{o.handsOnInProgress(handsOn.inProgress)}</li>
             <li>{o.handsOnSteps(handsOnSteps.completed, handsOnSteps.total)}</li>
           </ul>
-          <button type="button" onClick={onOpenHandsOn}>{o.openHandsOn} <span aria-hidden="true">→</span></button>
+          <button type="button" class="btn btn--secondary" onClick={onOpenHandsOn}>{o.openHandsOn} <span aria-hidden="true">→</span></button>
         </article>
 
-        <article class="progress-card">
-          <h4>{o.practiceTitle}</h4>
+        <article class="progress-card panel panel--sm">
+          <h4 class="card-title">{o.practiceTitle}</h4>
           <ul>
             <li>{o.practiceReviewed(reviewedCards, cards.length)}</li>
             <li>{o.practiceWeak(weakCards)}</li>
             <li>{o.practiceDue(dueCount)}</li>
           </ul>
-          <button type="button" onClick={onOpenPractice}>{o.openPractice} <span aria-hidden="true">→</span></button>
+          <button type="button" class="btn btn--secondary" onClick={onOpenPractice}>{o.openPractice} <span aria-hidden="true">→</span></button>
         </article>
 
-        <article class="progress-card">
-          <h4>{o.quizTitle}</h4>
+        <article class="progress-card panel panel--sm">
+          <h4 class="card-title">{o.quizTitle}</h4>
           <ul>
             <li>{o.quizAnswered(quizAnswered)}</li>
             <li>{o.quizAttempts(quizAttempts)}</li>
             <li>{o.quizCorrect(quizCorrect)}</li>
           </ul>
-          <button type="button" onClick={onOpenQuiz}>{o.openQuiz} <span aria-hidden="true">→</span></button>
+          <button type="button" class="btn btn--secondary" onClick={onOpenQuiz}>{o.openQuiz} <span aria-hidden="true">→</span></button>
         </article>
 
-        <article class="progress-card">
-          <h4>{o.mockExamTitle}</h4>
+        <article class="progress-card panel panel--sm">
+          <h4 class="card-title">{o.mockExamTitle}</h4>
           <ul>
             <li>{o.mockExamCompleted(mockExamAttempts.length)}</li>
             <li>{activeMockExam ? o.mockExamActive : o.mockExamNoActive}</li>
@@ -128,13 +128,13 @@ export function ProgressOverview({
               : <li>{o.mockExamEmpty}</li>}
           </ul>
           <div class="progress-card-actions">
-            <button type="button" onClick={onOpenMockExam}>{o.openMockExam} <span aria-hidden="true">→</span></button>
-            {mockExamAttempts.length > 0 && <button type="button" class="progress-card-secondary" onClick={onOpenMockExamAnalysis}>{o.openMockExamAnalysis} <span aria-hidden="true">→</span></button>}
+            <button type="button" class="btn btn--secondary" onClick={onOpenMockExam}>{o.openMockExam} <span aria-hidden="true">→</span></button>
+            {mockExamAttempts.length > 0 && <button type="button" class="btn btn--secondary" onClick={onOpenMockExamAnalysis}>{o.openMockExamAnalysis} <span aria-hidden="true">→</span></button>}
           </div>
         </article>
       </div>
 
-      <section class="progress-panel" aria-labelledby="by-domain"><h3 id="by-domain">{copy.progress.byDomain}</h3>{domains.map((domain) => {
+      <section class="progress-panel" aria-labelledby="by-domain"><h3 class="section-title" id="by-domain">{copy.progress.byDomain}</h3>{domains.map((domain) => {
         const list = cards.filter((card) => card.domainId === domain.id);
         const done = list.filter((card) => reviews[card.id]).length;
         const weak = list.filter((card) => isWeak(reviews[card.id])).length;

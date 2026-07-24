@@ -27,18 +27,18 @@ const privacy = copy.privacy;
   <a href={localePaths[locale].app}>{copy.backToGuide}</a>
 </header>
 <main id="main-content" class="privacy-main">
-  <article class="privacy-article">
+  <article class="privacy-article panel">
     <p class="eyebrow">{privacy.eyebrow}</p>
-    <h1>{privacy.heading}</h1>
+    <h1 class="page-title">{privacy.heading}</h1>
     <p class="lead">{privacy.lead}</p>
 
     <section aria-labelledby="study-data-title">
-      <h2 id="study-data-title">{privacy.studyDataHeading}</h2>
+      <h2 class="section-title" id="study-data-title">{privacy.studyDataHeading}</h2>
       <p>{privacy.studyData}</p>
     </section>
 
     {analyticsEnabled && <section aria-labelledby="analytics-title">
-      <h2 id="analytics-title">{privacy.analyticsHeading}</h2>
+      <h2 class="section-title" id="analytics-title">{privacy.analyticsHeading}</h2>
       <p>{privacy.analyticsIntro}</p>
       <ul>
         {privacy.analyticsExclusions.map((item) => <li>{item}</li>)}
@@ -47,12 +47,12 @@ const privacy = copy.privacy;
     </section>}
 
     {analyticsEnabled && <section aria-labelledby="cookies-title">
-      <h2 id="cookies-title">{privacy.cookiesHeading}</h2>
+      <h2 class="section-title" id="cookies-title">{privacy.cookiesHeading}</h2>
       <p>{privacy.cookiesPrefix}<a href={`https://tools.google.com/dlpage/gaoptout?hl=${locale}`} target="_blank" rel="noreferrer">{privacy.optOutLink}<span class="sr-only"> {privacy.newTab}</span> ↗</a>{privacy.cookiesSuffix}</p>
     </section>}
 
     <section aria-labelledby="contact-title">
-      <h2 id="contact-title">{privacy.contactHeading}</h2>
+      <h2 class="section-title" id="contact-title">{privacy.contactHeading}</h2>
       <p>{privacy.contactPrefix}<a href="https://github.com/toshi0607/cca-study-guide/issues" target="_blank" rel="noreferrer">GitHub Issues<span class="sr-only"> {privacy.newTab}</span> ↗</a>{privacy.contactSuffix}</p>
     </section>
 
