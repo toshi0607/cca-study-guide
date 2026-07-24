@@ -11,6 +11,9 @@ concurrency:
   group: production-smoke
   cancel-in-progress: true
 
+permissions:
+  contents: read
+
 jobs:
   verify-deployment:
     runs-on: ubuntu-latest
