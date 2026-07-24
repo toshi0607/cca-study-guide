@@ -50,7 +50,7 @@ test('shows a stale hands-on guide read-only and reconfirms it without inventing
 
   await openHandsOnList(page);
   await page.getByRole('button', { name: 'Claude Codeのチーム設定とCI差分レビュー' }).click();
-  await expect(page.locator('.note--warn')).toContainText('内容が更新されています');
+  await expect(page.locator('.guide-state-note')).toContainText('内容が更新されています');
   // Reading a stale record never rewrites storage.
   expect(await page.evaluate((key) => localStorage.getItem(key), STORAGE_KEY)).toBe(beforeRead);
   // Its step checkboxes are read-only until reconfirmed.
@@ -64,7 +64,7 @@ test('shows a stale hands-on guide read-only and reconfirms it without inventing
   expect('completedAt' in saved).toBe(false);
   // The original completion time is preserved, not erased and not overwritten with now.
   expect(saved.previousCompletedAt).toBe(originalCompletedAt);
-  await expect(page.locator('.note--success')).toBeVisible();
+  await expect(page.locator('.guide-state-note--completed')).toBeVisible();
   // The two preserved steps are checked; the rest are not.
   await expect(page.getByRole('checkbox').first()).toBeEnabled();
 });

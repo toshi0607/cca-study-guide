@@ -59,8 +59,8 @@ export function TodayView({ locale, copy, now, ready, reviews, dueCount, session
           <p>{copy.mockExam.introduction}</p>
         </div>
         <div class="mock-exam-launch-actions">
-          <button type="button" class="btn" disabled={!ready} onClick={onOpenMockExam}>{mockExamCtaLabel} <span aria-hidden="true">→</span></button>
-          {ready && hasAttempt && <button type="button" class="btn btn--secondary" onClick={onOpenMockExamAnalysis}>{copy.mockExam.todayAnalysisLink} <span aria-hidden="true">→</span></button>}
+          <button type="button" class="btn mock-exam-launch-button" disabled={!ready} onClick={onOpenMockExam}>{mockExamCtaLabel} <span aria-hidden="true">→</span></button>
+          {ready && hasAttempt && <button type="button" class="btn btn--secondary mock-exam-launch-analysis" onClick={onOpenMockExamAnalysis}>{copy.mockExam.todayAnalysisLink} <span aria-hidden="true">→</span></button>}
         </div>
       </section>
       <section class="weak-areas" aria-labelledby="weak-areas-title">

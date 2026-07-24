@@ -16,12 +16,20 @@ import type { Page } from '@playwright/test';
 // declared ones — axe then reports e.g. #be736b on #fef5f4 (3.34:1) for what is
 // really --danger on --danger-pale (5.63:1). Settling animations first makes the
 // scan measure the styles the user actually ends up looking at.
+//
+// The wait is capped so it can never outlive the longest finite animation
+// (draw-blueprint, 900ms): a future looping/ambient animation would otherwise
+// leave `finished` pending forever and hang every a11y scan until the test
+// timeout instead of failing fast.
+const SETTLE_CAP_MS = 1200;
 async function settleAnimations(page: Page): Promise<void> {
-  await page.evaluate(() =>
-    Promise.all(
+  await page.evaluate((capMs) => {
+    const settled = Promise.all(
       document.getAnimations().map((animation) => animation.finished.catch(() => undefined)),
-    ).then(() => undefined),
-  );
+    );
+    const cap = new Promise((resolve) => setTimeout(resolve, capMs));
+    return Promise.race([settled, cap]).then(() => undefined);
+  }, SETTLE_CAP_MS);
 }
 
 async function analyze(page: Page) {

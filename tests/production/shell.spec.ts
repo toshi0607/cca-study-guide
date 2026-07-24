@@ -86,12 +86,12 @@ test('opens every primary lazy view without console or chunk errors', async ({ p
 
   // Mock Exam landing — launched from Today, not the bottom nav
   await page.getByRole('button', { name: '今日' }).first().click();
-  await page.locator('.mock-exam-launch-actions .btn:not(.btn--secondary)').click();
+  await page.locator('.mock-exam-launch-button').click();
   await expect(page.getByRole('heading', { name: '60問の模試に挑戦する' })).toBeVisible();
 
   // Learning analysis — reachable from Today because the seed carries an attempt
   await page.getByRole('button', { name: '今日' }).first().click();
-  await page.locator('.mock-exam-launch-actions .btn--secondary').click();
+  await page.locator('.mock-exam-launch-analysis').click();
   await expect(page.getByRole('heading', { name: '模試結果を分析する' })).toBeVisible();
 
   // Progress

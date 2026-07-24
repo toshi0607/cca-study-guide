@@ -57,7 +57,7 @@ async function seedAttempts(page: Page, attempts: unknown[]): Promise<void> {
 }
 
 async function openAnalysis(page: Page, openLabel = '学習分析'): Promise<void> {
-  await page.locator('.mock-exam-launch-actions .btn:not(.btn--secondary)').click();
+  await page.locator('.mock-exam-launch-button').click();
   await page.getByRole('button', { name: openLabel }).click();
 }
 
@@ -143,7 +143,7 @@ test('renders in English', async ({ page }) => {
   const attempts = [0, 1, 2].map((n) => fullAttempt(`a${n}`, BASE + n * DAY, { correct: (_q, i) => i % 3 !== 0 }));
   await seedStorage(page, STORAGE_KEY, { ...emptyV3(), mockExamAttempts: attempts });
   await page.reload();
-  await page.locator('.mock-exam-launch-actions .btn:not(.btn--secondary)').click();
+  await page.locator('.mock-exam-launch-button').click();
   await page.getByRole('button', { name: 'Learning analysis' }).click();
 
   await expect(page.getByRole('heading', { name: 'Analyze your mock exam results' })).toBeFocused();

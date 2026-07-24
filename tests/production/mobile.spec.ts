@@ -19,7 +19,7 @@ test('English mobile journey stays within the viewport with operable navigation'
 
   // Today
   await expect(page.getByRole('heading', { name: /Recall first/ })).toBeVisible();
-  await expect(page.locator('.mock-exam-launch-actions .btn:not(.btn--secondary)')).toBeVisible();
+  await expect(page.locator('.mock-exam-launch-button')).toBeVisible();
   await assertNoOverflow('today');
 
   // Practice
@@ -34,7 +34,7 @@ test('English mobile journey stays within the viewport with operable navigation'
 
   // Mock exam landing (launched from Today)
   await page.getByRole('button', { name: 'Today' }).first().click();
-  await page.locator('.mock-exam-launch-actions .btn:not(.btn--secondary)').click();
+  await page.locator('.mock-exam-launch-button').click();
   await expect(page.getByRole('heading', { name: 'Take the 60-question mock exam' })).toBeVisible();
   await assertNoOverflow('mock-exam-landing');
 

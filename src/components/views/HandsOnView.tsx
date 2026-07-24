@@ -76,9 +76,9 @@ export function HandsOnView({ locale, copy, records, onStart, onToggleStep, onCo
           </p>
         </header>
 
-        {status === 'stale' && <p class="note note--warn" role="note">{c.staleNote}</p>}
-        {status === 'future' && <p class="note note--warn" role="note">{c.futureNote}</p>}
-        {status === 'in_progress' && record?.status === 'in_progress' && record.previousCompletedAt && <p class="note note--success" role="note">{c.previouslyCompleted(formatDate(new Date(record.previousCompletedAt), locale))}</p>}
+        {status === 'stale' && <p class="note note--warn guide-state-note" role="note">{c.staleNote}</p>}
+        {status === 'future' && <p class="note note--warn guide-state-note" role="note">{c.futureNote}</p>}
+        {status === 'in_progress' && record?.status === 'in_progress' && record.previousCompletedAt && <p class="note note--success guide-state-note--completed" role="note">{c.previouslyCompleted(formatDate(new Date(record.previousCompletedAt), locale))}</p>}
 
         <div class="panel meta-grid">
           <div><h3 class="sub-title">{c.domains}</h3><p class="domain-labels">{domains.filter((domain) => selected.domainIds.includes(domain.id)).map((domain) => <span class="domain-label" key={domain.id}>D{domain.number} {localize(domain.title, locale)}</span>)}</p></div>

@@ -136,8 +136,8 @@ export function GuideView({ locale, copy, records, hasMockExamAttempts, onProgre
             <summary><span><code>{section.recommendedOrder}</code> {title}</span><span class={`status status-${status}`}>{copy.guide.status[status]}</span></summary>
             <div class="guide-section-body">
               <p>{localize(section.summary, locale)}</p>
-              {status === 'stale' && record && <p class="note note--warn">{copy.guide.staleNote(copy.guide.status[record.status])}</p>}
-              {status === 'future' && record && <p class="note note--warn">{copy.guide.futureNote(copy.guide.status[record.status])}</p>}
+              {status === 'stale' && record && <p class="note note--warn guide-state-note">{copy.guide.staleNote(copy.guide.status[record.status])}</p>}
+              {status === 'future' && record && <p class="note note--warn guide-state-note">{copy.guide.futureNote(copy.guide.status[record.status])}</p>}
               <h4 class="sub-title">{copy.guide.domains}</h4><p class="domain-labels">{domains.filter((domain) => section.domainIds.includes(domain.id)).map((domain) => <span class="domain-label" key={domain.id}>D{domain.number} {localize(domain.title, locale)}</span>)}</p>
               <h4 class="sub-title">{copy.guide.statements}</h4><p class="statement-ids">{section.taskStatementIds.map((id) => <code key={id}>{id}</code>)}</p>
               <h4 class="sub-title">{copy.guide.mustKnow}</h4><ul>{localize(section.learningObjectives, locale).map((item) => <li key={item}>{item}</li>)}</ul>
