@@ -21,7 +21,7 @@ export function ProgressOverviewEntry(props: ProgressOverviewProps) {
     return () => { cancelled = true; };
   }, []);
 
-  if (error) return <section class="progress-overview-error" role="alert" tabIndex={-1} ref={errorRef}><p>{props.copy.progress.overview.loadError}</p><button type="button" onClick={() => window.location.reload()}>{props.copy.progress.overview.retry}</button></section>;
-  if (!Overview) return <section class="progress-overview-loading" role="status" aria-live="polite" aria-busy="true"><p>{props.copy.progress.overview.loading}</p></section>;
+  if (error) return <section class="progress-overview-error panel" role="alert" tabIndex={-1} ref={errorRef}><p>{props.copy.progress.overview.loadError}</p><button type="button" class="btn btn--secondary" onClick={() => window.location.reload()}>{props.copy.progress.overview.retry}</button></section>;
+  if (!Overview) return <section class="progress-overview-loading panel" role="status" aria-live="polite" aria-busy="true"><p>{props.copy.progress.overview.loading}</p></section>;
   return <Overview {...props}/>;
 }

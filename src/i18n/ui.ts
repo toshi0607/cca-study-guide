@@ -386,7 +386,6 @@ export type UiCopy = {
     importJson: string;
     reset: string;
     weakCount: (count: number) => string;
-    sourcesEyebrow: string;
     sourcesTitle: string;
     sourcesDescription: string;
     verified: (date: string) => string;
@@ -967,7 +966,6 @@ export const ui = {
       importJson: '進捗をJSONから読み込む',
       reset: 'この端末の進捗を削除',
       weakCount: (count) => `苦手 ${count}`,
-      sourcesEyebrow: 'SOURCE REGISTER',
       sourcesTitle: '公式資料',
       sourcesDescription: '説明は公開資料の要約です。仕様変更に備え、学習時はリンク先の最新版も確認してください。',
       verified: (date) => `最終確認 ${date}`,
@@ -1538,7 +1536,6 @@ export const ui = {
       importJson: 'Import progress from JSON',
       reset: 'Delete progress on this device',
       weakCount: (count) => `${count} struggling`,
-      sourcesEyebrow: 'SOURCE REGISTER',
       sourcesTitle: 'Official sources',
       sourcesDescription: 'Explanations summarize public sources. Check the latest linked documentation as you study in case specifications have changed.',
       verified: (date) => `Last verified ${date}`,
