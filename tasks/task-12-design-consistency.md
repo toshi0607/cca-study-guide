@@ -88,7 +88,19 @@ S2-S6 は担当ファイルが排他。`src/i18n/ui.ts` のみ共有だが、各
 - [x] 統合後の跨ぎ修正（コミット `bf9778d`）: `.hero-lede` 昇格 / `.section-heading h2` specificity 解消 / 孤児クラス削除 / test セレクタ更新 / a11y アニメーション待ち
 - [x] `pnpm build` 0 errors / `pnpm test` 445 pass / `pnpm test:e2e` **131 pass** / `pnpm test:bundle` OK
 - [x] 全ビューを 1440px / 375px で再撮影し監査項目を突合（計測: ボタン10→6種・見出し12→9種・パネル15→5種、模試見出しの本文書体落ち解消、アイブロウ英語大文字統一）
-- [~] `reviewer` エージェント（design-system.md 適合）実行中 / `/code-review high` はユーザー起動待ち（billed）
+- [x] `reviewer` エージェント（design-system.md 適合）: 9観点中7 CONFIRMED、Blocker 1 + Should-fix 3 → コミット `f9f16d7` で全修正。最終 unit 445 / e2e 131 / bundle OK
+- [ ] `/code-review high`（bug 観点）: **ユーザー起動待ち**（billed のため私からは実行不可）
+
+## reviewer 指摘と対応（コミット f9f16d7）
+
+| 重大度 | 指摘 | 対応 |
+|---|---|---|
+| Blocker | 学習分析の h4 が本文書体に落ちる（A2 局所再発） | `.sub-title` 付与 + `mock-exam.css` の font-size 削除。Barlow 16px を実測確認 |
+| Should-fix | 模試の設問ヒントだけ note 化されず素テキスト | `.note.note--info` 付与。左罫シアン+淡色地を実測確認 |
+| Should-fix | 生 `#fff` 8箇所（`--on-ink` があるのに） | today/shell で `var(--on-ink)` に置換 |
+| Should-fix | `.source-links` の `.78rem`（system.css 取りこぼし） | `var(--fs-xs)` に置換 |
+| Should-fix | 特大ディスプレイ数字の生 rem | ラダー例外として design-system.md §2 に明記（意匠が変わるため丸めない） |
+| Nit ×4 | トースト影 / ヒーロー署名影 / 空状態の本文書体 / pitfall ラベル | 意図的な意匠のため据え置き（Notes に記録） |
 
 ## 統合後の計測結果（監査時 → 現在、Playwright computed style 実測）
 
