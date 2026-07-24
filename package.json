@@ -32,6 +32,7 @@
     "@astrojs/check": "^0.9.4",
     "@axe-core/playwright": "^4.12.1",
     "@playwright/test": "^1.61.1",
+    "lighthouse": "13.4.1",
     "png-to-ico": "^3.0.2",
     "sharp": "^0.35.3",
     "subset-font": "^2.5.0",

@@ -35,7 +35,7 @@ jobs:
         run: |
           mkdir -p tmp/lighthouse-ci
           for i in 1 2 3; do
-            npx --yes lighthouse@13 http://127.0.0.1:4321/ \
+            pnpm exec lighthouse http://127.0.0.1:4321/ \
               --quiet --only-categories=performance --output=json \
               --output-path=tmp/lighthouse-ci/run$i.json \
               --chrome-flags='--headless --no-sandbox'
