@@ -64,9 +64,12 @@ S2-S6 は担当ファイルが排他。`src/i18n/ui.ts` のみ共有だが、各
 - [x] C1 `mockExam.eyebrow` `resultEyebrow` `analysis.eyebrow` を英語大文字へ / C2 分析6セクションはアイブロウなし
 
 ### S3 ガイド系
-- [ ] A4 詳細ビュー本文を `.panel` へ / A5 `.domain-label` 化 / D5 カード意匠の統一 / D6 重複削除
-- [ ] A1 ボタン / B2 注記 / D2 一覧を開くボタンを `.btn--text` へ / D4 ハンズオン進捗ヘッダーをガイドと同型に
-- [ ] C3 ハードコードアイブロウ2箇所を i18n 化
+- [x] A4 詳細ビュー本文を `.panel` へ / A5 `.domain-label` 化 / D5 カード意匠の統一 / D6 重複削除
+- [x] A1 ボタン / B2 注記 / D2 一覧を開くボタンを `.btn--text` へ / D4 ハンズオン進捗ヘッダーをガイドと同型に
+- [x] C3 ハードコードアイブロウ2箇所を i18n 化
+- [x] A3 `.page-header` → `.panel--hero`（一覧は素、詳細は `.is-compact`）/ B1・B4 ラダー適用 / §3.7 リネーム
+- [x] 完了条件: `pnpm build` exit 0 / `pnpm test` 445 pass / `pnpm test:bundle` OK / 1440px・375px の全5画面SS確認
+- [ ] **未完（担当外ファイルのため未修正）**: 下記 Notes「S3 — E2E への影響」の3スペック7アサーションのセレクタ更新
 
 ### S4 今日+シェル
 - [x] D3 `.mock-exam-launch` の影を削除 / A1 ボタン / B1・B4 ラダー適用（影の削除のみ未達 — 下記 Notes 参照。ボタン統一とラダー適用は完了）
@@ -192,6 +195,60 @@ S2-S6 は担当ファイルが排他。`src/i18n/ui.ts` のみ共有だが、各
 - min-height 走査（`.mock-exam-view` / `.mock-exam-landing` / 両ダイアログ配下の button/a/[role=button]、全8画面）: 違反0件（上記の `SourceLinks` 由来の94件を除く。これらは model classなし・スコープ外の共有コンポーネント）
 - `git diff --name-only`: 担当17ファイルのみ（`mock-exam.css`・15コンポーネント・`MockExamEntry.tsx`・`ui.ts`・本ファイル）
 - 一時ファイル（`mock-exam-verify-tmp.mjs` 等）は削除済み、dev サーバーは停止済み
+
+### S3 ガイド系 — 判断と逸脱
+
+#### §3.7 リネームの可否（`grep -rnE 'guide-status|guide-targets|guide-statement-ids|guide-domain-badges|guide-section-heading|card-domain' src --include='*.tsx'` の結果に基づく）
+
+| 旧クラス | 参照元 | 判定 |
+|---|---|---|
+| `.guide-status` | GuideView / HandsOnView のみ | **リネーム実施** → `.status`（`system.css` に既存の `.status` と宣言が完全一致だったので旧ルールを削除） |
+| `.guide-targets` | GuideView / HandsOnView / OfficialScenariosView のみ | **リネーム実施** → `.target-list` |
+| `.guide-statement-ids` | 同上3ビューのみ | **リネーム実施** → `.statement-ids` |
+| `.guide-domain-badges` | 同上3ビューのみ | **リネーム実施** → `.domain-labels` |
+| `.guide-section-heading` | GuideView / HandsOnView のみ | **リネーム実施** → `.progress-heading` |
+| `.card-domain` | QuestionMetadata / PracticeSession / PracticeView / QuizSetup / QuizView（**S5 担当**）＋ S3 の3ビュー | **リネームせず現行名のまま**。`system.css` の定義には一切触れていない。S3 側は使用をやめ、長いラベルは `.domain-label`、`D1` だけのチップは `.badge.badge--ink` に置換した（A5） |
+
+`.guide-targets button`（`system.css`）は A1 で `.btn.btn--secondary` に置換されるため削除した。セレクタ specificity が `.btn` を上回り置換が効かなくなるためで、実質は §3.7 のリネームに付随する処理。参照元は上記のとおり S3 のみ。
+
+#### D5 の判断 — `.official-card` 側（左帯 + auto-fit 2カラム）に寄せた
+
+- `.handson-list` / `.official-list` を同一宣言（`repeat(auto-fit, minmax(320px, 1fr))` / `gap: var(--space-4)`）にし、カードは両方とも `.panel.panel--sm.panel--accent` にした。
+- 左帯の色は `.official-card` の 6px シアンではなく **§3.2 の `.panel--accent`（6px ink）** を使った。デザインシステムに定義済みの共有部品で表現でき、`--cyan-dark` のベタ書きが1つ消えるため。`.guide-context` の 6px ink 帯とも一致する。
+- ハンズオンの説明文が長い件は、`auto-fit` が 760px 以下で自動的に1カラムへ落ちるため実害なしと判断（375px SS で確認）。1440px では両リストとも3カラムで、意匠は完全に同一。
+- カード内の縦間隔は子要素ごとの `margin: 8px 0 0` をやめ、`.handson-card, .official-card { display: grid; gap: var(--space-2) }` に統一した。
+
+#### A4 の構成判断 — セクションごとに `.panel`（1枚の大パネルにはしない）
+
+ハンズオン詳細は15セクションあるが、各セクションが独立した見出しを持つ手順単位なので、`.panel` を並べたほうが走査しやすい。ガイド（`.guide-context` / `.guide-path` / `.guide-sections` の3パネル）や他ビューとも同じ扱いになる。縦間隔は個別 `margin-top` を全廃し、ビュー直下に `.panel-stack` を付けて `--space-6` に統一した（`.handson-view > section { margin-top: 22px }` / `.official-view > section` は削除済み）。
+
+#### 仕様からの逸脱（2件）
+
+1. **`.hero-lede` を `guide.css` に新設した。**
+   `.page-header > p:not(.eyebrow)`（`max-width: 780px; margin: 18px 0 0; color: var(--ink-soft)`）は `system.css` にあるが、A3 で `.panel--hero` に移ると効かなくなる。`.panel--hero` 側には本文段落の規約が無いため、ヒーロー本文用に `.hero-lede { max-width: 780px; margin: var(--space-5) 0 0; color: var(--ink-soft) }` を `guide.css` に置いた。値はすべてトークン（18px は §2 の丸め規則で `--space-5`）。**他ストリームも A3 で同じ穴に当たるので、Phase 2 で `system.css` §3.2 へ移すべき。**
+2. **`.guide-availability` の `!important` を除去した。**
+   design-system.md §5 は「`.progress-card-secondary` と `.blueprint-node` 以外の `!important` は残さない」としている。`.guide-context p` を `.guide-context > p` に、`.guide-availability` を `.guide-context > .guide-availability` にしてセレクタ強度で解決した。
+
+#### S3 — E2E への影響（未修正・担当外ファイル）
+
+§3.7 のリネームと B2 の `.note` 統合は、`tests/**` のクラスセレクタを不可避に壊す。`tests/**` は担当ファイル外のため**編集していない**。要修正は3スペック7アサーション：
+
+| ファイル:行 | 現行セレクタ | 変更後 |
+|---|---|---|
+| `tests/guide.spec.ts:18` | `.guide-domain-badges` | `.domain-labels` |
+| `tests/guide.spec.ts:19,20` | `.guide-statement-ids` | `.statement-ids` |
+| `tests/guide.spec.ts:29,38` | `.guide-targets` | `.target-list` |
+| `tests/hands-on.spec.ts:53` | `.guide-state-note` | `.note.note--warn` |
+| `tests/hands-on.spec.ts:67` | `.guide-state-note--completed` | `.note.note--success` |
+| `tests/save-failure.spec.ts:61` | `.guide-targets` | `.target-list` |
+
+壊さずに済ませたものは意図的に残した: `.guide-recommendation`（`display: grid` のレイアウト専用クラスとして存続）、`.guide-recommendation-open`（`width: fit-content` のみ）、`.guide-actions`、`.handson-card` / `.official-card`、`.official-badge--official` / `--practice`（`.badge` 上に載る面ごとの modifier）。
+
+#### S3 — 44px 未満で残っている対話要素（いずれも S3 の変更前から存在・共有部品）
+
+- `.source-links li a`（`SourceLinks.tsx` / CSS は凍結中の `system.css:125`）: 実測 12px。練習・演習・模試（S2/S5）でも同じ部品を使っているため S3 単独では変更しない。Phase 2 で `system.css` に `min-height: 44px` + `display: inline-flex` を入れるのが筋。
+- `.handson-step-check label`: 実測 26.39px。行の `.handson-step-check` には `min-height: 44px` があるが `align-items: flex-start` なのでラベル自身は本文高のまま。S3 の変更前と同一。
+- ボタン・`summary` は 1440px / 375px の全5画面で **0件が44px未満**（`.btn` 48px / `.btn--text` 44px / `.guide-section summary` 58px）。
 
 ## Review
 

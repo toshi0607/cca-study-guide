@@ -26,7 +26,7 @@ export function OfficialScenariosEntry(props: {
     return () => { cancelled = true; };
   }, []);
 
-  if (error) return <section class="guide-load-error" role="alert" tabIndex={-1} ref={errorRef}><p>{props.copy.officialScenarios.loadError}</p><button type="button" onClick={() => window.location.reload()}>{props.copy.officialScenarios.retry}</button></section>;
-  if (!View) return <section class="guide-loading" role="status" aria-live="polite" aria-busy="true"><p>{props.copy.officialScenarios.loading}</p></section>;
+  if (error) return <section class="guide-load-error panel" role="alert" tabIndex={-1} ref={errorRef}><p>{props.copy.officialScenarios.loadError}</p><button type="button" class="btn" onClick={() => window.location.reload()}>{props.copy.officialScenarios.retry}</button></section>;
+  if (!View) return <section class="guide-loading panel" role="status" aria-live="polite" aria-busy="true"><p>{props.copy.officialScenarios.loading}</p></section>;
   return <View {...props}/>;
 }
