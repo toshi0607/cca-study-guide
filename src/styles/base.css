@@ -66,10 +66,10 @@ button { color: inherit; }
 
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
-  *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+  *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }  /* ds-allow: reduced-motion must override every animation */
 }
 
 @media print {
-  .rail, .mobile-header, .bottom-nav, .persistent-disclaimer, .filter-panel, .reveal-button, .rating { display: none !important; }
-  body { background: #fff; }
+  .rail, .mobile-header, .bottom-nav, .persistent-disclaimer, .filter-panel, .reveal-button, .rating { display: none !important; }  /* ds-allow: print hides interactive chrome */
+  body { background: var(--surface); }
 }

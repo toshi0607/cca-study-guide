@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import type { MockExamViewProps } from './mock-exam/MockExamView';
+import { Button } from './app/Button';
 
 type MockExamComponent = typeof import('./mock-exam/MockExamView').MockExamView;
 
@@ -23,7 +24,7 @@ export function MockExamEntry(props: MockExamViewProps) {
     return () => { cancelled = true; };
   }, []);
 
-  if (error) return <section class="mock-exam-load-error" role="alert" tabIndex={-1} ref={errorRef}><p>{props.copy.mockExam.loadError}</p><button type="button" class="btn btn--secondary" onClick={() => window.location.reload()}>{props.copy.mockExam.retry}</button></section>;
+  if (error) return <section class="mock-exam-load-error" role="alert" tabIndex={-1} ref={errorRef}><p>{props.copy.mockExam.loadError}</p><Button variant="secondary" onClick={() => window.location.reload()}>{props.copy.mockExam.retry}</Button></section>;
   if (!View) return <section class="mock-exam-loading" role="status" aria-live="polite" aria-busy="true"><p>{props.copy.mockExam.loading}</p></section>;
   return <View {...props}/>;
 }

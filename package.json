@@ -19,6 +19,7 @@
     "test:watch": "vitest",
     "fonts:subset": "node scripts/subset-fonts.mjs",
     "test:bundle": "node scripts/check-initial-bundle.mjs",
+    "test:styles": "node scripts/check-design-tokens.mjs",
     "verify:production": "node scripts/verify-production-deployment.mjs"
   },
   "dependencies": {

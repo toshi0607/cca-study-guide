@@ -8,6 +8,19 @@
 - 日本語版のアイブロウも英語大文字タグラインに統一
 - スコープ = 監査の A + B + C + D 全部（余白・文字サイズのラダー化を含む）
 
+## 0. 再発防止（この規約を守らせる仕組み）
+
+刷新後の一貫性を維持するため、以下を用意している。新しい UI はまずこれらに従う:
+
+- **自動チェック**: `node scripts/check-design-tokens.mjs`（CI: Performance budget ワークフロー、
+  ローカル `pnpm test:styles`）が `src/styles/*.css`（`tokens.css` 除く）の生の hex / rem・px
+  文字サイズ / `!important` を検出して落とす。正当な例外は行末 `/* ds-allow: <理由> */` で
+  オプトアウト（display 数字は §2、ヒーロー見出しは §3.4）。
+- **型付きプリミティブ**: `src/components/app/{Button,Panel,Note}.tsx` とクラス関数
+  `src/components/app/ui.ts`（`buttonClass`/`panelClass`/`noteClass`）。誤ったバリアントは
+  コンパイルエラー。新しい UI はクラス手書きより優先して使う。
+- **エージェント向け規約**: `src/CLAUDE.md` がこのファイルを拘束力ある正として参照する。
+
 ---
 
 ## 1. ファイル構成

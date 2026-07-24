@@ -26,7 +26,7 @@
 
 .wordmark b {
   font-family: var(--display);
-  font-size: 2.2rem;
+  font-size: 2.2rem;  /* ds-allow: wordmark display figure (§2) */
   letter-spacing: .02em;
 }
 
