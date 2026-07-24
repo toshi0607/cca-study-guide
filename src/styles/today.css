@@ -115,7 +115,7 @@
 .node-5 { grid-column: 4 / 5; grid-row: 2; }
 
 .node-copy { display: flex; justify-content: space-between; align-items: start; }
-.node-copy span { padding: 2px 6px; background: var(--ink); color: #fff; font: 700 var(--fs-micro) var(--mono); }
+.node-copy span { padding: 2px 6px; background: var(--ink); color: var(--on-ink); font: 700 var(--fs-micro) var(--mono); }
 .node-copy strong { font: 700 var(--fs-xl)/1 var(--display); letter-spacing: .01em; color: var(--cyan-dark); }
 .blueprint-node > p { margin: 0; font-weight: 700; font-size: var(--fs-base); line-height: 1.45; word-break: auto-phrase; }
 .node-progress { height: 24px; background: linear-gradient(90deg, var(--cyan-pale) var(--progress), var(--track) var(--progress)); border: 1px solid var(--grid); }
@@ -158,7 +158,7 @@
   cursor: pointer;
 }
 .weak-row:hover { border-color: var(--amber); background: var(--amber-pale); }
-.weak-row-domain { padding: 3px 6px; background: var(--amber); color: #fff; font: 700 var(--fs-xs) var(--mono); }
+.weak-row-domain { padding: 3px 6px; background: var(--amber); color: var(--on-ink); font: 700 var(--fs-xs) var(--mono); }
 .weak-row-title { font-weight: 700; word-break: auto-phrase; }
 .weak-row strong { font: var(--fs-xs) var(--mono); white-space: nowrap; }
 .weak-areas .empty-state { margin-top: var(--space-6); }

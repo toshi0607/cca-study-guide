@@ -153,7 +153,7 @@
 .mock-exam-axis-table th[scope="row"] { padding-left: var(--space-3); }
 
 .mock-exam-review-group { margin-top: var(--space-4); }
-.mock-exam-review-group h4 { margin: 0 0 var(--space-2); font-size: var(--fs-base); color: var(--ink); }
+.mock-exam-review-group h4 { color: var(--ink); }
 .mock-exam-priority-list { margin: 0; padding: 0 0 0 var(--space-5); display: grid; gap: var(--space-2); }
 .mock-exam-priority-item { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: var(--space-1) var(--space-4); }
 .mock-exam-priority-name { font-weight: 700; }

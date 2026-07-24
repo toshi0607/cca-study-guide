@@ -56,7 +56,7 @@ export function MockExamAnalysis({ locale, copy, attempts, headingRef, onOpenPra
 
   const renderPriority = (priority: MockExamReviewPriority, subheading: string, subId: string) => (
     <div class="mock-exam-review-group">
-      <h4 id={subId}>{subheading}</h4>
+      <h4 id={subId} class="sub-title">{subheading}</h4>
       {priority.status === 'insufficient' && <p class="mock-exam-axis-empty">{a.reviewInsufficient}</p>}
       {priority.status === 'none' && <p class="mock-exam-axis-empty">{a.reviewNone}</p>}
       {priority.status === 'ranked' && (

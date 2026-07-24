@@ -121,6 +121,15 @@
   --lh-body: 1.65;
   --lh-relaxed: 1.8;
 
+  /* ディスプレイ数字（本文ラダーの対象外・例外）:
+     大きな統計数字・装飾ウォーターマーク・ワードマークは `--display` 書体の
+     図像的タイポで、テキストラダー（上限 --fs-hero 4.5rem）に押し込むと意匠が
+     変わる。これらは生の rem / clamp を許容する。該当箇所は以下に限定:
+       .today-hero::after（ウォーターマーク） / .due-block strong（本日の枚数）
+       .quiz-score-figure strong・.session-breakdown dd（スコア） / .wordmark b
+     新たなディスプレイ数字を足す場合はこのリストに追記すること。それ以外の
+     文字は必ず --fs-* を使う。 */
+
   /* --- 形 --- */
   --radius: 2px;         /* 対話要素・カード すべて */
   --radius-dialog: 4px;  /* dialog のみ */

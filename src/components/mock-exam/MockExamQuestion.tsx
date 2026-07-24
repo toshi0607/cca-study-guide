@@ -24,7 +24,7 @@ export function MockExamQuestion({ question, selected, flagged, locale, copy, he
         <p class="eyebrow">{copy.practice.question}</p>
         <h3 tabIndex={-1} ref={headingRef}>{localize(question.stem, locale)}</h3>
       </div>
-      <p class="quiz-hint">{question.format === 'single' ? copy.mockExam.singleHint : copy.mockExam.multipleHint}</p>
+      <p class="note note--info quiz-hint">{question.format === 'single' ? copy.mockExam.singleHint : copy.mockExam.multipleHint}</p>
       <fieldset class="choice-list">
         <legend class="sr-only">{copy.mockExam.choicesLegend}</legend>
         {question.choices.map((choice) => {
