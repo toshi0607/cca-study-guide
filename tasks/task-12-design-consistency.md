@@ -84,10 +84,22 @@ S2-S6 は担当ファイルが排他。`src/i18n/ui.ts` のみ共有だが、各
 - [x] C2 `sources-panel` のアイブロウ削除 / B1・B4 ラダー適用 / privacy ページも同様
 
 ### Phase 2
-- [ ] 5ブランチをマージ
-- [ ] `pnpm build` / `pnpm test` / `pnpm test:e2e` / `pnpm test:bundle`
-- [ ] 全ビューを 1440px / 375px で再撮影し監査項目を突合
-- [ ] `/code-review high` + `reviewer` エージェント（design-system.md との適合）
+- [x] 5ブランチをマージ（コミット `bf2db06`/`6725092`/`3652849`/`06988f3`/`8bfee15` → マージコミット4件）。ソース衝突ゼロ、`tasks/task-12` のみ衝突し両節を残して解決
+- [x] 統合後の跨ぎ修正（コミット `bf9778d`）: `.hero-lede` 昇格 / `.section-heading h2` specificity 解消 / 孤児クラス削除 / test セレクタ更新 / a11y アニメーション待ち
+- [x] `pnpm build` 0 errors / `pnpm test` 445 pass / `pnpm test:e2e` **131 pass** / `pnpm test:bundle` OK
+- [x] 全ビューを 1440px / 375px で再撮影し監査項目を突合（計測: ボタン10→6種・見出し12→9種・パネル15→5種、模試見出しの本文書体落ち解消、アイブロウ英語大文字統一）
+- [~] `reviewer` エージェント（design-system.md 適合）実行中 / `/code-review high` はユーザー起動待ち（billed）
+
+## 統合後の計測結果（監査時 → 現在、Playwright computed style 実測）
+
+| 指標 | 監査時 | 現在 | 備考 |
+|---|---|---|---|
+| ボタン系統 | 10種 | 6種 | うち2種は practice/quiz のチップ選択/非選択。実質ボタンは ink塗り/secondary/text/danger の4種 |
+| 見出し（tag×size×family） | 12種 | 9種 | 模試の本文書体落ち解消。BIZ UDPGothic は `.card-prompt h3`（設問文=意図的例外）のみ |
+| パネル（pad×border×shadow） | 15種 | 5種 | 影は `.panel--hero` のみ |
+| 模試セクション見出し | 16.8-22.4px BIZ UDPGothic | 20px Barlow（`.card-title`） | A2 完全解消（プローブ実測） |
+| 日本語アイブロウ | 今日/模擬試験/学習分析 が日本語 | 全て英語大文字 | C1 解消 |
+| `.card-domain` の二重用途 | 23px と 343px | 廃止（`.badge`/`.domain-label` に分離） | A5 解消 |
 
 ## Notes（逸脱ログ）
 
