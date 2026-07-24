@@ -40,12 +40,12 @@ export function MockExamPalette({ open, refs, currentIndex, answered, flagged, c
   return (
     <dialog ref={dialogRef} class="mock-exam-palette" aria-label={copy.mockExam.paletteTitle} onClose={onClose} onCancel={onClose}>
       <div class="mock-exam-palette-head">
-        <h2>{copy.mockExam.paletteTitle}</h2>
-        <button type="button" class="mock-exam-secondary" onClick={onClose}>{copy.mockExam.paletteClose}</button>
+        <h2 class="card-title">{copy.mockExam.paletteTitle}</h2>
+        <button type="button" class="btn btn--secondary" onClick={onClose}>{copy.mockExam.paletteClose}</button>
       </div>
       <div class="mock-exam-palette-filters" role="group" aria-label={copy.mockExam.paletteFilterLabel}>
         {(['all', 'unanswered', 'flagged'] as const).map((key) => (
-          <button key={key} type="button" class={filter === key ? 'is-active' : ''} aria-pressed={filter === key} onClick={() => setFilter(key)}>
+          <button key={key} type="button" class={`chip${filter === key ? ' is-selected' : ''}`} aria-pressed={filter === key} onClick={() => setFilter(key)}>
             {filterLabel[key]}
           </button>
         ))}
@@ -63,7 +63,7 @@ export function MockExamPalette({ open, refs, currentIndex, answered, flagged, c
                 <li key={item.ref.questionId}>
                   <button
                     type="button"
-                    class={`mock-exam-palette-cell${item.isCurrent ? ' is-current' : ''}${item.isAnswered ? ' is-answered' : ''}${item.isFlagged ? ' is-flagged' : ''}`}
+                    class={`chip mock-exam-palette-cell${item.isCurrent ? ' is-current' : ''}${item.isAnswered ? ' is-selected' : ''}${item.isFlagged ? ' is-flagged' : ''}`}
                     aria-current={item.isCurrent ? 'true' : undefined}
                     aria-label={copy.mockExam.paletteQuestionLabel(item.index + 1, states)}
                     onClick={() => onSelect(item.index)}

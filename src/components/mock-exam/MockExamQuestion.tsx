@@ -47,7 +47,7 @@ export function MockExamQuestion({ question, selected, flagged, locale, copy, he
           );
         })}
       </fieldset>
-      <button type="button" class={`mock-exam-flag${flagged ? ' is-flagged' : ''}`} aria-pressed={flagged} onClick={onToggleFlag}>
+      <button type="button" class={`chip mock-exam-flag${flagged ? ' is-flagged' : ''}`} aria-pressed={flagged} onClick={onToggleFlag}>
         {flagged ? copy.mockExam.unflagButton : copy.mockExam.flagButton}
       </button>
     </article>
