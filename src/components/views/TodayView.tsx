@@ -4,11 +4,12 @@ import { formatDate, formatNumber } from '../app/format';
 import { cardIndex, domainIndex } from '../../content/card-index';
 import type { Locale } from '../../i18n/locales';
 import { localize, type UiCopy } from '../../i18n/ui';
+import { daysUntilExam } from '../../lib/exam-date';
 import type { ReviewState } from '../../lib/scheduler';
 import type { MockExamAttempt, MockExamSession } from '../../lib/mock-exam';
 import { isWeak } from '../../lib/weakness';
 
-export function TodayView({ locale, copy, now, ready, reviews, dueCount, session, attempts, onStartDueReview, onOpenWeakDomain, onOpenMockExam, onOpenMockExamAnalysis }: {
+export function TodayView({ locale, copy, now, ready, reviews, dueCount, session, attempts, examDate, onStartDueReview, onOpenWeakDomain, onOpenMockExam, onOpenMockExamAnalysis }: {
   locale: Locale;
   copy: UiCopy;
   now: Date | null;
@@ -17,11 +18,13 @@ export function TodayView({ locale, copy, now, ready, reviews, dueCount, session
   dueCount: number;
   session: MockExamSession | null;
   attempts: readonly MockExamAttempt[];
+  examDate: string | null;
   onStartDueReview: () => void;
   onOpenWeakDomain: (domainId: string) => void;
   onOpenMockExam: () => void;
   onOpenMockExamAnalysis: () => void;
 }) {
+  const days = now ? daysUntilExam(examDate, now) : null;
   // CTA reflects the exam state: resume a running session, reopen results when an
   // attempt exists, otherwise start fresh. Opening the analysis is a separate
   // auxiliary link surfaced only once there is an attempt to analyze.
@@ -52,6 +55,7 @@ export function TodayView({ locale, copy, now, ready, reviews, dueCount, session
           <button class="btn btn--wide" disabled={!ready} onClick={onStartDueReview}>{copy.today.startReview} <span aria-hidden="true">→</span></button>
         </div>
       </section>
+      {days !== null && <p class="note note--info today-exam-countdown">{days >= 0 ? copy.today.examDaysLeft(days) : copy.today.examDatePassed(Math.abs(days))}</p>}
       <Blueprint reviews={reviews} ready={ready} locale={locale} copy={copy}/>
       <section class="mock-exam-launch" aria-labelledby="mock-exam-launch-title">
         <div class="section-heading">

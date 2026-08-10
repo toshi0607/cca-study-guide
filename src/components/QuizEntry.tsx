@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import type { Locale } from '../i18n/locales';
 import type { UiCopy } from '../i18n/ui';
+import type { AnswerOutcome } from '../lib/quiz';
 import type { QuizStat } from '../lib/storage';
+import type { QuizConfidence } from '../lib/storage-schema';
 import { Button } from './app/Button';
 
 type QuizComponent = typeof import('./views/QuizView').QuizView;
@@ -14,7 +16,8 @@ export function QuizEntry(props: {
   locale: Locale;
   copy: UiCopy;
   quizStats?: Record<string, QuizStat>;
-  onAnswer: (questionId: string, correct: boolean) => boolean;
+  onAnswer: (questionId: string, outcome: AnswerOutcome) => boolean;
+  onConfidence: (questionId: string, confidence: QuizConfidence, wasCorrect: boolean) => boolean;
   targetQuestionId: string | null;
   onTargetOpened: () => void;
   targetScenarioId: string | null;

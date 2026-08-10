@@ -13,6 +13,7 @@ import {
 } from '../../lib/hands-on-progress';
 import type { HandsOnProgress } from '../../lib/storage';
 import { SourceLinks } from '../app/SourceLinks';
+import { CopyLinkButton } from '../app/CopyLinkButton';
 import { formatDate } from '../app/format';
 import type { Locale } from '../../i18n/locales';
 
@@ -28,9 +29,11 @@ type Props = {
   onOpenQuestion: (questionId: string) => void;
   targetGuideId: string | null;
   onTargetOpened: () => void;
+  targetStepId: string | null;
+  onTargetStepOpened: () => void;
 };
 
-export function HandsOnView({ locale, copy, records, onStart, onToggleStep, onComplete, onReconfirm, onOpenCard, onOpenQuestion, targetGuideId, onTargetOpened }: Props) {
+export function HandsOnView({ locale, copy, records, onStart, onToggleStep, onComplete, onReconfirm, onOpenCard, onOpenQuestion, targetGuideId, onTargetOpened, targetStepId, onTargetStepOpened }: Props) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const listHeadingRef = useRef<HTMLHeadingElement>(null);
   const detailHeadingRef = useRef<HTMLHeadingElement>(null);
@@ -53,6 +56,34 @@ export function HandsOnView({ locale, copy, records, onStart, onToggleStep, onCo
     requestAnimationFrame(() => target?.focus());
   }, [selectedId, selected]);
 
+  // Deep-link entry to a specific step: once the guide detail above is open,
+  // scroll its step heading into view and focus it. A step id that no longer
+  // exists (or arrives before the guide has resolved) is a no-op — the
+  // element lookup simply finds nothing.
+  //
+  // Deliberately its own id, not the checkbox's `handson-step-<guide>-<step>`
+  // id: that one is already claimed by the step's <input> (and its <label
+  // for>), so reusing it here would give two elements the same DOM id.
+  //
+  // The scroll/focus itself is deferred to a second requestAnimationFrame,
+  // not called synchronously: the effect above already queued one rAF that
+  // plain-focuses the detail heading (no preventScroll), which triggers the
+  // browser's default scroll-into-view and would otherwise fire after this
+  // effect and yank the viewport back up. Because this effect runs after that
+  // one in the same commit, its rAF callback is registered second and so
+  // fires second — landing on the step, not back on the guide header.
+  useEffect(() => {
+    if (!targetStepId || !selected) return;
+    requestAnimationFrame(() => {
+      const heading = document.getElementById(`handson-step-heading-${selected.id}-${targetStepId}`);
+      if (heading) {
+        heading.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        heading.focus({ preventScroll: true });
+      }
+    });
+    onTargetStepOpened();
+  }, [targetStepId, selected]);
+
   if (selected) {
     const stepIds = selected.steps.map((step) => step.id);
     const record = records[selected.id];
@@ -74,6 +105,7 @@ export function HandsOnView({ locale, copy, records, onStart, onToggleStep, onCo
             <span class="handson-minutes">{c.estimatedTime}: {c.minutes(selected.estimatedMinutes)}</span>
             {editable && <span class="handson-stepcount">{c.stepCount(stepProgress.completed, stepProgress.total)}</span>}
           </p>
+          <CopyLinkButton link={{ view: 'hands-on', handsOnGuideId: selected.id }} copy={copy} label={localize(selected.title, locale)} class="handson-copy-link"/>
         </header>
 
         {status === 'stale' && <p class="note note--warn guide-state-note" role="note">{c.staleNote}</p>}
@@ -98,12 +130,14 @@ export function HandsOnView({ locale, copy, records, onStart, onToggleStep, onCo
             <legend class="sr-only">{c.stepsLegend}</legend>
             {selected.steps.map((step, index) => {
               const checkboxId = `handson-step-${selected.id}-${step.id}`;
+              const headingId = `handson-step-heading-${selected.id}-${step.id}`;
               return (
-                <div class="handson-step" key={step.id}>
+                <div class="handson-step" id={headingId} tabIndex={-1} key={step.id}>
                   <p class="handson-step-check">
                     <input type="checkbox" id={checkboxId} checked={done.has(step.id)}
                       onChange={(event) => onToggleStep(selected.id, selected.revision, stepIds, step.id, (event.currentTarget as HTMLInputElement).checked)}/>
                     <label for={checkboxId}><span class="handson-step-num">{index + 1}</span> {localize(step.title, locale)}</label>
+                    <CopyLinkButton link={{ view: 'hands-on', handsOnGuideId: selected.id, handsOnStepId: step.id }} copy={copy} label={localize(step.title, locale)} class="handson-step-copy-link"/>
                   </p>
                   <ol class="handson-step-instructions">{localize(step.instructions, locale).map((item) => <li key={item}>{item}</li>)}</ol>
                   <p class="handson-step-expected"><strong>{c.expectedResult}:</strong></p>

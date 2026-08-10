@@ -50,8 +50,14 @@ These are the features currently available in the service. Everything runs entir
 - **Learning analysis** — suggests which domains to review next based on mock exam results (does not compute an official score, pass/fail, or readiness)
   - **evidence level** — shows whether there are enough answers to back the analysis
   - **stale attempt safety** — answers whose question content has since changed are not re-scored and are excluded from the per-axis aggregation
+- **Time cost on the learning path** — each stage shows how many minutes of material it contains (Study Guide 360, Hands-on 480, mock exam 120); stages with no fixed duration show none
+- **Mock-exam overlap** — the start screen states how many of the exam's questions you have already answered in the Quiz, so you can decide when to sit it first-sight
+- **Answer confidence and partial answers** — one optional tap records whether you were sure, unsure, or guessing, and a multiple-select answer that picked some correct choices and nothing wrong is recorded as partial rather than simply wrong
+- **Planned exam date (optional)** — stored on this device only and never exported; shows days remaining and minutes of Study Guide material left. It does not judge readiness or suggest a pace
+- **Study summary to the clipboard** — copies a short text digest (weak cards, low-accuracy questions, due counts) for pasting into your own notes or a study companion. Clipboard only; nothing is sent anywhere
+- **Deep links** — every Study Guide section, hands-on guide and step, and practice card has a `#/...` URL you can bookmark, share, or open on another device. URLs carry content ids and a view name only, never progress or answers
 - **local-only storage** — progress is stored only in this browser's localStorage
-- **JSON export/import** — export/import progress to migrate across devices and browsers
+- **JSON export/import** — export/import progress to migrate across devices and browsers. Import offers **merge** as well as replace, so two devices can be combined without losing either side's records; merging the same file twice does not inflate any count
 
 ## Suggested study order
 

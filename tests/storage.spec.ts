@@ -250,10 +250,11 @@ test('exports, resets, and re-imports Mock Exam state alongside existing progres
   await expect(page.getByText('この端末の進捗を削除しました。')).toBeVisible();
   expect(await page.evaluate((key) => localStorage.getItem(key), STORAGE_KEY)).toBeNull();
 
-  // #when — importing the exported file restores the Mock Exam state and the review
+  // #when — importing the exported file and choosing to replace restores the Mock Exam state and the review
   const chooserPromise = page.waitForEvent('filechooser');
   await page.getByRole('button', { name: '進捗をJSONから読み込む' }).click();
   await (await chooserPromise).setFiles(exportPath);
+  await page.getByRole('button', { name: '置き換える' }).click();
   await expect(page.getByText('JSONから進捗を読み込みました。')).toBeVisible();
 
   const restored = await page.evaluate((key) => JSON.parse(localStorage.getItem(key) ?? 'null'), STORAGE_KEY);

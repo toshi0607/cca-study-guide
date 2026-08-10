@@ -21,17 +21,14 @@ test('restores exported progress through the JSON import after a reset', async (
   await expect(page.getByText('この端末の進捗を削除しました。')).toBeVisible();
   expect(await page.evaluate((key) => localStorage.getItem(key), STORAGE_KEY)).toBeNull();
 
-  // #when — importing the exported file and confirming the overwrite dialog
-  const dialogMessage = new Promise<string>((resolve) => page.once('dialog', (dialog) => {
-    resolve(dialog.message());
-    void dialog.accept();
-  }));
+  // #when — importing the exported file and choosing to replace in the import dialog
   const chooserPromise = page.waitForEvent('filechooser');
   await page.getByRole('button', { name: '進捗をJSONから読み込む' }).click();
   await (await chooserPromise).setFiles(exportPath);
 
   // #then — the dialog summarizes the payload and progress is back without a reload
-  expect(await dialogMessage).toContain('復習済みカード1枚');
+  await expect(page.getByText('復習記録1件を含むファイルです。')).toBeVisible();
+  await page.getByRole('button', { name: '置き換える' }).click();
   await expect(page.getByText('JSONから進捗を読み込みました。')).toBeFocused();
   await expect.poll(() => page.evaluate((key) => Object.keys(JSON.parse(localStorage.getItem(key) ?? '{}').reviews ?? {}).length, STORAGE_KEY)).toBe(1);
   const d1Total = cards.filter((card) => card.domainId === 'd1').length;

@@ -18,6 +18,8 @@ export function HandsOnEntry(props: {
   onOpenQuestion: (questionId: string) => void;
   targetGuideId: string | null;
   onTargetOpened: () => void;
+  targetStepId: string | null;
+  onTargetStepOpened: () => void;
 }) {
   const [HandsOn, setHandsOn] = useState<HandsOnComponent | null>(null);
   const [error, setError] = useState(false);
