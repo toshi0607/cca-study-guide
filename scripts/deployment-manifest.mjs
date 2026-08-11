@@ -12,11 +12,10 @@
 //     excluded), so a CSS-only / HTML-metadata-only / static-asset-only change
 //     is still detected even when App.*.js and client.*.js are unchanged.
 //
-// HTML files are normalized before hashing to strip the only two tokens that
-// legitimately vary between two builds of the SAME source: the GA measurement
-// id (env-dependent) and the per-build random `astro-island uid`. These are
-// verified to be the ONLY non-deterministic HTML tokens for this app; any other
-// change to HTML content still changes the hash. Non-HTML files are hashed raw.
+// HTML files are normalized before hashing to strip the per-build random
+// `astro-island uid`. This is the only known non-deterministic HTML token for
+// this app; any other change to HTML content changes the hash. Non-HTML files
+// are hashed raw.
 
 import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
@@ -27,22 +26,18 @@ import { join, relative, sep } from 'node:path';
 export const MANIFEST_FILENAME = 'deployment-manifest.json';
 
 /** Schema version of the manifest shape, so the verifier can guard on it. */
-export const MANIFEST_VERSION = 1;
+export const MANIFEST_VERSION = 2;
 
 /**
- * Normalize the two build/env-variable tokens in an HTML document so that two
- * builds of the same source hash identically:
- *   - the GA measurement id `G-XXXXXXXXXX` (differs per environment), and
- *   - the random `astro-island uid="..."` (differs per build).
+ * Normalize the per-build random `astro-island uid="..."` in an HTML document
+ * so that two builds of the same source hash identically.
  * Every other byte of the HTML is preserved, so a real content/metadata change
  * still changes the hash.
  * @param {string} html
  * @returns {string}
  */
 export function normalizeHtml(html) {
-  return html
-    .replace(/G-[A-Z0-9]{6,}/g, 'G-NORMALIZED')
-    .replace(/(<astro-island\b[^>]*?\buid=")[^"]*(")/g, '$1NORMALIZED$2');
+  return html.replace(/(<astro-island\b[^>]*?\buid=")[^"]*(")/g, '$1NORMALIZED$2');
 }
 
 /** sha256 hex of a Buffer/Uint8Array/string. */

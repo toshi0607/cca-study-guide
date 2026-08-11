@@ -1,6 +1,6 @@
 # CCA Study Guide — Product and Technical Design
 
-Last reviewed: 2026-07-14
+Last reviewed: 2026-08-11
 
 ## Product thesis
 
@@ -18,7 +18,7 @@ The site must never imply Anthropic endorsement and must not contain, reconstruc
 - Filters by domain and state; card search.
 - Progress summary, JSON export/import for moving between devices, and local reset.
 - A source and disclaimer section with the blueprint verification date.
-- No login, API, database, or user-generated content. Optional aggregate usage analytics loads when configured, with advertising storage and signals disabled; the app emits no custom events for study content or progress and links to a dedicated disclosure page.
+- No login, API, database, user-generated content, or third-party analytics. Study content and progress stay in the browser's localStorage, and the app links to a dedicated privacy page.
 
 In scope since July 2026: a multiple-choice quiz mode built from independently authored questions (single- and multiple-select), with weighted or per-domain draws, immediate feedback with official-source links, and locally stored per-question stats.
 
@@ -148,7 +148,7 @@ Official scenarios are a **sub-area under the Guide view**, mirroring hands-on: 
 - Playwright/axe for the critical reveal/rating/persistence/keyboard/mobile flow when browser binaries are available.
 - Standard static output deployable unchanged to Vercel or Cloudflare Workers Static Assets.
 
-No server secret is required. An optional build-time `PUBLIC_GA_MEASUREMENT_ID` enables GA4 and its linked disclosure; when absent, analytics scripts and analytics-specific disclosure are omitted entirely.
+No server secret or build-time runtime configuration is required. The static app does not load third-party analytics or send learning data off-device.
 
 ## Hosting decision
 

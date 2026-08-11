@@ -2,12 +2,9 @@
 import App from '../../components/App';
 import { contentStats } from '../../content/validate';
 import LocalizedLayout from '../../layouts/LocalizedLayout.astro';
-import { parseGoogleAnalyticsId } from '../../lib/analytics';
 void contentStats;
-
-const analyticsEnabled = Boolean(parseGoogleAnalyticsId(import.meta.env.PUBLIC_GA_MEASUREMENT_ID));
 ---
 
 <LocalizedLayout locale="en" page="app">
-  <App locale="en" analyticsEnabled={analyticsEnabled} client:load />
+  <App locale="en" client:load />
 </LocalizedLayout>

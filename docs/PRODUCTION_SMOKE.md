@@ -41,21 +41,31 @@ pnpm test:e2e:production
 ```
 
 `pnpm verify:production` runs `scripts/verify-production-deployment.mjs`. It
-proves Production serves the **whole** local `dist/` build, not just its two
-JS island bundles, via a **deployment manifest**:
+checks the **whole known** local `dist/` build, not just its two JS island
+bundles, using the local **deployment manifest** as its root of trust:
 
 - Every build (local and Vercel) generates `dist/deployment-manifest.json`
   through an `astro:build:done` hook (`scripts/deployment-manifest.mjs`). It
   records the source `commit` plus the sha256 of **every** served file — JS,
-  CSS, HTML, fonts, icons, images. HTML is hashed after normalizing the only
-  two per-build/per-env tokens (the GA measurement id and the random
-  `astro-island uid`), so a real metadata change still changes the hash.
-- Vercel serves that manifest at `/deployment-manifest.json`. The check fetches
-  it, compares the full file-hash map and the `commit` against the local build,
-  and cross-checks that the App island asset Production actually serves hashes
-  to what its own manifest claims (so a stale manifest can't mask a mismatch).
+  CSS, HTML, fonts, icons, images. HTML is hashed after normalizing the
+  per-build random `astro-island uid`, so a real metadata change still changes
+  the hash.
+- The check fetches every path in that local inventory from Production, follows
+  at most five explicitly validated same-allowlist HTTPS redirects, and compares
+  the returned bytes with the local expected hash using the same normalization.
+  It uses `redirect: 'manual'` and never sends a request to an off-allowlist,
+  HTTP, or credential-bearing redirect target.
+- Vercel's `/deployment-manifest.json` is retained as supplementary deployment
+  evidence: its raw receipt, `commit`, and file-hash map must agree with the
+  local manifest. It is not evidence for served file bytes.
 - This catches CSS-only, HTML/SEO-metadata-only, locale-page-only, and
-  static-asset-only changes — cases two-bundle diffing would miss.
+  static-asset-only changes — including an altered served secondary CSS, HTML,
+  or JS file even if Production's own manifest is unchanged.
+
+HTTP has no general way to enumerate arbitrary additional files a server might
+expose. Therefore a `MATCH` means **every file listed in the trusted local
+manifest inventory matched**; it does not claim that Production exposes no
+unknown extra paths.
 
 Pass `--commit <sha>` to record/compare the audited commit (the workflow passes
 `main`'s checked-out HEAD) and `--json <path>` to write a machine report (always
@@ -70,16 +80,15 @@ the live site.
 
 The CSP and other security headers in `vercel.json` are served only by the
 Vercel edge, so neither the Playwright suites nor `astro preview` exercise
-them. After a deploy that touches `vercel.json`, `src/components/GoogleAnalytics.astro`,
+them. After a deploy that touches `vercel.json`, an Astro layout/client directive,
 or the Astro version, confirm the header is present and intact:
 
 ```
 curl -sI https://cca.toshi0607.com/ | grep -i -E 'content-security-policy|x-frame-options|x-content-type-options|referrer-policy|permissions-policy'
 ```
 
-Expect a `Content-Security-Policy` whose `script-src` lists `'self'`, three
-`sha256-…` hashes, and `https://www.googletagmanager.com` (no `'unsafe-inline'`),
-plus `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`,
+Expect a `Content-Security-Policy` whose `script-src` lists `'self'` and the
+required `sha256-…` hashes (no `'unsafe-inline'`), plus `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`,
 `Referrer-Policy: strict-origin-when-cross-origin`, and a `Permissions-Policy`.
 If the site renders but the browser console logs `Refused to execute inline
 script … violates the following Content Security Policy directive`, the
@@ -118,26 +127,22 @@ stores them.
 
 Not every red run is a real regression:
 
-- **Transient analytics/external-host failures are ignored by design and
-  are NOT release failures.** The privacy/analytics test only asserts on
-  same-origin app behavior and known GA endpoints; a blip on an
-  unrelated third-party host (ad blockers, flaky CDNs, etc.) reached
-  incidentally by the browser is not a smoke failure.
-- **Distinguish a real same-origin chunk failure from an external blip.**
-  If a `/_astro/*.js` or other same-origin asset 404s or fails to load,
-  treat it as real — that is exactly what this suite exists to catch. If
-  the failing request is to a third-party domain the app doesn't control,
-  treat it as noise and re-run before escalating.
+- **Any third-party request from an application route is a privacy regression.**
+  The deployed app intentionally has no third-party runtime dependency; inspect
+  the Playwright trace to identify which markup or script initiated the request.
+- **A same-origin chunk failure is also a real regression.** If a
+  `/_astro/*.js` or other same-origin asset 404s or fails to load, inspect the
+  deployment identity report for a stale or incomplete rollout.
 - Check the trace/video in `production-playwright-report` before deciding —
   a screenshot at the failure point usually makes the distinction obvious.
 
 ## Deployment mismatch ("Production does not yet serve this main build")
 
-`pnpm verify:production` prints this when Production's manifest is absent or
-does not match the local `main` build (a differing file hash or `commit`). This
-is almost always a **deploy race**, not a regression: Vercel hasn't finished
-deploying the latest `main` commit yet, so it is still serving the previous
-build's manifest (or none for a brand-new file).
+`pnpm verify:production` prints this when a Production file in the local
+manifest inventory, or the supplementary Production manifest receipt, does not
+match the local `main` build. This is often a **deploy race**, not a regression:
+Vercel hasn't finished deploying the latest `main` commit yet, so it is still
+serving an older build (or no manifest for a brand-new file).
 
 What to do:
 
@@ -157,7 +162,7 @@ What to do:
   the same post-merge journeys that used to be manual — locale shell load,
   primary lazy views, export/import roundtrip, unreadable-storage safety,
   hands-on persistence, mobile journey, Mock Exam exactly-once, and
-  analytics/network privacy. Run on demand after any deploy you want
+  network privacy. Run on demand after any deploy you want
   confidence in.
 - **Full release audit** (`/release-audit full`, `docs/RELEASE_CHECKLIST.md`
   Pre-merge section): everything smoke covers, plus unit/build/bundle/full

@@ -42,7 +42,7 @@ function studyStorage() {
   }
 }
 
-function App({ locale, analyticsEnabled = false }: { locale: Locale; analyticsEnabled?: boolean }) {
+function App({ locale }: { locale: Locale }) {
   const copy = ui[locale];
   const [view, setView] = useState<View>('today');
   const [data, setData] = useState<StudyData>(createEmptyStudyData);
@@ -378,7 +378,7 @@ function App({ locale, analyticsEnabled = false }: { locale: Locale; analyticsEn
           locale={locale} copy={copy}
           reviews={data.reviews} studyGuideProgress={data.studyGuideProgress} handsOnProgress={data.handsOnProgress}
           quizStats={data.quizStats} activeMockExam={data.activeMockExam} mockExamAttempts={data.mockExamAttempts} dueCount={dueCardIds.length}
-          analyticsEnabled={analyticsEnabled} dataUnreadable={dataUnreadable}
+          dataUnreadable={dataUnreadable}
           onExport={exportData} onImportFile={importData} onReset={resetData}
           onOpenGuide={() => navigate('guide')} onOpenHandsOn={() => navigate('hands-on')} onOpenPractice={() => openMockExamPractice()}
           onOpenQuiz={() => navigate('quiz')} onOpenMockExam={openMockExam} onOpenMockExamAnalysis={openMockExamAnalysis}
@@ -386,7 +386,7 @@ function App({ locale, analyticsEnabled = false }: { locale: Locale; analyticsEn
         <footer class="site-footer">
           <span>{copy.brand.footer}</span>
           <nav aria-label={copy.aria.siteInformation}>
-            {analyticsEnabled && <a href={localePaths[locale].privacy}>{copy.footer.analytics}</a>}
+            <a href={localePaths[locale].privacy}>{copy.footer.privacy}</a>
             <a href="https://github.com/toshi0607/cca-study-guide" target="_blank" rel="noreferrer">{copy.footer.github}<span class="sr-only">{copy.aria.opensNewTab}</span><span aria-hidden="true"> ↗</span></a>
           </nav>
         </footer>

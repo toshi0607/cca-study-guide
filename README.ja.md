@@ -30,7 +30,7 @@ Claude Certified Architect – Foundations（CCAR-F）の公開出題範囲を�
 - 選択式演習にはシナリオ演習モードを収録。架空企業のケース記述を読んでから紐づく設問群に答える形式に慣れるための独自教材で、本試験のシナリオの複製・再現ではない
 - 練習ビューには一覧表示に加えて集中レビューセッションを収録。フィルタ結果を1枚ずつ「思い出す→開示→評価」で回し、キーボードショートカット（Space/Enterで開示、1/2/3で評価、Escで中断）にも対応
 - 進捗はブラウザのlocalStorageだけに保存（JSONの書き出し・読み込みで端末・ブラウザ間の移行が可能）
-- Google Analyticsは設定時に通常読み込みし、ページ閲覧以外の学習データを独自イベントとして送信しない
+- 第三者のアクセス解析や行動追跡は読み込まず、学習進捗はブラウザのlocalStorageだけに保存
 
 ## 機能
 
@@ -95,8 +95,8 @@ pnpm test:e2e:ui       # Playwright UIモード
 `pnpm test:e2e`は毎回productionビルドを作り直すため、開発中に繰り返すと待ち時間が長くなります。ローカルでプレビューサーバーを起動済みなら、明示的に再利用できます（古いビルドを誤って使わないよう、既定では再利用しません）。
 
 ```sh
-# 別ターミナルで起動（analyticsテストが測定IDを要求するため、webServerと同じIDでビルド）
-PUBLIC_GA_MEASUREMENT_ID=G-TEST123456 pnpm build && pnpm preview --host 127.0.0.1 --port 4325
+# 別ターミナルで起動
+pnpm build && pnpm preview --host 127.0.0.1 --port 4325
 pnpm test:e2e:reuse   # または test:e2e:fast。起動済みサーバーへ実行
 ```
 
@@ -113,26 +113,17 @@ pnpm fonts:subset
 
 ファイル名には内容ハッシュが含まれ、参照は`public/fonts/manifest.json`経由で自動追従します。生成物のwoff2とmanifestはコミットしてください。
 
-## Google Analytics
-
-GA4のWebデータストリームに表示される測定IDを、Production環境のみに設定します。未設定ならGoogleタグとアクセス解析の表示は出力されません。不正な形式はビルドエラーになります。
-
-```sh
-vercel env add PUBLIC_GA_MEASUREMENT_ID production
-vercel deploy --prod
-```
-
-値は`G-...`形式です。設定時は`gtag.js`を通常読み込みし、広告ストレージ・広告向けユーザーデータ・広告パーソナライズを拒否した状態で基本ページビューを設定します。Google Signalsと広告パーソナライズ用シグナルも無効で、GA Cookieはアクセス中のホストだけに限定します。アプリ独自のカスタムイベントは実装していません。ページビューだけに限定する場合は、GA4 Webデータストリーム側でも「拡張計測」を無効にしてください。利用者向け説明は`/privacy/`に掲載します。
-
 ## 告知動画
 
 `video/`はSNS告知動画（約34秒・1920×1080・H.264）を生成する独立したRemotionプロジェクトです。自前の`package.json`を持ち、アプリ本体のビルド・テスト・デプロイには影響しません。`video-hf/`は同じコンポジションを`remotion-to-hyperframes`スキルで[HyperFrames](https://hyperframes.heygen.com/)（HTML + GSAP）へ移植したものです（`video-hf/TRANSLATION_NOTES.md`参照）。画面素材は`video/assets/`に置いた実画面スクリーンショットです。
 
 ```sh
 # Remotion
-cd video && pnpm install && npx remotion render promo out/promo.mp4
+pnpm --dir video install --frozen-lockfile
+pnpm --dir video exec remotion render promo out/promo.mp4
 # HyperFrames（PATH上に system ffmpeg が必要）
-cd video-hf && npx hyperframes render --quality high --output out/promo.mp4
+pnpm --dir video-hf install --frozen-lockfile
+pnpm --dir video-hf render -- --quality high --output out/promo.mp4
 ```
 
 `out/`の生成物はコミットせず、完成した動画はGitHub Release（[promo-video-v2](https://github.com/toshi0607/cca-study-guide/releases/tag/promo-video-v2)）で配布します。

@@ -41,7 +41,7 @@ export default defineConfig({
     { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
   ],
   webServer: {
-    command: `PUBLIC_GA_MEASUREMENT_ID=G-TEST123456 pnpm build && pnpm preview --host 127.0.0.1 --port ${PORT}`,
+    command: `pnpm build && pnpm preview --host 127.0.0.1 --port ${PORT}`,
     url: BASE_URL,
     reuseExistingServer,
     timeout: 120_000,

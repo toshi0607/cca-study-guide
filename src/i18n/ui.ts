@@ -384,8 +384,6 @@ export type UiCopy = {
     };
     localData: string;
     localDataDescription: string;
-    analyticsDisclosure: string;
-    details: string;
     exportJson: string;
     dataUnreadableActions: string;
     importJson: string;
@@ -597,7 +595,7 @@ export type UiCopy = {
     };
   };
   footer: {
-    analytics: string;
+    privacy: string;
     github: string;
   };
 };
@@ -967,8 +965,6 @@ export const ui = {
       },
       localData: 'ローカルデータ',
       localDataDescription: '端末間の同期はありません。ブラウザデータを消す前にJSONを書き出してください。',
-      analyticsDisclosure: 'Google Analyticsで基本的なページ閲覧情報を収集します。学習カード、検索語、評価、進捗データは独自イベントとして送信しません。',
-      details: '詳細を見る',
       exportJson: '進捗をJSONで書き出す',
       dataUnreadableActions: '保存データを読み込めないため、書き出しと削除を一時的に無効にしています。データはこの端末に残っている可能性があります。',
       importJson: '進捗をJSONから読み込む',
@@ -1176,7 +1172,7 @@ export const ui = {
         emptyBody: '模試を1回以上完了すると、ここに分析が表示されます。',
       },
     },
-    footer: { analytics: 'アクセス解析について', github: 'GitHub' },
+    footer: { privacy: 'プライバシー', github: 'GitHub' },
   },
   en: {
     brand: {
@@ -1540,8 +1536,6 @@ export const ui = {
       },
       localData: 'Local data',
       localDataDescription: 'Progress does not sync across devices. Export the JSON before clearing browser data.',
-      analyticsDisclosure: 'Google Analytics collects basic page-view information. Study cards, search terms, ratings, and progress are not sent as custom events.',
-      details: 'View details',
       exportJson: 'Export progress as JSON',
       dataUnreadableActions: 'Export and delete are disabled while saved data cannot be read. Your data may still be on this device.',
       importJson: 'Import progress from JSON',
@@ -1749,6 +1743,6 @@ export const ui = {
         emptyBody: 'Complete at least one mock exam and your analysis will appear here.',
       },
     },
-    footer: { analytics: 'Analytics information', github: 'GitHub' },
+    footer: { privacy: 'Privacy', github: 'GitHub' },
   },
 } satisfies Record<Locale, UiCopy>;

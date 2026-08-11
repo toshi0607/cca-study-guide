@@ -15,7 +15,7 @@ Claude Certified Architect – Foundations（CCAR-F）の公開出題範囲を�
 - Anthropic 非公式・非提携の表記を消さない・弱めない
 - 実試験問題・記憶からの再構成問題・非公開教材を掲載しない（詳細: `DESIGN.md` §Legal and editorial guardrails）
 - 公式点数・合否・準備完了度（pass probability 等）を算出・示唆しない
-- 学習内容・進捗を外部送信しない（GA はページ閲覧のみ。詳細: `ASSETS_AND_ANALYTICS.md`）
+- 学習内容・進捗を外部送信しない。第三者解析・追跡を読み込まない（詳細: `ASSETS_AND_ANALYTICS.md`）
 - 永続化された content ID とストレージスキーマは互換性契約。破壊的変更をしない
 - 依存追加は「既存スタックで満たせない」ことを示せる場合のみ
 
@@ -28,7 +28,7 @@ Claude Certified Architect – Foundations（CCAR-F）の公開出題範囲を�
 | デザイントークン・共有コンポーネント仕様 | `tasks/design-system.md` |
 | リリース手順・検証の4層 | `docs/RELEASE_CHECKLIST.md` |
 | 本番スモークの実行と誤検知の切り分け | `docs/PRODUCTION_SMOKE.md` |
-| OGP・アイコン・フォント・GA 設定 | `ASSETS_AND_ANALYTICS.md` |
+| OGP・アイコン・フォント・プライバシー/CSP | `ASSETS_AND_ANALYTICS.md` |
 | 過去の失敗から学んだ教訓 | `tasks/lessons.md` |
 | 機能開発の経緯・監査記録 | `tasks/task-*.md`（歴史的記録。現状の仕様は `DESIGN.md` が優先） |
 
@@ -54,7 +54,7 @@ pnpm test:e2e:fast      # E2E 高速版（@slow 除外・サーバー再利用�
 pnpm test:e2e           # E2E 全部（マージ前）
 pnpm test:styles        # デザイントークン lint
 pnpm test:bundle        # 初期バンドル予算
-pnpm test:no-analytics  # GA 未設定ビルドに計測が混入しないこと
+pnpm test:no-analytics  # 第三者解析・追跡がビルドに混入しないこと
 ```
 
 CI: `.github/workflows/` の e2e / perf（バンドル・Lighthouse・トークン）/

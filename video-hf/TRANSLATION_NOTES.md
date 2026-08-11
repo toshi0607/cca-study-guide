@@ -47,6 +47,6 @@ full with no escape-hatch bow-out.
   is nearly critically damped, so the `power3.out` approximation is visually
   tight (no overshoot to reproduce).
 
-`npx hyperframes check` → **ok (0 errors)**. 7-scene contact-sheet snapshot
+`pnpm check` → **ok (0 errors)**. 7-scene contact-sheet snapshot
 reviewed; all scenes, the weight chips, and the quiz→scenario crossfade match
 the Remotion stills.

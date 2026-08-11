@@ -1,3 +1,42 @@
+# Codex Security 指摘5件の修正
+
+2026-08-09 の標準スキャン（5 low）を、共通原因ごとに3パッチへまとめて修正する。
+設計と最終統合は root、実装は下位モデル worker が担当する。
+
+## Patch contract
+
+| Boundary | Broken control | Invariant / preserved behavior | Proof |
+| --- | --- | --- | --- |
+| Analytics | 外部 `gtag.js` が学習データと同一 origin で実行される。GA ID はデプロイ同一性から除外される | 学習データを外部コードから隔離する。静的サイト・サーバー秘密なしを維持 | analytics loader/egress が build から消えること、no-analytics/CSP テスト |
+| Production verifier | production 自身の manifest を全ファイルの証明として信頼し、redirect を送信後に検査する | 実配信 byte をローカル manifest に照合し、各 redirect hop を送信前に HTTPS/host 検査する。正当な same-host redirect は維持 | 改ざん secondary asset と off-host redirect の失敗テスト、same-host redirect の成功テスト |
+| `video-hf` dependencies | `npx --yes` と SRI なし CDN script が repository-bound integrity を持たない | 通常コマンドは frozen lockfile の local CLI を使い、CDN script byte を SRI で固定。動画本体と本番アプリの分離を維持 | lockfile、script 静的テスト、`hyperframes check` |
+
+## Plan
+
+- [x] 設計レビューで3パッチの境界・互換性・最小実装を確定
+- [x] Analytics を撤去し、CSP・privacy/docs・関連テストを整合
+- [x] Production verifier を実 byte 検証＋manual redirect に変更し、回帰テストを追加
+- [x] `video-hf` を local pinned CLI＋lockfile＋GSAP SRI に変更し、機械チェックを追加
+- [x] 変更を統合レビューし、指摘ごとの source-to-sink が閉じたことを再追跡
+- [x] focused tests → unit/build/CSP/no-analytics → E2E fast の順に検証
+- [x] Review・decision log・残余リスクを本ファイルへ記録
+
+## Decision log
+
+- Analytics は direct third-party script を残したまま localStorage を隔離できず、Measurement Protocol はサーバー秘密を要求して静的サイト制約に反するため、外部 analytics 実行を完全撤去した。
+- verifier は production manifest を inventory としては使えるが、integrity の根拠にはしない。信頼する hash はローカル build manifest のみとする。
+- `video-hf` の GSAP は vendoring ではなく exact-version CDN + SRI を使い、変更量を抑えつつ response byte を固定する。
+- HTTP だけでは未知の追加公開パスを列挙できないため、verifier の `MATCH` は trusted local manifest inventory 全件の一致に限定して表現する。
+
+## Review
+
+- Codex Security の5 findingを3境界へ統合して修正。GA loader/egress/設定経路を撤去し、production verifierはlocal manifest全keyの実配信byteを検証、`video-hf`はexact local CLI・独立pnpm lock・GSAP SRIへ移行した。
+- 独立reviewerはCritical/High/Mediumを検出せず。READMEに残った`npx`案内と、CSP guardがsha256以外の余剰能力を見逃すLow 2件を指摘し、いずれも機械テスト付きで修正した。
+- 検証: focused security 21件、`pnpm test` 470件、`pnpm build`、CSP exact check、hostile legacy GA env付きno-analytics、`pnpm test:e2e:fast` 80件、styles、bundle、`video-hf` frozen install + `hyperframes check` が成功。
+- 残余リスク: HTTP検証は未知の追加公開パスを証明できない。GSAP SRIは改ざんをfail closedにするがCDN可用性までは保証しない。full E2EはPR CI、Vercel edge headerとproduction smokeはdeploy後に確認する。
+
+---
+
 # 告知動画の現行仕様更新（Remotion → HyperFrames 移植）
 
 現行仕様を反映した告知動画を、既存 Remotion コンポジションを更新 → `remotion-to-hyperframes` スキルで HyperFrames HTML へ移植 → レンダリングして作る。
