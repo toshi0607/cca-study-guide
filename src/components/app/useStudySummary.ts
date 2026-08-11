@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'preact/hooks';
+import { useEffect, useState } from 'preact/hooks';
 import { cardIndex, domainIndex } from '../../content/card-index';
 import { deriveHandsOnProgress } from '../../lib/hands-on-progress';
 import type { StudyData } from '../../lib/storage';
@@ -27,21 +27,12 @@ export function useStudySummary({ view, data, dataUnreadable, now }: {
   dataUnreadable: boolean;
   now: Date | null;
 }): string | null {
-  const [summaryText, setSummaryText] = useState<string | null>(null);
-  const previousDataRef = useRef(data);
+  const [built, setBuilt] = useState<{ data: StudyData; text: string } | null>(null);
 
   useEffect(() => {
-    // Invalidate on a document change (an import, a reset, any answer) but NOT on
-    // the `now` tick, which fires every minute to keep "due now" fresh. Clearing
-    // on every tick would make the digest flash uncopyable; not clearing on a
-    // document change would leave the previous digest copyable during the
-    // rebuild.
-    if (previousDataRef.current !== data) setSummaryText(null);
-    previousDataRef.current = data;
-
     // Leaving Progress, an unreadable document, or `now` not yet ready means
     // there is no digest to keep available.
-    if (view !== 'progress' || dataUnreadable || !now) { setSummaryText(null); return; }
+    if (view !== 'progress' || dataUnreadable || !now) { setBuilt(null); return; }
     let cancelled = false;
     void Promise.all([
       import('../../content/questions'),
@@ -51,22 +42,30 @@ export function useStudySummary({ view, data, dataUnreadable, now }: {
       if (cancelled) return;
       const studyGuide = deriveStudyGuideProgress(studyGuideSections, data.studyGuideProgress);
       const handsOn = deriveHandsOnProgress(handsOnGuides, data.handsOnProgress);
-      setSummaryText(buildStudySummary({
+      setBuilt({
         data,
-        cards: cardIndex,
-        questions,
-        domains: domainIndex,
-        studyGuideTotal: studyGuide.totalSections,
-        studyGuideCompleted: studyGuide.completed,
-        handsOnTotal: handsOn.totalGuides,
-        handsOnCompleted: handsOn.completed,
-        now,
-      }));
+        text: buildStudySummary({
+          data,
+          cards: cardIndex,
+          questions,
+          domains: domainIndex,
+          studyGuideTotal: studyGuide.totalSections,
+          studyGuideCompleted: studyGuide.completed,
+          handsOnTotal: handsOn.totalGuides,
+          handsOnCompleted: handsOn.completed,
+          now,
+        }),
+      });
     }, () => {
-      if (!cancelled) setSummaryText(null);
+      if (!cancelled) setBuilt(null);
     });
     return () => { cancelled = true; };
   }, [view, data, dataUnreadable, now]);
 
-  return summaryText;
+  // The digest is returned only for the exact document it was built from. That
+  // makes a changed document (an import, a reset, any answer) uncopyable on the
+  // very render it changes, without waiting for the effect above — while a `now`
+  // tick, which fires every minute to keep "due now" fresh, leaves the identity
+  // intact and so never flashes the digest uncopyable.
+  return built && built.data === data ? built.text : null;
 }

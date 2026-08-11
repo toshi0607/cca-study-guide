@@ -11,7 +11,6 @@ import {
   mergeQuizStats,
   mergeStudyGuideProgress,
   mergeHandsOnRecord,
-  mergeHandsOnProgress,
   mergeMockExamAttempts,
   mergeStudyData,
 } from './study-data-merge';
@@ -313,6 +312,53 @@ describe('mergeHandsOnRecord', () => {
     const result = mergeHandsOnRecord(local, incoming);
 
     expect(result.status === 'in_progress' && result.previousCompletedAt).toBe(completedAt);
+  });
+
+  // A revision bump can happen more than once before the learner reconfirms, and
+  // `reconfirmHandsOnGuide` keeps the original completion across every one of
+  // them. A merge that only looked at a `completed` loser would drop the history
+  // at the second bump, because by then the loser is itself `in_progress`.
+  it('carries the original completion time across a chain of revision bumps', () => {
+    const completedAt = '2026-08-09T00:00:00.000Z';
+    const rev1 = handsOnProgress({
+      revision: 1,
+      status: 'completed',
+      updatedAt: '2026-08-09T00:00:00.000Z',
+      completedAt,
+    });
+    const rev2 = handsOnProgress({ revision: 2, status: 'in_progress', updatedAt: '2026-08-10T00:00:00.000Z' });
+    const rev3 = handsOnProgress({ revision: 3, status: 'in_progress', updatedAt: '2026-08-11T00:00:00.000Z' });
+
+    const afterFirstBump = mergeHandsOnRecord(rev1, rev2);
+    const afterSecondBump = mergeHandsOnRecord(afterFirstBump, rev3);
+
+    expect(afterFirstBump.status === 'in_progress' && afterFirstBump.previousCompletedAt).toBe(completedAt);
+    expect(afterSecondBump.revision).toBe(3);
+    expect(afterSecondBump.status === 'in_progress' && afterSecondBump.previousCompletedAt).toBe(completedAt);
+  });
+
+  it('carries the completion time to the higher revision regardless of which side it arrives on', () => {
+    const completedAt = '2026-08-09T00:00:00.000Z';
+    const older = handsOnProgress({ revision: 1, status: 'in_progress', updatedAt: '2026-08-10T00:00:00.000Z', previousCompletedAt: completedAt });
+    const newer = handsOnProgress({ revision: 2, status: 'in_progress', updatedAt: '2026-08-11T00:00:00.000Z' });
+
+    const localOlder = mergeHandsOnRecord(older, newer);
+    const localNewer = mergeHandsOnRecord(newer, older);
+
+    expect(localOlder.revision).toBe(2);
+    expect(localNewer.revision).toBe(2);
+    expect(localOlder.status === 'in_progress' && localOlder.previousCompletedAt).toBe(completedAt);
+    expect(localNewer.status === 'in_progress' && localNewer.previousCompletedAt).toBe(completedAt);
+  });
+
+  it('is idempotent when inheriting from an in-progress loser', () => {
+    const older = handsOnProgress({ revision: 1, status: 'in_progress', updatedAt: '2026-08-10T00:00:00.000Z', previousCompletedAt: '2026-08-09T00:00:00.000Z' });
+    const newer = handsOnProgress({ revision: 2, status: 'in_progress', updatedAt: '2026-08-11T00:00:00.000Z' });
+
+    const once = mergeHandsOnRecord(newer, older);
+    const twice = mergeHandsOnRecord(once, older);
+
+    expect(twice).toEqual(once);
   });
 
   it('does not overwrite a winner previousCompletedAt', () => {

@@ -186,9 +186,6 @@ function App({ locale, analyticsEnabled = false }: { locale: Locale; analyticsEn
       // than gain an explicit `partial: 0`.
       if (outcome === 'partial') stat.partial = (previous?.partial ?? 0) + 1;
       else if (previous?.partial !== undefined) stat.partial = previous.partial;
-      // Confidence is reported separately (recordQuizConfidence), so an answer
-      // submission alone must not clear what was recorded for a prior attempt.
-      if (previous?.lastConfidence !== undefined) stat.lastConfidence = previous.lastConfidence;
       if (previous?.guessedCorrect !== undefined) stat.guessedCorrect = previous.guessedCorrect;
       return { ...current, quizStats: { ...current.quizStats, [questionId]: stat } };
     });

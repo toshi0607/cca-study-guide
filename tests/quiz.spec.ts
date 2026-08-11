@@ -380,3 +380,58 @@ test('resets the confidence buttons to unpressed when a same-page deep link swit
   expect(stats['q-d3-skill'].lastConfidence).toBe('unsure');
   expect(stats['q-d1-fanout'].lastConfidence).toBe('sure');
 });
+
+test('does not inherit confidence on a new answer', async ({ page }) => {
+  // #given — an exact-target question with the unique correct choice c (index 2)
+  await openScenarioQuestion(page, 'ja', 'カスタマーサポート解決エージェント', 'q-d1-fanout');
+  await page.locator('.choice-button').nth(2).click();
+  await expect(page.locator('.quiz-verdict.is-correct')).toBeVisible();
+
+  // #when — recording "勘" (guess) on the correct answer
+  await page.locator('.quiz-confidence-button').nth(2).click();
+
+  // #then — the correct guess is recorded once
+  await expect.poll(() => page.evaluate((key) => JSON.parse(localStorage.getItem(key) ?? '{}').quizStats?.['q-d1-fanout']?.guessedCorrect, STORAGE_KEY)).toBe(1);
+
+  // #when — re-opening the same exact-target question and answering without selecting confidence
+  await openScenarioQuestion(page, 'ja', 'カスタマーサポート解決エージェント', 'q-d1-fanout');
+  await page.locator('.choice-button').nth(2).click();
+  await expect(page.locator('.quiz-verdict.is-correct')).toBeVisible();
+  await page.getByRole('button', { name: '結果を見る' }).click();
+
+  // #then — answering without confidence does not inherit the prior confidence or guess count
+  await expect(page.getByRole('heading', { name: '演習結果' })).toBeVisible();
+  const stats = await page.evaluate((key) => JSON.parse(localStorage.getItem(key) ?? '{}').quizStats ?? {}, STORAGE_KEY);
+  const stat = stats['q-d1-fanout'];
+  expect('lastConfidence' in stat).toBe(false);
+  expect(stat.guessedCorrect).toBe(1);
+
+  // #when — launching the exact-target question once more and recording a new "確信あり" confidence
+  await openScenarioQuestion(page, 'ja', 'カスタマーサポート解決エージェント', 'q-d1-fanout');
+  await page.locator('.choice-button').nth(2).click();
+  await expect(page.locator('.quiz-verdict.is-correct')).toBeVisible();
+  await page.getByRole('button', { name: '確信あり', exact: true }).click();
+
+  // #then — the newly recorded confidence is saved
+  await expect.poll(() => page.evaluate((key) => JSON.parse(localStorage.getItem(key) ?? '{}').quizStats?.['q-d1-fanout']?.lastConfidence, STORAGE_KEY)).toBe('sure');
+});
+
+test('records a double-clicked guess once', async ({ page }) => {
+  // #given — an exact-target question with the unique correct choice c (index 2)
+  await openScenarioQuestion(page, 'ja', 'カスタマーサポート解決エージェント', 'q-d1-fanout');
+  await page.locator('.choice-button').nth(2).click();
+  await expect(page.locator('.quiz-verdict.is-correct')).toBeVisible();
+
+  // #when — synchronously clicking the third confidence button ("勘") twice
+  await page.evaluate(() => {
+    const b = document.querySelectorAll('.quiz-confidence-button')[2] as HTMLButtonElement;
+    b.click();
+    b.click();
+  });
+
+  // #then — both the guess count and confidence are persisted exactly once
+  await expect.poll(() => page.evaluate((key) => JSON.parse(localStorage.getItem(key) ?? '{}').quizStats?.['q-d1-fanout']?.guessedCorrect, STORAGE_KEY)).toBe(1);
+  const stats = await page.evaluate((key) => JSON.parse(localStorage.getItem(key) ?? '{}').quizStats ?? {}, STORAGE_KEY);
+  expect(stats['q-d1-fanout'].guessedCorrect).toBe(1);
+  expect(stats['q-d1-fanout'].lastConfidence).toBe('guess');
+});

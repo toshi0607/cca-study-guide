@@ -87,11 +87,30 @@ Medium 3（モーダルでない `aria-modal` → ネイティブ `<dialog>`、�
 **方針が衝突した1点**: 1人目は「`navigate` で target をクリアする」、2人目は「`navigate` ではクリアするな（`setTarget` → `navigate` の順序が壊れる）」。
 1人目の atomic な `navigate(view, target)` 設計を採用した。その設計では `setTarget` → `navigate` の順序自体が消えるため、2人目の懸念は発生しない。
 
+### 4巡目: 再々レビュー
+
+| 指摘 | 対応 |
+| --- | --- |
+| 新しい回答に前回の `lastConfidence` が引き継がれる | `recordQuizAnswer` で引き継ぎをやめキーごと省略。`guessedCorrect` は累積カウンタなので維持 |
+| `previousCompletedAt` が revision を2段階以上またぐと消える | 敗者が `in_progress` の場合はその `previousCompletedAt` も候補にする。`reconfirmHandsOnGuide` の契約に揃えた |
+| 確信度の同期二重発火を state だけでは防げない | `currentResult` の identity をキーにした `useRef` の同期ガードを追加（回答側の `answeredIdRef` と同じ考え方）。保存失敗時は ref を戻して再試行可能 |
+| `useStudySummary` の無効化に1 render の遅延がある | state を `{ data, text }` にし、`built.data === data` のときだけ text を返す。data が変わった render で即座に null になり、`now` の tick ではチラつかない |
+
 ### 検証（最終・すべて exit 0）
 
 | コマンド | 結果 |
 | --- | --- |
-| `pnpm test` | 623 passed |
-| `pnpm build` | 0 errors |
-| `pnpm test:e2e` | 145 passed |
+| `pnpm test` | 626 passed |
+| `pnpm build` | 0 errors / 0 warnings |
+| `pnpm test:e2e` | 147 passed |
 | `pnpm test:styles` / `test:bundle` / `test:no-analytics` | OK |
+
+### 委譲についての記録
+
+4巡目の一部を `codex-luna`（GPT-5.6 Luna / `codex exec`）へ委譲した。トークンは節約できたが、
+**2回のインシデントが起きたので、委譲後の diff 検証は省略できない**:
+
+1. 1回目: 範囲外のファイル（`tasks/todo.md` 末尾・`notes.md`・`task_plan.md`）へ作業ログを書き込んだ → `git checkout` で復元
+2. 2回目: **直前のバッチで入れた修正2件を巻き戻した**（`mergeHandsOnRecord` の multi-revision 対応と
+   `useStudySummary` の identity 化が消え、テストが 628 → 623 に減っていた）→ 手作業で再適用
+   （報告のテスト件数が前回より減っていたことで検知した）

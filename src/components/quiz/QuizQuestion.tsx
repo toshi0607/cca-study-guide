@@ -1,5 +1,5 @@
 import type { MutableRef } from 'preact/hooks';
-import { useState } from 'preact/hooks';
+import { useRef, useState } from 'preact/hooks';
 import { formatDate } from '../app/format';
 import { SourceLinks } from '../app/SourceLinks';
 import type { ChoiceQuestion, Scenario } from '../../content/types';
@@ -43,6 +43,7 @@ export function QuizQuestion({
   // time rather than reset via a `useEffect`, so there is no frame where a
   // prior answer's recorded value is still shown for the new one.
   const [recorded, setRecorded] = useState<{ result: QuizResult; value: QuizConfidence } | null>(null);
+  const confidenceGuardRef = useRef<QuizResult | null>(null);
   const recordedConfidence = currentResult && recorded?.result === currentResult ? recorded.value : null;
 
   const answerText = (question: ChoiceQuestion) =>
@@ -103,8 +104,13 @@ export function QuizQuestion({
                 class="btn btn--secondary quiz-confidence-button"
                 aria-pressed={recordedConfidence === value}
                 onClick={() => {
-                  if (recordedConfidence !== null) return;
-                  if (onConfidence(value, currentResult.outcome === 'correct')) setRecorded({ result: currentResult, value });
+                  if (!currentResult || confidenceGuardRef.current === currentResult) return;
+                  confidenceGuardRef.current = currentResult;
+                  if (onConfidence(value, currentResult.outcome === 'correct')) {
+                    setRecorded({ result: currentResult, value });
+                  } else {
+                    confidenceGuardRef.current = null;
+                  }
                 }}
               >{copy.quiz.confidence[value]}</button>
             ))}

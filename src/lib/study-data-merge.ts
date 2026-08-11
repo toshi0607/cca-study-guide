@@ -110,26 +110,29 @@ export function mergeStudyGuideProgress(
 // device therefore does not propagate: losing a deliberate uncheck is recoverable
 // by unchecking again, losing finished steps is not.
 //
-// When a higher revision wins over a record that was `completed` at the older
-// revision, that completion time is carried across as `previousCompletedAt` —
-// the same field `reconfirmHandsOnGuide` uses on a single device, so a merge
-// does not lose context the normal flow preserves. Only ever onto an
-// `in_progress` winner that has none, and only when it precedes `updatedAt`:
-// both are hard requirements of `isHandsOnProgress`, and a record that fails it
-// would make the storage layer reject the WHOLE document.
+// When an authoritative `in_progress` record wins, the loser's completion time is
+// carried across as `previousCompletedAt` — the same field
+// `reconfirmHandsOnGuide` uses on a single device, so a merge does not lose
+// context the normal flow preserves. The loser supplies it either directly
+// (`completed`) or from its own `previousCompletedAt` (`in_progress`), so the
+// original completion survives a chain of revision bumps rather than only one.
+// Only ever onto an `in_progress` winner that has none, and only when it
+// precedes `updatedAt`: both are hard requirements of `isHandsOnProgress`, and a
+// record that fails it would make the storage layer reject the WHOLE document.
 export function mergeHandsOnRecord(local: HandsOnProgress, incoming: HandsOnProgress): HandsOnProgress {
   const incomingIsAuthoritative = prefersIncoming(local, incoming);
   const authoritative = incomingIsAuthoritative ? incoming : local;
   const loser = incomingIsAuthoritative ? local : incoming;
   const steps = [...new Set([...local.completedStepIds, ...incoming.completedStepIds])];
+  const candidate = loser.status === 'completed' ? loser.completedAt : loser.previousCompletedAt;
 
   if (
     authoritative.status === 'in_progress'
     && authoritative.previousCompletedAt === undefined
-    && loser.status === 'completed'
-    && Date.parse(loser.completedAt) <= Date.parse(authoritative.updatedAt)
+    && candidate !== undefined
+    && Date.parse(candidate) <= Date.parse(authoritative.updatedAt)
   ) {
-    return { ...authoritative, completedStepIds: steps, previousCompletedAt: loser.completedAt };
+    return { ...authoritative, completedStepIds: steps, previousCompletedAt: candidate };
   }
 
   return { ...authoritative, completedStepIds: steps };
