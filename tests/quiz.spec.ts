@@ -435,3 +435,45 @@ test('records a double-clicked guess once', async ({ page }) => {
   expect(stats['q-d1-fanout'].guessedCorrect).toBe(1);
   expect(stats['q-d1-fanout'].lastConfidence).toBe('guess');
 });
+
+test('does not attach confidence to an answer another tab already overwrote, and shows a stale notice', async ({ page }) => {
+  // #given — an exact-target question answered correctly in this tab, confidence not yet chosen
+  await openScenarioQuestion(page, 'ja', 'カスタマーサポート解決エージェント', 'q-d1-fanout');
+  await page.locator('.choice-button').nth(2).click();
+  await expect(page.locator('.quiz-verdict.is-correct')).toBeVisible();
+
+  // #when — another tab answers the same question again with a newer, incorrect
+  // result, simulated by writing canonical storage directly (no reload, so this
+  // tab's mounted screen keeps grading the now-superseded answer)
+  const newerAnsweredAt = await page.evaluate((key) => {
+    const raw = JSON.parse(localStorage.getItem(key) ?? '{}');
+    const previous = raw.quizStats['q-d1-fanout'];
+    const newer = new Date(Date.parse(previous.lastAnsweredAt) + 60_000).toISOString();
+    raw.quizStats['q-d1-fanout'] = { attempts: previous.attempts + 1, correct: previous.correct, lastAnsweredAt: newer, lastCorrect: false };
+    localStorage.setItem(key, JSON.stringify(raw));
+    return newer;
+  }, STORAGE_KEY);
+
+  // #when — this tab records "勘" for its now-stale answer
+  await page.locator('.quiz-confidence-button').nth(2).click();
+
+  // #then — a stale notice is shown instead of a recorded-confidence notice
+  await expect(page.locator('.quiz-confidence-stale')).toBeVisible();
+  await expect(page.locator('.quiz-confidence-recorded')).toHaveCount(0);
+
+  // #then — the newer answer from "tab B" is left exactly as written: no
+  // confidence or guess count crossed over from tab A's stale grading
+  const stat = await page.evaluate((key) => JSON.parse(localStorage.getItem(key) ?? '{}').quizStats['q-d1-fanout'], STORAGE_KEY);
+  expect(stat.lastAnsweredAt).toBe(newerAnsweredAt);
+  expect(stat.lastCorrect).toBe(false);
+  expect('lastConfidence' in stat).toBe(false);
+  expect('guessedCorrect' in stat).toBe(false);
+
+  // #when — pressing another confidence button afterward
+  await page.getByRole('button', { name: '確信あり', exact: true }).click();
+
+  // #then — the guard from the first click holds: still stale, still nothing written
+  await expect(page.locator('.quiz-confidence-stale')).toBeVisible();
+  const statAfterRetry = await page.evaluate((key) => JSON.parse(localStorage.getItem(key) ?? '{}').quizStats['q-d1-fanout'], STORAGE_KEY);
+  expect('lastConfidence' in statAfterRetry).toBe(false);
+});

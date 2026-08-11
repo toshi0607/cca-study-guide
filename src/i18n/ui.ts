@@ -346,6 +346,9 @@ export type UiCopy = {
     confidenceLegend: string;
     confidence: Record<'sure' | 'unsure' | 'guess', string>;
     confidenceRecorded: (label: string) => string;
+    // Shown instead of confidenceRecorded when another tab overwrote this stat
+    // with a newer answer before the confidence pick was saved.
+    confidenceStale: string;
     correctAnswerLabel: string;
     correctBadge: string;
     selectedBadge: string;
@@ -969,6 +972,7 @@ export const ui = {
       confidenceLegend: 'この回答の確信度を記録できます（任意・スキップ可）。後で「勘で当たった問題」を見分けるために使います。',
       confidence: { sure: '確信あり', unsure: '迷った', guess: '勘' },
       confidenceRecorded: (label) => `確信度「${label}」を記録しました。`,
+      confidenceStale: 'この回答は別のタブで更新されていたため、確信度は記録しませんでした。',
       correctAnswerLabel: '正解：',
       correctBadge: '正解',
       selectedBadge: '選択',
@@ -1577,6 +1581,7 @@ export const ui = {
       confidenceLegend: 'You can record how sure you were (optional — you may skip it). It is used later to tell apart answers you guessed.',
       confidence: { sure: 'Sure', unsure: 'Unsure', guess: 'Guessed' },
       confidenceRecorded: (label) => `Recorded your confidence: ${label}.`,
+      confidenceStale: 'This answer had already been replaced in another tab, so the confidence was not recorded.',
       correctAnswerLabel: 'Correct answer:',
       correctBadge: 'Correct',
       selectedBadge: 'Your pick',

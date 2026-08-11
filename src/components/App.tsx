@@ -27,6 +27,7 @@ import { PracticeEntry } from './PracticeEntry';
 import type { StateFilter } from './views/PracticeView';
 import { ProgressView } from './views/ProgressView';
 import { QuizEntry } from './QuizEntry';
+import type { ConfidenceOutcome } from './quiz/types';
 import { TodayView } from './views/TodayView';
 
 function detectStorageAvailable(): boolean {
@@ -171,14 +172,18 @@ function App({ locale, analyticsEnabled = false }: { locale: Locale; analyticsEn
     if (aborted) notify(copy.session.abortedNotice);
   };
 
-  const recordQuizAnswer = (questionId: string, outcome: AnswerOutcome): boolean =>
-    commitData((current) => {
+  // Returns the `lastAnsweredAt` of the answer just saved (or null on failure),
+  // so the caller can hand it back to recordQuizConfidence as the token that
+  // proves a later confidence pick still targets this exact answer.
+  const recordQuizAnswer = (questionId: string, outcome: AnswerOutcome): string | null => {
+    const answeredAt = new Date().toISOString();
+    const saved = commitData((current) => {
       const previous = current.quizStats[questionId];
       const correct = outcome === 'correct';
       const stat: QuizStat = {
         attempts: (previous?.attempts ?? 0) + 1,
         correct: (previous?.correct ?? 0) + (correct ? 1 : 0),
-        lastAnsweredAt: new Date().toISOString(),
+        lastAnsweredAt: answeredAt,
         lastCorrect: correct,
       };
       // Each optional field is assigned only when there is a value for it: a stat
@@ -189,14 +194,24 @@ function App({ locale, analyticsEnabled = false }: { locale: Locale; analyticsEn
       if (previous?.guessedCorrect !== undefined) stat.guessedCorrect = previous.guessedCorrect;
       return { ...current, quizStats: { ...current.quizStats, [questionId]: stat } };
     });
+    return saved ? answeredAt : null;
+  };
 
   // Records the learner's self-reported confidence for the answer they just
-  // submitted. A no-op (returns false without persisting) when the question
-  // has no stat yet, since recordQuizAnswer always runs first and creates it.
-  const recordQuizConfidence = (questionId: string, confidence: QuizConfidence, wasCorrect: boolean): boolean =>
-    commitData((current) => {
+  // submitted. `expectedLastAnsweredAt` is the token recordQuizAnswer returned
+  // for that answer: commitData re-reads canonical storage, and another tab may
+  // have answered this question again since this screen graded it, so the token
+  // is checked against the freshly-read stat before writing anything.
+  const recordQuizConfidence = (questionId: string, confidence: QuizConfidence, wasCorrect: boolean, expectedLastAnsweredAt: string): ConfidenceOutcome => {
+    let stale = false;
+    const saved = commitData((current) => {
       const previous = current.quizStats[questionId];
-      if (!previous) return null;
+      // lastAnsweredAt is ISO-millisecond precision, so two answers to the same
+      // question could in theory land in the same millisecond; in practice the
+      // synchronous double-fire guard in QuizView means a human can't produce a
+      // second answer to the same question that fast, so the timestamp alone is
+      // a sufficient token here.
+      if (!previous || previous.lastAnsweredAt !== expectedLastAnsweredAt) { stale = true; return null; }
       // Same rule as `partial` above: only ever write `guessedCorrect` once there
       // is something to count, so a stat with no guessed-correct answer keeps the
       // field absent rather than gaining an explicit key.
@@ -208,6 +223,9 @@ function App({ locale, analyticsEnabled = false }: { locale: Locale; analyticsEn
       };
       return { ...current, quizStats: { ...current.quizStats, [questionId]: stat } };
     });
+    if (stale) return 'stale';
+    return saved ? 'saved' : 'failed';
+  };
 
   const exportData = () => {
     if (dataUnreadable) return;

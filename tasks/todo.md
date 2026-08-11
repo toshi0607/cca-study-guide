@@ -96,13 +96,23 @@ Medium 3（モーダルでない `aria-modal` → ネイティブ `<dialog>`、�
 | 確信度の同期二重発火を state だけでは防げない | `currentResult` の identity をキーにした `useRef` の同期ガードを追加（回答側の `answeredIdRef` と同じ考え方）。保存失敗時は ref を戻して再試行可能 |
 | `useStudySummary` の無効化に1 render の遅延がある | state を `{ data, text }` にし、`built.data === data` のときだけ text を返す。data が変わった render で即座に null になり、`now` の tick ではチラつかない |
 
+### 5巡目: 追加指摘
+
+| 指摘 | 対応 |
+| --- | --- |
+| 別タブの新しい回答へ古い UI の確信度を誤って紐付ける | 回答トークン（保存時の `lastAnsweredAt`）を `QuizResult` に持たせ、`recordQuizConfidence` は canonical storage 再読込後にトークンが一致した場合だけ書く。不一致なら stat を一切変更せず `'stale'` を返し、UI が「別のタブで更新されていたため記録しませんでした」と通知する（再試行はさせない） |
+
+`commitData` は「変更なし」と「保存失敗」を戻り値で区別できないため、stale の判定は
+`commitData` の外のローカル変数で行い、`'saved' | 'stale' | 'failed'` の3値を返す形にした。
+スキーマは変更していない（任意の answer id 新設は後方互換・validator・import/merge 規則へ波及するため見送り）。
+
 ### 検証（最終・すべて exit 0）
 
 | コマンド | 結果 |
 | --- | --- |
 | `pnpm test` | 626 passed |
 | `pnpm build` | 0 errors / 0 warnings |
-| `pnpm test:e2e` | 147 passed |
+| `pnpm test:e2e` | 148 passed |
 | `pnpm test:styles` / `test:bundle` / `test:no-analytics` | OK |
 
 ### 委譲についての記録

@@ -10,7 +10,7 @@ import type { QuizConfidence } from '../../lib/storage-schema';
 import { AnswerReview } from './AnswerReview';
 import { QuestionMetadata } from './QuestionMetadata';
 import { ScenarioBackground } from './ScenarioBackground';
-import type { QuizResult } from './types';
+import type { ConfidenceOutcome, QuizResult } from './types';
 
 export function QuizQuestion({
   current, index, total, scenario, locale, copy, selected, answered, currentResult, rationalesState, feedbackRef,
@@ -32,7 +32,7 @@ export function QuizQuestion({
   onSubmitMultiple: () => void;
   onAdvance: () => void;
   onQuit: () => void;
-  onConfidence: (confidence: QuizConfidence, wasCorrect: boolean) => boolean;
+  onConfidence: (confidence: QuizConfidence, wasCorrect: boolean) => ConfidenceOutcome;
 }) {
   // Which confidence the learner picked for the current answer, if any. Keyed
   // by the `currentResult` object identity (QuizView pushes a fresh object per
@@ -43,8 +43,13 @@ export function QuizQuestion({
   // time rather than reset via a `useEffect`, so there is no frame where a
   // prior answer's recorded value is still shown for the new one.
   const [recorded, setRecorded] = useState<{ result: QuizResult; value: QuizConfidence } | null>(null);
+  // Set when a confidence pick came back 'stale' (another tab overwrote this
+  // stat with a newer answer first). Keyed by result identity, same as
+  // `recorded`, so it clears itself once the learner moves to the next answer.
+  const [staleResult, setStaleResult] = useState<QuizResult | null>(null);
   const confidenceGuardRef = useRef<QuizResult | null>(null);
   const recordedConfidence = currentResult && recorded?.result === currentResult ? recorded.value : null;
+  const isStale = Boolean(currentResult) && staleResult === currentResult;
 
   const answerText = (question: ChoiceQuestion) =>
     question.choices.filter((choice) => question.correctChoiceIds.includes(choice.id)).map((choice) => localize(choice.text, locale)).join(' / ');
@@ -106,8 +111,13 @@ export function QuizQuestion({
                 onClick={() => {
                   if (!currentResult || confidenceGuardRef.current === currentResult) return;
                   confidenceGuardRef.current = currentResult;
-                  if (onConfidence(value, currentResult.outcome === 'correct')) {
+                  const outcome = onConfidence(value, currentResult.outcome === 'correct');
+                  if (outcome === 'saved') {
                     setRecorded({ result: currentResult, value });
+                  } else if (outcome === 'stale') {
+                    // Leave the guard set: this answer is gone from canonical storage,
+                    // so retrying the same pick would still have nothing to attach to.
+                    setStaleResult(currentResult);
                   } else {
                     confidenceGuardRef.current = null;
                   }
@@ -116,6 +126,7 @@ export function QuizQuestion({
             ))}
           </div>
           {recordedConfidence !== null && <p class="note note--info quiz-confidence-recorded">{copy.quiz.confidenceRecorded(copy.quiz.confidence[recordedConfidence])}</p>}
+          {isStale && <p class="note note--warn quiz-confidence-stale">{copy.quiz.confidenceStale}</p>}
         </div>
         <AnswerReview question={current} selectedIds={currentResult.selectedIds} rationalesState={rationalesState} locale={locale} copy={copy}/>
         <div class="card-sources"><strong>{copy.quiz.officialSources}</strong><SourceLinks ids={current.sourceIds} copy={copy}/><small>{copy.quiz.verified(formatDate(current.verifiedAt, locale))}</small></div>

@@ -4,6 +4,7 @@ import type { UiCopy } from '../i18n/ui';
 import type { AnswerOutcome } from '../lib/quiz';
 import type { QuizConfidence, QuizStat } from '../lib/storage-schema';
 import { Button } from './app/Button';
+import type { ConfidenceOutcome } from './quiz/types';
 
 type QuizComponent = typeof import('./views/QuizView').QuizView;
 
@@ -15,8 +16,8 @@ export function QuizEntry(props: {
   locale: Locale;
   copy: UiCopy;
   quizStats?: Record<string, QuizStat>;
-  onAnswer: (questionId: string, outcome: AnswerOutcome) => boolean;
-  onConfidence: (questionId: string, confidence: QuizConfidence, wasCorrect: boolean) => boolean;
+  onAnswer: (questionId: string, outcome: AnswerOutcome) => string | null;
+  onConfidence: (questionId: string, confidence: QuizConfidence, wasCorrect: boolean, expectedLastAnsweredAt: string) => ConfidenceOutcome;
   targetQuestionId: string | null;
   onTargetOpened: () => void;
   targetScenarioId: string | null;
