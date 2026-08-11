@@ -135,3 +135,46 @@ test('discards this device\'s existing records when "置き換える" is chosen 
   expect(data.quizStats).toEqual({ 'q-d2-something': quizStatB });
   expect((data.mockExamAttempts as { id: string }[]).map((attempt) => attempt.id)).toEqual(['attempt-device-b']);
 });
+
+test('keeps the import dialog open with an in-dialog error when the merge save fails, and succeeds on retry', async ({ page }, testInfo) => {
+  // #given — a device-local record and an import file, both already picked in the choice dialog
+  await seedStorage(page, STORAGE_KEY, localStudyData);
+  await page.reload();
+  const importPath = testInfo.outputPath('save-failure-import.json');
+  await writeFile(importPath, JSON.stringify(fileStudyData));
+  await page.getByRole('button', { name: '進捗' }).first().click();
+  const chooserPromise = page.waitForEvent('filechooser');
+  await page.getByRole('button', { name: '進捗をJSONから読み込む' }).click();
+  await (await chooserPromise).setFiles(importPath);
+  await expect(page.getByText('復習記録1件を含むファイルです。')).toBeVisible();
+
+  // #given — localStorage.setItem throws for the study-data key while a sessionStorage marker is set
+  // (same monkey-patch shape as tests/save-failure.spec.ts, but toggled mid-test rather than fixed at load)
+  await page.evaluate((studyKey) => {
+    const original = Storage.prototype.setItem;
+    Storage.prototype.setItem = function (key, value) {
+      if (key === studyKey && sessionStorage.getItem('__blockStudySave')) throw new DOMException('blocked', 'QuotaExceededError');
+      return original.call(this, key, value);
+    };
+    sessionStorage.setItem('__blockStudySave', '1');
+  }, STORAGE_KEY);
+
+  // #when — merging while saves are blocked
+  await page.getByRole('button', { name: '統合する' }).click();
+
+  // #then — the dialog stays open with the in-dialog error, and the parsed import is still held
+  await expect(page.locator('.import-choice-dialog')).toBeVisible();
+  await expect(page.locator('.import-save-error')).toBeVisible();
+  await expect(page.getByText('復習記録1件を含むファイルです。')).toBeVisible();
+
+  // #when — saves are unblocked and the same button is pressed again
+  await page.evaluate(() => sessionStorage.removeItem('__blockStudySave'));
+  await page.getByRole('button', { name: '統合する' }).click();
+
+  // #then — the retry succeeds: the dialog closes and the merge result is persisted
+  await expect(page.getByText('読み込んだデータをこの端末の記録に統合しました。')).toBeFocused();
+  await expect(page.locator('.import-choice-dialog')).toHaveCount(0);
+  const data = await readStudyData(page, STORAGE_KEY);
+  if (!data) throw new Error('expected merged study data to be stored');
+  expect(Object.keys(data.reviews as Record<string, unknown>).sort()).toEqual(['d1-loop-stop', 'd2-tool-contract']);
+});

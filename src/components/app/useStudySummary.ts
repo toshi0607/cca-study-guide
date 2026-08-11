@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'preact/hooks';
+import { useEffect, useRef, useState } from 'preact/hooks';
 import { cardIndex, domainIndex } from '../../content/card-index';
 import { deriveHandsOnProgress } from '../../lib/hands-on-progress';
 import type { StudyData } from '../../lib/storage';
@@ -28,12 +28,19 @@ export function useStudySummary({ view, data, dataUnreadable, now }: {
   now: Date | null;
 }): string | null {
   const [summaryText, setSummaryText] = useState<string | null>(null);
+  const previousDataRef = useRef(data);
 
   useEffect(() => {
-    // Only invalidate when the guard actually blocks a rebuild (leaving
-    // Progress, an unreadable document, or `now` not yet ready). Clearing it
-    // unconditionally would make the digest flash uncopyable every minute,
-    // since `now` — a dependency below, kept fresh for "due now" — ticks then.
+    // Invalidate on a document change (an import, a reset, any answer) but NOT on
+    // the `now` tick, which fires every minute to keep "due now" fresh. Clearing
+    // on every tick would make the digest flash uncopyable; not clearing on a
+    // document change would leave the previous digest copyable during the
+    // rebuild.
+    if (previousDataRef.current !== data) setSummaryText(null);
+    previousDataRef.current = data;
+
+    // Leaving Progress, an unreadable document, or `now` not yet ready means
+    // there is no digest to keep available.
     if (view !== 'progress' || dataUnreadable || !now) { setSummaryText(null); return; }
     let cancelled = false;
     void Promise.all([

@@ -28,12 +28,18 @@ export function CopyLinkButton({ link, copy, label, class: className }: {
   const [state, setState] = useState<CopyState>('idle');
 
   const onClick = () => {
+    // Clear first so the status text changes and the live region re-announces the same result.
+    setState('idle');
     if (!navigator.clipboard) {
-      setState('failed');
+      requestAnimationFrame(() => setState('failed'));
       return;
     }
     const url = buildDeepLinkUrl(window.location, link);
-    void navigator.clipboard.writeText(url).then(() => setState('copied'), () => setState('failed'));
+    // writeText called synchronously here (during user gesture)
+    void navigator.clipboard.writeText(url).then(
+      () => requestAnimationFrame(() => setState('copied')),
+      () => requestAnimationFrame(() => setState('failed')),
+    );
   };
 
   return (

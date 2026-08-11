@@ -35,12 +35,15 @@ export function QuizQuestion({
   onConfidence: (confidence: QuizConfidence, wasCorrect: boolean) => boolean;
 }) {
   // Which confidence the learner picked for the current answer, if any. Keyed
-  // by `index` (not `current.id`, so the same question appearing twice in a
-  // round still resets) and derived at render time rather than reset via a
-  // `useEffect`, so there is no frame where a prior question's recorded value
-  // is still shown for the new one.
-  const [recorded, setRecorded] = useState<{ index: number; value: QuizConfidence } | null>(null);
-  const recordedConfidence = recorded?.index === index ? recorded.value : null;
+  // by the `currentResult` object identity (QuizView pushes a fresh object per
+  // answer) rather than `index`: an exact-target deep link can hashchange this
+  // same mounted instance onto a different question without resetting `index`
+  // to a new value, which would otherwise leave a prior answer's recorded
+  // confidence displayed as pressed for the new question. Derived at render
+  // time rather than reset via a `useEffect`, so there is no frame where a
+  // prior answer's recorded value is still shown for the new one.
+  const [recorded, setRecorded] = useState<{ result: QuizResult; value: QuizConfidence } | null>(null);
+  const recordedConfidence = currentResult && recorded?.result === currentResult ? recorded.value : null;
 
   const answerText = (question: ChoiceQuestion) =>
     question.choices.filter((choice) => question.correctChoiceIds.includes(choice.id)).map((choice) => localize(choice.text, locale)).join(' / ');
@@ -101,7 +104,7 @@ export function QuizQuestion({
                 aria-pressed={recordedConfidence === value}
                 onClick={() => {
                   if (recordedConfidence !== null) return;
-                  if (onConfidence(value, currentResult.outcome === 'correct')) setRecorded({ index, value });
+                  if (onConfidence(value, currentResult.outcome === 'correct')) setRecorded({ result: currentResult, value });
                 }}
               >{copy.quiz.confidence[value]}</button>
             ))}

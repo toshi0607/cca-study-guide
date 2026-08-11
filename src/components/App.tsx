@@ -94,7 +94,7 @@ function App({ locale, analyticsEnabled = false }: { locale: Locale; analyticsEn
   const notify = (message: string) => { setNotice(message); focusNotice(); };
 
   const { examDate, saveExamDate, clearExamDate, clearExamDateSilently } = useExamDate({ storage: examDateStore, copy, notify });
-  const { pendingImport, importFile, finishImport, cancelImport } = useStudyImport({
+  const { pendingImport, importError, importFile, finishImport, cancelImport } = useStudyImport({
     storage: studyStore,
     copy,
     notify,
@@ -107,15 +107,11 @@ function App({ locale, analyticsEnabled = false }: { locale: Locale; analyticsEn
   const applyDeepLink = (link: DeepLink) => {
     const linkTarget = targetFromDeepLink(link);
     if (link.cardId) { setQuery(''); setDomainFilter('all'); setStateFilter('all'); }
-    if (linkTarget) setTarget(linkTarget);
-    // Same rule as `navigate`: leaving the practice view ends a running session
-    // (its ratings are already persisted). A hash arriving mid-session must not
-    // leave an orphaned session behind the new view.
-    if (link.view !== 'practice') setSessionCards(null);
-    setView(link.view);
-    // A step target scrolls itself into view inside HandsOnView; running App's
-    // own smooth scroll at the same time would fight that scroll.
-    if (!link.handsOnStepId) window.scrollTo({ top: 0, behavior: 'smooth' });
+    // Routed through `navigate` so view and target update atomically, same as
+    // every in-app target-bearing navigation. A step target scrolls itself into
+    // view inside HandsOnView; running App's own smooth scroll at the same time
+    // would fight that scroll.
+    navigate(link.view, linkTarget, !link.handsOnStepId);
   };
 
   useEffect(() => {
@@ -259,19 +255,25 @@ function App({ locale, analyticsEnabled = false }: { locale: Locale; analyticsEn
     setNotice(examDateCleared ? copy.notices.resetDone : copy.notices.resetDonePartial);
   };
 
-  const navigate = (next: View) => {
+  // View and target are updated atomically here so a lazily-loaded view can
+  // never see a target left over from a navigation that never named one: a
+  // target-less navigate always clears it, and a target-bearing one (deep link
+  // or an open* helper) hands it in as `nextTarget` rather than calling
+  // `setTarget` beforehand.
+  const navigate = (next: View, nextTarget: ViewTarget | null = null, scroll = true) => {
     // Leaving the practice view ends a running session; its ratings are already persisted.
     if (next !== 'practice') setSessionCards(null);
+    setTarget(nextTarget);
     setView(next);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    if (scroll) window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const openGuideCard = (cardId: string) => {
-    setQuery(''); setDomainFilter('all'); setStateFilter('all'); setTarget({ kind: 'practice-card', cardId }); navigate('practice');
+    setQuery(''); setDomainFilter('all'); setStateFilter('all'); navigate('practice', { kind: 'practice-card', cardId });
   };
-  const openGuideQuestion = (questionId: string) => { setTarget({ kind: 'quiz-question', questionId }); navigate('quiz'); };
-  const openPracticeScenario = (scenarioId: string) => { setTarget({ kind: 'quiz-scenario', scenarioId }); navigate('quiz'); };
-  const openHandsOnGuide = (guideId: string) => { setTarget({ kind: 'hands-on', guideId }); navigate('hands-on'); };
+  const openGuideQuestion = (questionId: string) => navigate('quiz', { kind: 'quiz-question', questionId });
+  const openPracticeScenario = (scenarioId: string) => navigate('quiz', { kind: 'quiz-scenario', scenarioId });
+  const openHandsOnGuide = (guideId: string) => navigate('hands-on', { kind: 'hands-on', guideId });
   const saveGuideProgress = (sectionId: string, revision: number, action: 'start' | 'complete' | 'reconfirm') => {
     const saved = commitData((current) => {
       const record = current.studyGuideProgress[sectionId];
@@ -394,6 +396,7 @@ function App({ locale, analyticsEnabled = false }: { locale: Locale; analyticsEn
           copy={copy}
           reviewedTotal={Object.keys(pendingImport.data.reviews).length}
           exportedAt={pendingImport.exportedAt ? formatDate(new Date(pendingImport.exportedAt), locale) : null}
+          saveError={importError}
           onMerge={() => finishImport('merge')}
           onReplace={() => finishImport('replace')}
           onCancel={cancelImport}

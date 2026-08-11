@@ -72,11 +72,26 @@ Medium 3（モーダルでない `aria-modal` → ネイティブ `<dialog>`、�
 
 **対応しなかった指摘**: なし（Nit 含めすべて対応）。
 
+### 3巡目: 再レビュー2件
+
+| 指摘 | 対応 |
+| --- | --- |
+| 遅延ビューが target を消費する前に遷移すると古い target が残る | `navigate(view, target, scroll)` に統合し、ターゲット無し遷移では必ず null にする。`setTarget` → `navigate` の順序を全廃 |
+| 同一 QuizView 内の deep link 切替で確信度が前問から残る | index ではなく `currentResult` のオブジェクト identity に紐付け |
+| import の保存失敗で解析済みデータを破棄していた | 成功時とキャンセル時のみ破棄。失敗はダイアログ内に表示し、再試行できる |
+| `<dialog>` の fallback が実際には表示されない | `showModal` が無い/throw した場合に `dialog.open = true` で表示 |
+| CopyLinkButton の同じ結果が2回目以降アナウンスされない | クリックごとに live region を空にしてから結果を出す（`writeText` は user gesture 中に同期呼び出しのまま） |
+| revision-aware マージで敗者の完了履歴が消える | 敗者の `completedAt` を勝者の `previousCompletedAt` へ引き継ぐ（`isHandsOnProgress` の制約を満たす場合のみ） |
+| `useStudySummary` が data 変更時に無効化しない | 前回の data を ref で保持し、data が変わったときだけ無効化。`now` の tick では維持 |
+
+**方針が衝突した1点**: 1人目は「`navigate` で target をクリアする」、2人目は「`navigate` ではクリアするな（`setTarget` → `navigate` の順序が壊れる）」。
+1人目の atomic な `navigate(view, target)` 設計を採用した。その設計では `setTarget` → `navigate` の順序自体が消えるため、2人目の懸念は発生しない。
+
 ### 検証（最終・すべて exit 0）
 
 | コマンド | 結果 |
 | --- | --- |
-| `pnpm test` | 619 passed |
+| `pnpm test` | 623 passed |
 | `pnpm build` | 0 errors |
-| `pnpm test:e2e` | 141 passed |
+| `pnpm test:e2e` | 145 passed |
 | `pnpm test:styles` / `test:bundle` / `test:no-analytics` | OK |

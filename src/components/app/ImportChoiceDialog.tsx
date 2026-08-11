@@ -13,10 +13,11 @@ import { Button } from './Button';
 // "replace" silently discard it. showModal() gives the focus trap, the inert
 // backdrop, and Escape-to-close from the platform rather than from hand-rolled
 // key handling that only approximates them.
-export function ImportChoiceDialog({ copy, reviewedTotal, exportedAt, onReplace, onMerge, onCancel }: {
+export function ImportChoiceDialog({ copy, reviewedTotal, exportedAt, saveError, onReplace, onMerge, onCancel }: {
   copy: UiCopy;
   reviewedTotal: number;
   exportedAt: string | null;
+  saveError: boolean;
   onReplace: () => void;
   onMerge: () => void;
   onCancel: () => void;
@@ -26,12 +27,17 @@ export function ImportChoiceDialog({ copy, reviewedTotal, exportedAt, onReplace,
 
   useEffect(() => {
     const dialog = dialogRef.current;
-    // showModal throws if the dialog is already open, and is absent in very old
-    // engines; either way the dialog still renders and its buttons still work.
-    try {
-      if (dialog && !dialog.open) dialog.showModal();
-    } catch {
-      // Non-modal fallback: the choice is still presented and still actionable.
+    if (dialog && typeof dialog.showModal !== 'function') {
+      // When showModal is unavailable (very old engines), display non-modally so
+      // the dialog is still visible and the choices are still actionable
+      // (background remains operable but the dialog is shown).
+      dialog.open = true;
+    } else {
+      try {
+        if (dialog && !dialog.open) dialog.showModal();
+      } catch {
+        if (dialog) dialog.open = true;
+      }
     }
     const frame = requestAnimationFrame(() => headingRef.current?.focus());
     return () => cancelAnimationFrame(frame);
@@ -47,6 +53,7 @@ export function ImportChoiceDialog({ copy, reviewedTotal, exportedAt, onReplace,
       onCancel={(event) => { event.preventDefault(); onCancel(); }}
     >
       <h2 id="import-choice-title" class="section-title" tabIndex={-1} ref={headingRef}>{copy.notices.importChoiceTitle}</h2>
+      {saveError && <p class="note note--danger import-save-error" role="alert">{copy.notices.importSaveFailed}</p>}
       <p>{copy.notices.importChoiceSummary(reviewedTotal, exportedAt)}</p>
       <p>{copy.notices.importChoiceMergeNote}</p>
       <p>{copy.notices.importChoiceReplaceNote}</p>

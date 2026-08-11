@@ -8,6 +8,9 @@ export type StudyStorage = ReturnType<typeof createStudyStorage>;
 export type StudyImportController = {
   // A parsed import awaiting the learner's replace/merge/cancel choice.
   pendingImport: ImportedStudyData | null;
+  // Whether the last save attempt for the pending import failed. The dialog
+  // stays open and shows this instead of losing the parsed import.
+  importError: boolean;
   importFile: (event: Event) => void;
   finishImport: (mode: 'replace' | 'merge') => void;
   cancelImport: () => void;
@@ -22,6 +25,7 @@ export function useStudyImport({ storage, copy, notify, onImported }: {
   onImported: (data: StudyData) => void;
 }): StudyImportController {
   const [pendingImport, setPendingImport] = useState<ImportedStudyData | null>(null);
+  const [importError, setImportError] = useState(false);
   // Serializes imports: a second file picked while one is still being read
   // would otherwise apply in resolution order, not selection order.
   const importBusyRef = useRef(false);
@@ -31,11 +35,13 @@ export function useStudyImport({ storage, copy, notify, onImported }: {
       notify(copy.notices.importInvalid);
       return;
     }
+    setImportError(false);
     setPendingImport(imported);
   };
 
   return {
     pendingImport,
+    importError,
     importFile: (event: Event): void => {
       const input = event.currentTarget as HTMLInputElement;
       const file = input.files?.[0];
@@ -55,21 +61,25 @@ export function useStudyImport({ storage, copy, notify, onImported }: {
           importBusyRef.current = false;
         });
     },
+    // The pending import is only cleared once its save succeeds, or on an
+    // explicit cancel: clearing it up front (as before) would drop the parsed
+    // import on a save failure, forcing the learner to re-pick the file.
     finishImport: (mode: 'replace' | 'merge'): void => {
-      const pending = pendingImport;
-      setPendingImport(null);
-      if (!pending) return;
+      if (!pendingImport) return;
       // Re-read canonical storage: another tab may have written since the file was
       // picked, and a merge must combine with what is actually stored now.
-      const next = mode === 'merge' ? mergeStudyData(storage.load(), pending.data) : pending.data;
+      const next = mode === 'merge' ? mergeStudyData(storage.load(), pendingImport.data) : pendingImport.data;
       if (!storage.save(next)) {
-        notify(copy.notices.saveFailed);
+        setImportError(true);
         return;
       }
+      setImportError(false);
+      setPendingImport(null);
       onImported(next);
       notify(mode === 'merge' ? copy.notices.importMerged : copy.notices.importDone);
     },
     cancelImport: (): void => {
+      setImportError(false);
       setPendingImport(null);
       notify(copy.notices.importCancelled);
     },

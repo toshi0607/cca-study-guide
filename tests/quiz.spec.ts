@@ -347,3 +347,36 @@ test('resets the confidence buttons to unpressed on the next question', async ({
   await expect(nextConfidenceButtons).toHaveCount(3);
   for (const button of await nextConfidenceButtons.all()) await expect(button).toHaveAttribute('aria-pressed', 'false');
 });
+
+test('resets the confidence buttons to unpressed when a same-page deep link switches to a different question', async ({ page }) => {
+  // #given — an exact-target question answered with a recorded confidence, without unmounting QuizQuestion
+  await openScenarioQuestion(page, 'ja', 'カスタマーサポート解決エージェント', 'q-d1-fanout');
+  await page.locator('.choice-button').nth(2).click();
+  await expect(page.locator('.quiz-verdict.is-correct')).toBeVisible();
+  const sureButton = page.getByRole('button', { name: '確信あり', exact: true });
+  await sureButton.click();
+  await expect(sureButton).toHaveAttribute('aria-pressed', 'true');
+
+  // #when — a hashchange (not a page reload) targets a different question while this instance stays mounted
+  await page.evaluate(() => { window.location.hash = '#/quiz/q-d3-skill'; });
+  await expect(page.locator('.quiz-feedback')).toHaveCount(0);
+  await expect(page.getByText('複数選択：', { exact: false })).toBeVisible();
+  await page.locator('.choice-button').nth(0).click();
+  await page.locator('.choice-button').nth(2).click();
+  await page.getByRole('button', { name: '回答する' }).click();
+
+  // #then — every confidence button for the new question starts unpressed, not the previous question's pick
+  const confidenceButtons = page.locator('.quiz-confidence-button');
+  await expect(confidenceButtons).toHaveCount(3);
+  for (const button of await confidenceButtons.all()) await expect(button).toHaveAttribute('aria-pressed', 'false');
+
+  // #when — recording a confidence for the new question
+  const unsureButton = page.getByRole('button', { name: '迷った', exact: true });
+  await unsureButton.click();
+
+  // #then — it saves once for the new question, and does not overwrite the earlier question's recorded confidence
+  await expect(unsureButton).toHaveAttribute('aria-pressed', 'true');
+  const stats = await page.evaluate((key) => JSON.parse(localStorage.getItem(key) ?? '{}').quizStats, STORAGE_KEY);
+  expect(stats['q-d3-skill'].lastConfidence).toBe('unsure');
+  expect(stats['q-d1-fanout'].lastConfidence).toBe('sure');
+});

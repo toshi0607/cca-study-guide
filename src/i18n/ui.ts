@@ -45,6 +45,7 @@ export type UiCopy = {
     importChoiceCancel: string;
     importMerged: string;
     importCancelled: string;
+    importSaveFailed: string;
     resetConfirm: string;
     resetFailed: string;
     resetDone: string;
@@ -685,6 +686,7 @@ export const ui = {
       importChoiceCancel: 'キャンセル',
       importMerged: '読み込んだデータをこの端末の記録に統合しました。',
       importCancelled: '読み込みをキャンセルしました。記録は変更していません。',
+      importSaveFailed: '保存できませんでした。読み込んだ内容はまだ保持しています。もう一度お試しいただくか、キャンセルしてください。',
       resetConfirm: 'この端末の学習進捗をすべて削除します。元に戻せません。',
       resetFailed: '進捗を削除できませんでした。ブラウザのサイトデータ設定を確認してください。',
       resetDone: 'この端末の進捗を削除しました。',
@@ -1292,6 +1294,7 @@ export const ui = {
       importChoiceCancel: 'Cancel',
       importMerged: 'Merged the imported data into this device’s records.',
       importCancelled: 'Import cancelled. Nothing was changed.',
+      importSaveFailed: 'Could not save. The imported data is still held — try again, or cancel.',
       resetConfirm: 'Delete all study progress on this device? This cannot be undone.',
       resetFailed: 'Your progress could not be deleted. Check this browser’s site-data settings.',
       resetDone: 'Progress on this device was deleted.',

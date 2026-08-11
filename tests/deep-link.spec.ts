@@ -28,6 +28,52 @@ test('opens a guide section from a direct hash link, expanded and focused, and k
   await expect.poll(() => page.evaluate(() => window.location.hash)).toBe('#/practice');
 });
 
+// Both tests below hold the lazily-loaded GuideView chunk open (same
+// interception pattern as tests/chunk-failure.spec.ts) so the target set by
+// the exact-target hash is still unconsumed when the learner moves on.
+
+test('drops a stale exact-target when the destination hash changes before the Guide chunk resolves', async ({ page }) => {
+  // #given — the Guide view's chunk is held in flight
+  let releaseChunk = () => {};
+  const chunkHeld = new Promise<void>((resolve) => { releaseChunk = resolve; });
+  await page.route('**/GuideView.*.js', async (route) => {
+    await chunkHeld;
+    await route.continue();
+  });
+
+  // #when — an exact-target hash is opened, then changed to the target-less guide hash before the chunk loads
+  await page.goto(`/#/guide/${section.id}`);
+  await page.evaluate(() => { window.location.hash = '#/guide'; });
+  releaseChunk();
+
+  // #then — once the guide view finally renders, no section was left expanded
+  await expect(page.getByRole('heading', { name: '学習ガイド', exact: true })).toBeVisible();
+  await expect(page.locator('.guide-section[open]')).toHaveCount(0);
+});
+
+test('drops a stale exact-target after leaving for another view before the Guide chunk resolves, then returning by in-app navigation', async ({ page }) => {
+  // #given — the Guide view's chunk is held in flight
+  let releaseChunk = () => {};
+  const chunkHeld = new Promise<void>((resolve) => { releaseChunk = resolve; });
+  await page.route('**/GuideView.*.js', async (route) => {
+    await chunkHeld;
+    await route.continue();
+  });
+
+  // #when — an exact-target hash is opened, then the learner moves to a different view before the chunk loads
+  await page.goto(`/#/guide/${section.id}`);
+  await page.evaluate(() => { window.location.hash = '#/progress'; });
+  await expect(page.getByRole('heading', { name: '進捗と資料' })).toBeVisible();
+  releaseChunk();
+
+  // #when — returning to Guide through in-app navigation, not another deep link
+  await page.getByRole('button', { name: 'ガイド' }).first().click();
+
+  // #then — the earlier target was never replayed; no section is expanded
+  await expect(page.getByRole('heading', { name: '学習ガイド', exact: true })).toBeVisible();
+  await expect(page.locator('.guide-section[open]')).toHaveCount(0);
+});
+
 test('opens a hands-on step from a direct hash link, focused, without disturbing another guide', async ({ page }) => {
   // #given — guide A's detail is open via its own hash link first
   await page.goto(`/#/hands-on/${guideA.id}`);

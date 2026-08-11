@@ -296,6 +296,78 @@ describe('mergeHandsOnRecord', () => {
     expect(result.revision).toBe(2);
     expect([...result.completedStepIds].sort()).toEqual(['step-1', 'step-2']);
   });
+
+  it('preserves the lower revision completion time on a higher revision in-progress winner', () => {
+    const completedAt = '2026-08-10T00:00:00.000Z';
+    const local = handsOnProgress({
+      revision: 2,
+      status: 'in_progress',
+      updatedAt: '2026-08-11T00:00:00.000Z',
+    });
+    const incoming = handsOnProgress({
+      revision: 1,
+      status: 'completed',
+      updatedAt: '2026-08-10T00:00:00.000Z',
+      completedAt,
+    });
+    const result = mergeHandsOnRecord(local, incoming);
+
+    expect(result.status === 'in_progress' && result.previousCompletedAt).toBe(completedAt);
+  });
+
+  it('does not overwrite a winner previousCompletedAt', () => {
+    const previousCompletedAt = '2026-08-09T00:00:00.000Z';
+    const local = handsOnProgress({
+      revision: 2,
+      status: 'in_progress',
+      updatedAt: '2026-08-11T00:00:00.000Z',
+      previousCompletedAt,
+    });
+    const incoming = handsOnProgress({
+      revision: 1,
+      status: 'completed',
+      updatedAt: '2026-08-10T00:00:00.000Z',
+      completedAt: '2026-08-10T00:00:00.000Z',
+    });
+    const result = mergeHandsOnRecord(local, incoming);
+
+    expect(result.status === 'in_progress' && result.previousCompletedAt).toBe(previousCompletedAt);
+  });
+
+  it('does not inherit a completion time later than the winner updatedAt', () => {
+    const local = handsOnProgress({
+      revision: 2,
+      status: 'in_progress',
+      updatedAt: '2026-08-10T00:00:00.000Z',
+    });
+    const incoming = handsOnProgress({
+      revision: 1,
+      status: 'completed',
+      updatedAt: '2026-08-11T00:00:00.000Z',
+      completedAt: '2026-08-11T00:00:00.000Z',
+    });
+    const result = mergeHandsOnRecord(local, incoming);
+
+    expect(result.status).toBe('in_progress');
+    expect('previousCompletedAt' in result).toBe(false);
+  });
+
+  it('is idempotent when inheriting a lower revision completion time', () => {
+    const local = handsOnProgress({
+      revision: 2,
+      status: 'in_progress',
+      updatedAt: '2026-08-11T00:00:00.000Z',
+    });
+    const incoming = handsOnProgress({
+      revision: 1,
+      status: 'completed',
+      updatedAt: '2026-08-10T00:00:00.000Z',
+      completedAt: '2026-08-10T00:00:00.000Z',
+    });
+    const firstMerge = mergeHandsOnRecord(local, incoming);
+
+    expect(mergeHandsOnRecord(firstMerge, incoming)).toEqual(firstMerge);
+  });
 });
 
 describe('mergeMockExamAttempts', () => {
@@ -427,4 +499,3 @@ describe('mergeStudyData idempotence', () => {
     expect(secondMerge).toEqual(empty);
   });
 });
-
