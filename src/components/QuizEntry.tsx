@@ -2,8 +2,7 @@ import { useEffect, useRef, useState } from 'preact/hooks';
 import type { Locale } from '../i18n/locales';
 import type { UiCopy } from '../i18n/ui';
 import type { AnswerOutcome } from '../lib/quiz';
-import type { QuizStat } from '../lib/storage';
-import type { QuizConfidence } from '../lib/storage-schema';
+import type { QuizConfidence, QuizStat } from '../lib/storage-schema';
 import { Button } from './app/Button';
 
 type QuizComponent = typeof import('./views/QuizView').QuizView;

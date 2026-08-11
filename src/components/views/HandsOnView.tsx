@@ -27,39 +27,47 @@ type Props = {
   onReconfirm: (guideId: string, revision: number) => boolean;
   onOpenCard: (cardId: string) => void;
   onOpenQuestion: (questionId: string) => void;
-  targetGuideId: string | null;
+  target: { guideId: string; stepId?: string } | null;
   onTargetOpened: () => void;
-  targetStepId: string | null;
-  onTargetStepOpened: () => void;
 };
 
-export function HandsOnView({ locale, copy, records, onStart, onToggleStep, onComplete, onReconfirm, onOpenCard, onOpenQuestion, targetGuideId, onTargetOpened, targetStepId, onTargetStepOpened }: Props) {
+export function HandsOnView({ locale, copy, records, onStart, onToggleStep, onComplete, onReconfirm, onOpenCard, onOpenQuestion, target, onTargetOpened }: Props) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const listHeadingRef = useRef<HTMLHeadingElement>(null);
   const detailHeadingRef = useRef<HTMLHeadingElement>(null);
   const c = copy.handsOn;
 
-  // Exact-target entry from the official scenarios view: open the requested
-  // guide's detail directly, then clear the target so a later manual return to
-  // the list is not overridden. Focus lands on the detail heading via the effect
-  // below, which the back button then returns to the list heading.
+  // Exact-target entry from the official scenarios view (or a deep link): open
+  // the requested guide's detail directly. A target with no stepId is fully
+  // consumed here; one with a stepId is only opened here — its consumption
+  // waits for the step effect below, once `selected` actually resolves to this
+  // guide (see that effect's comment for why). Focus lands on the detail
+  // heading via the effect below, which the back button then returns to the
+  // list heading.
   useEffect(() => {
-    if (!targetGuideId) return;
-    if (handsOnGuides.some((guide) => guide.id === targetGuideId)) setSelectedId(targetGuideId);
-    onTargetOpened();
-  }, [targetGuideId]);
+    if (!target) return;
+    const exists = handsOnGuides.some((guide) => guide.id === target.guideId);
+    if (exists) setSelectedId(target.guideId);
+    // An unknown guide id can never satisfy the step effect's guide match, so its
+    // target is consumed here rather than left pending forever.
+    if (!exists || !target.stepId) onTargetOpened();
+  }, [target]);
 
   const selected = selectedId ? handsOnGuides.find((guide) => guide.id === selectedId) ?? null : null;
 
   useEffect(() => {
-    const target = selected ? detailHeadingRef.current : listHeadingRef.current;
-    requestAnimationFrame(() => target?.focus());
+    const heading = selected ? detailHeadingRef.current : listHeadingRef.current;
+    requestAnimationFrame(() => heading?.focus());
   }, [selectedId, selected]);
 
-  // Deep-link entry to a specific step: once the guide detail above is open,
-  // scroll its step heading into view and focus it. A step id that no longer
-  // exists (or arrives before the guide has resolved) is a no-op — the
-  // element lookup simply finds nothing.
+  // Deep-link entry to a specific step: once the guide detail above is open
+  // *and matches this target's guide* (`selected.id === target.guideId` — not
+  // just "some guide is open"), scroll its step heading into view and focus
+  // it. Gating on the guide match, rather than reacting to stepId alone,
+  // prevents a stepId meant for guide B from being applied while guide A is
+  // still the one selected (e.g. mid-transition between two hash targets). A
+  // step id that no longer exists is a no-op — the element lookup simply
+  // finds nothing — but the target is still consumed either way.
   //
   // Deliberately its own id, not the checkbox's `handson-step-<guide>-<step>`
   // id: that one is already claimed by the step's <input> (and its <label
@@ -73,16 +81,18 @@ export function HandsOnView({ locale, copy, records, onStart, onToggleStep, onCo
   // one in the same commit, its rAF callback is registered second and so
   // fires second — landing on the step, not back on the guide header.
   useEffect(() => {
-    if (!targetStepId || !selected) return;
+    if (!target?.stepId || selected?.id !== target.guideId) return;
+    const stepId = target.stepId;
+    const guideId = selected.id;
     requestAnimationFrame(() => {
-      const heading = document.getElementById(`handson-step-heading-${selected.id}-${targetStepId}`);
+      const heading = document.getElementById(`handson-step-heading-${guideId}-${stepId}`);
       if (heading) {
         heading.scrollIntoView({ behavior: 'smooth', block: 'start' });
         heading.focus({ preventScroll: true });
       }
     });
-    onTargetStepOpened();
-  }, [targetStepId, selected]);
+    onTargetOpened();
+  }, [target, selected]);
 
   if (selected) {
     const stepIds = selected.steps.map((step) => step.id);

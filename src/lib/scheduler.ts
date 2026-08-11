@@ -10,7 +10,14 @@ export type ReviewState = {
   lastRating: Rating;
 };
 
-const DAY = 86_400_000;
+export const DAY = 86_400_000;
+
+// How far out an `again` rating pushes the next review. Exported because a
+// ReviewState records only `dueAt`, so recovering when a review happened means
+// subtracting exactly this delay back out (see `reviewedAtMs` in
+// study-data-merge). A copy of the number in the other module would drift
+// silently the day this one changes.
+export const AGAIN_DELAY_MS = 10 * 60_000;
 
 export function scheduleReview(cardId: string, revision: number, rating: Rating, previous?: ReviewState, now = new Date()): ReviewState {
   let intervalDays = 0;
@@ -19,7 +26,7 @@ export function scheduleReview(cardId: string, revision: number, rating: Rating,
   let lapses = previous?.lapses ?? 0;
 
   if (rating === 'again') {
-    dueMs += 10 * 60_000;
+    dueMs += AGAIN_DELAY_MS;
     streak = 0;
     lapses += 1;
   } else if (rating === 'hard') {

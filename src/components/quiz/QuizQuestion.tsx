@@ -1,5 +1,5 @@
 import type { MutableRef } from 'preact/hooks';
-import { useEffect, useState } from 'preact/hooks';
+import { useState } from 'preact/hooks';
 import { formatDate } from '../app/format';
 import { SourceLinks } from '../app/SourceLinks';
 import type { ChoiceQuestion, Scenario } from '../../content/types';
@@ -34,13 +34,13 @@ export function QuizQuestion({
   onQuit: () => void;
   onConfidence: (confidence: QuizConfidence, wasCorrect: boolean) => boolean;
 }) {
-  // Which confidence the learner picked for the current answer, if any. Reset
-  // whenever the question changes (by `index`, not `current.id`, so the same
-  // question appearing twice in a round still clears the prior selection).
-  const [recordedConfidence, setRecordedConfidence] = useState<QuizConfidence | null>(null);
-  useEffect(() => {
-    setRecordedConfidence(null);
-  }, [current.id, index]);
+  // Which confidence the learner picked for the current answer, if any. Keyed
+  // by `index` (not `current.id`, so the same question appearing twice in a
+  // round still resets) and derived at render time rather than reset via a
+  // `useEffect`, so there is no frame where a prior question's recorded value
+  // is still shown for the new one.
+  const [recorded, setRecorded] = useState<{ index: number; value: QuizConfidence } | null>(null);
+  const recordedConfidence = recorded?.index === index ? recorded.value : null;
 
   const answerText = (question: ChoiceQuestion) =>
     question.choices.filter((choice) => question.correctChoiceIds.includes(choice.id)).map((choice) => localize(choice.text, locale)).join(' / ');
@@ -101,7 +101,7 @@ export function QuizQuestion({
                 aria-pressed={recordedConfidence === value}
                 onClick={() => {
                   if (recordedConfidence !== null) return;
-                  if (onConfidence(value, currentResult.outcome === 'correct')) setRecordedConfidence(value);
+                  if (onConfidence(value, currentResult.outcome === 'correct')) setRecorded({ index, value });
                 }}
               >{copy.quiz.confidence[value]}</button>
             ))}

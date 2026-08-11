@@ -48,10 +48,10 @@ export type UiCopy = {
     resetConfirm: string;
     resetFailed: string;
     resetDone: string;
+    resetDonePartial: string;
     dataUnreadable: string;
     summaryCopied: string;
     summaryCopyFailed: string;
-    examDateSaved: string;
     examDateCleared: string;
     examDateSaveFailed: string;
   };
@@ -688,10 +688,10 @@ export const ui = {
       resetConfirm: 'この端末の学習進捗をすべて削除します。元に戻せません。',
       resetFailed: '進捗を削除できませんでした。ブラウザのサイトデータ設定を確認してください。',
       resetDone: 'この端末の進捗を削除しました。',
+      resetDonePartial: '学習進捗を削除しました。受験予定日は削除できませんでした。',
       dataUnreadable: 'この端末の保存データを読み込めませんでした。新しい変更は保存できません。データはこの端末に残っている場合があるため、復元できる可能性があります。リセットは行わないでください。',
       summaryCopied: '学習状況の要約をクリップボードへコピーしました。',
       summaryCopyFailed: 'クリップボードへコピーできませんでした。JSONエクスポートをお使いください。',
-      examDateSaved: '受験予定日を保存しました。',
       examDateCleared: '受験予定日を消しました。',
       examDateSaveFailed: '受験予定日を保存できませんでした。',
     },
@@ -1295,10 +1295,10 @@ export const ui = {
       resetConfirm: 'Delete all study progress on this device? This cannot be undone.',
       resetFailed: 'Your progress could not be deleted. Check this browser’s site-data settings.',
       resetDone: 'Progress on this device was deleted.',
+      resetDonePartial: 'Deleted your study progress. The planned exam date could not be deleted.',
       dataUnreadable: 'The study data saved on this device could not be read. New changes cannot be saved. Your data may still be on this device and could be recoverable, so avoid resetting it.',
       summaryCopied: 'Study summary copied to the clipboard.',
       summaryCopyFailed: 'Could not copy to the clipboard. Use the JSON export instead.',
-      examDateSaved: 'Saved your planned exam date.',
       examDateCleared: 'Cleared your planned exam date.',
       examDateSaveFailed: 'Could not save your planned exam date.',
     },

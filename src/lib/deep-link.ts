@@ -26,30 +26,33 @@ export type DeepLink = {
   handsOnStepId?: string;
 };
 
-// Route segment → view. `scenario` is its own route because it lands on the quiz
-// view with a different target than `quiz/<questionId>` does.
-const routeToView: Readonly<Record<string, View>> = {
-  today: 'today',
-  guide: 'guide',
-  'hands-on': 'hands-on',
-  'official-scenarios': 'official-scenarios',
-  practice: 'practice',
-  quiz: 'quiz',
-  scenario: 'quiz',
-  'mock-exam': 'mock-exam',
-  progress: 'progress',
-};
+// One table, both directions. `maxSegments` is how many segments the route
+// accepts in total, including the route itself: exceeding it is an error rather
+// than something to silently drop, because a typo in a shared link would
+// otherwise open a different place without saying so.
+//
+// `scenario` is an extra route on the quiz view (a different target than
+// `quiz/<questionId>`), so it is marked as not being that view's canonical route
+// and never chosen when formatting from a view alone.
+const routes = [
+  { route: 'today', view: 'today', maxSegments: Infinity },
+  { route: 'guide', view: 'guide', maxSegments: 2 },
+  { route: 'hands-on', view: 'hands-on', maxSegments: 3 },
+  { route: 'official-scenarios', view: 'official-scenarios', maxSegments: Infinity },
+  { route: 'practice', view: 'practice', maxSegments: 2 },
+  { route: 'quiz', view: 'quiz', maxSegments: 2 },
+  { route: 'scenario', view: 'quiz', maxSegments: 2, alias: true },
+  { route: 'mock-exam', view: 'mock-exam', maxSegments: Infinity },
+  { route: 'progress', view: 'progress', maxSegments: Infinity },
+] as const satisfies readonly { route: string; view: View; maxSegments: number; alias?: boolean }[];
 
-const viewToRoute: Readonly<Record<View, string>> = {
-  today: 'today',
-  guide: 'guide',
-  'hands-on': 'hands-on',
-  'official-scenarios': 'official-scenarios',
-  practice: 'practice',
-  quiz: 'quiz',
-  'mock-exam': 'mock-exam',
-  progress: 'progress',
-};
+type RouteSpec = (typeof routes)[number];
+
+const byRoute = new Map<string, RouteSpec>(routes.map((spec) => [spec.route, spec]));
+const viewToRoute = new Map<View, string>();
+for (const spec of routes) {
+  if (!('alias' in spec)) viewToRoute.set(spec.view, spec.route);
+}
 
 // Content ids are kebab-case ASCII, and this is also the guard that keeps a
 // crafted hash from reaching the views as an arbitrary string.
@@ -73,10 +76,11 @@ export function parseDeepLink(hash: string): DeepLink | null {
   if (!trimmed) return null;
   const segments = trimmed.split('/').filter(Boolean);
   const [route, first, second] = segments;
-  if (!route || segments.length > 3) return null;
+  if (!route) return null;
 
-  const view = routeToView[route];
-  if (!view) return null;
+  const spec = byRoute.get(route);
+  if (!spec || segments.length > spec.maxSegments) return null;
+  const view = spec.view;
   if (!first) return { view };
 
   const firstId = decodeSegment(first);
@@ -92,14 +96,14 @@ export function parseDeepLink(hash: string): DeepLink | null {
       const stepId = decodeSegment(second);
       return stepId ? { view, handsOnGuideId: firstId, handsOnStepId: stepId } : null;
     }
-    // Routes with no target ignore a trailing segment rather than failing the
+    // Routes with no target ignore trailing segments rather than failing the
     // whole link: `#/today/anything` is still unambiguously "the today view".
     default: return { view };
   }
 }
 
 export function formatDeepLink(link: DeepLink): string {
-  const route = link.scenarioId ? 'scenario' : viewToRoute[link.view];
+  const route = link.scenarioId ? 'scenario' : viewToRoute.get(link.view)!;
   const parts = [route];
   const id = link.sectionId ?? link.cardId ?? link.questionId ?? link.scenarioId ?? link.handsOnGuideId;
   if (id) parts.push(encodeURIComponent(id));

@@ -1,7 +1,37 @@
 import { writeFile } from 'node:fs/promises';
 import { cards } from '../src/content/cards';
 import { expect, test } from './fixtures/app';
-import { STORAGE_KEY } from './fixtures/storage';
+import { readStudyData, seedStorage, STORAGE_KEY } from './fixtures/storage';
+
+// A local review/quiz-stat/mock-exam-attempt trio (device A) and a distinct
+// trio for the file being imported (device B) — disjoint ids throughout, so a
+// merge's union is distinguishable from either side alone. Shapes mirror the
+// seeds already exercised in storage.spec.ts (Mock Exam schema section).
+const reviewA = { cardId: 'd1-loop-stop', cardRevisionSeen: 1, dueAt: '2027-01-01T00:00:00.000Z', intervalDays: 3, streak: 1, lapses: 0, lastRating: 'good' };
+const quizStatA = { attempts: 1, correct: 1, lastAnsweredAt: '2026-07-01T00:00:00.000Z', lastCorrect: true };
+const attemptA = {
+  id: 'attempt-device-a', blueprintVersion: 1, outcome: 'submitted',
+  questionRefs: [{ questionId: 'q-a', revision: 1 }],
+  answers: [{ questionId: 'q-a', questionRevision: 1, selectedChoiceIds: ['a'], correct: true, answeredAt: '2026-07-01T00:05:00.000Z' }],
+  flaggedQuestionIds: [], startedAt: '2026-07-01T00:00:00.000Z', expiresAt: '2026-07-01T02:00:00.000Z', completedAt: '2026-07-01T01:00:00.000Z',
+};
+const localStudyData = {
+  version: 3, reviews: { 'd1-loop-stop': reviewA }, quizStats: { 'q-d1-loop-continue': quizStatA },
+  studyGuideProgress: {}, handsOnProgress: {}, activeMockExam: null, mockExamAttempts: [attemptA],
+};
+
+const reviewB = { cardId: 'd2-tool-contract', cardRevisionSeen: 1, dueAt: '2027-02-01T00:00:00.000Z', intervalDays: 2, streak: 1, lapses: 0, lastRating: 'good' };
+const quizStatB = { attempts: 1, correct: 1, lastAnsweredAt: '2026-07-02T00:00:00.000Z', lastCorrect: true };
+const attemptB = {
+  id: 'attempt-device-b', blueprintVersion: 1, outcome: 'submitted',
+  questionRefs: [{ questionId: 'q-b', revision: 1 }],
+  answers: [{ questionId: 'q-b', questionRevision: 1, selectedChoiceIds: ['b'], correct: true, answeredAt: '2026-07-02T00:05:00.000Z' }],
+  flaggedQuestionIds: [], startedAt: '2026-07-02T00:00:00.000Z', expiresAt: '2026-07-02T02:00:00.000Z', completedAt: '2026-07-02T01:00:00.000Z',
+};
+const fileStudyData = {
+  version: 3, reviews: { 'd2-tool-contract': reviewB }, quizStats: { 'q-d2-something': quizStatB },
+  studyGuideProgress: {}, handsOnProgress: {}, activeMockExam: null, mockExamAttempts: [attemptB],
+};
 
 test('restores exported progress through the JSON import after a reset', async ({ page }, testInfo) => {
   // #given — one rated card, exported as JSON and then wiped by a reset
@@ -49,4 +79,59 @@ test('rejects a file that is not exported progress data', async ({ page }, testI
   // #then — the failure is announced and nothing is stored
   await expect(page.getByText('進捗データとして読み込めませんでした。', { exact: false })).toBeFocused();
   expect(await page.evaluate((key) => localStorage.getItem(key), STORAGE_KEY)).toBeNull();
+});
+
+test('merges an imported file into this device\'s existing records instead of replacing them', async ({ page }, testInfo) => {
+  // #given — device-local record A already on this device
+  await seedStorage(page, STORAGE_KEY, localStudyData);
+  await page.reload();
+
+  // #given — record B, with card/question/attempt ids disjoint from A, as a JSON file
+  const importPath = testInfo.outputPath('merge-import.json');
+  await writeFile(importPath, JSON.stringify(fileStudyData));
+
+  // #when — importing it and choosing "統合する" in the dialog
+  await page.getByRole('button', { name: '進捗' }).first().click();
+  const chooserPromise = page.waitForEvent('filechooser');
+  await page.getByRole('button', { name: '進捗をJSONから読み込む' }).click();
+  await (await chooserPromise).setFiles(importPath);
+  await expect(page.getByText('復習記録1件を含むファイルです。')).toBeVisible();
+  await page.getByRole('button', { name: '統合する' }).click();
+  await expect(page.getByText('読み込んだデータをこの端末の記録に統合しました。')).toBeFocused();
+
+  // #then — both sides' keys survive as a union, by count and by which keys are present
+  const data = await readStudyData(page, STORAGE_KEY);
+  if (!data) throw new Error('expected merged study data to be stored');
+  const reviews = data.reviews as Record<string, unknown>;
+  const quizStats = data.quizStats as Record<string, unknown>;
+  const attempts = data.mockExamAttempts as { id: string }[];
+  expect(Object.keys(reviews)).toHaveLength(2);
+  expect(Object.keys(reviews).sort()).toEqual(['d1-loop-stop', 'd2-tool-contract']);
+  expect(Object.keys(quizStats)).toHaveLength(2);
+  expect(Object.keys(quizStats).sort()).toEqual(['q-d1-loop-continue', 'q-d2-something']);
+  expect(attempts).toHaveLength(2);
+  expect(attempts.map((attempt) => attempt.id).sort()).toEqual(['attempt-device-a', 'attempt-device-b']);
+});
+
+test('discards this device\'s existing records when "置き換える" is chosen instead of "統合する"', async ({ page }, testInfo) => {
+  // #given — the same device-local record A, and the same file B — the contrast case for the merge test above
+  await seedStorage(page, STORAGE_KEY, localStudyData);
+  await page.reload();
+  const importPath = testInfo.outputPath('replace-import.json');
+  await writeFile(importPath, JSON.stringify(fileStudyData));
+
+  // #when — importing and choosing "置き換える" this time
+  await page.getByRole('button', { name: '進捗' }).first().click();
+  const chooserPromise = page.waitForEvent('filechooser');
+  await page.getByRole('button', { name: '進捗をJSONから読み込む' }).click();
+  await (await chooserPromise).setFiles(importPath);
+  await page.getByRole('button', { name: '置き換える' }).click();
+  await expect(page.getByText('JSONから進捗を読み込みました。')).toBeFocused();
+
+  // #then — only B's records remain; A's are gone, not unioned in
+  const data = await readStudyData(page, STORAGE_KEY);
+  if (!data) throw new Error('expected replaced study data to be stored');
+  expect(data.reviews).toEqual({ 'd2-tool-contract': reviewB });
+  expect(data.quizStats).toEqual({ 'q-d2-something': quizStatB });
+  expect((data.mockExamAttempts as { id: string }[]).map((attempt) => attempt.id)).toEqual(['attempt-device-b']);
 });

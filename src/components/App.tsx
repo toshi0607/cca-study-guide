@@ -1,21 +1,23 @@
-import { useEffect, useRef, useState } from 'preact/hooks';
-import { cardIndex, domainIndex } from '../content/card-index';
+import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
+import { cardIndex } from '../content/card-index';
 import { localePaths, type Locale } from '../i18n/locales';
 import { ui } from '../i18n/ui';
 import type { AnswerOutcome } from '../lib/quiz';
 import { isDue, scheduleReview, type Rating } from '../lib/scheduler';
 import type { QuizConfidence, QuizStat } from '../lib/storage-schema';
-import { completeStudyGuideSection, deriveStudyGuideProgress, reconfirmStudyGuideSection, startStudyGuideSection } from '../lib/study-guide-progress';
-import { completeHandsOnGuide, deriveHandsOnProgress, reconfirmHandsOnGuide, setHandsOnStepCompletion, startHandsOnGuide } from '../lib/hands-on-progress';
-import { buildStudyDataExport, createEmptyStudyData, createStudyStorage, isImportSizeAllowed, MAX_IMPORT_TEXT_LENGTH, parseStudyDataImport, type ImportedStudyData, type StudyData } from '../lib/storage';
+import { completeStudyGuideSection, reconfirmStudyGuideSection, startStudyGuideSection } from '../lib/study-guide-progress';
+import { completeHandsOnGuide, reconfirmHandsOnGuide, setHandsOnStepCompletion, startHandsOnGuide } from '../lib/hands-on-progress';
+import { buildStudyDataExport, createEmptyStudyData, createStudyStorage, type StudyData } from '../lib/storage';
 import { createExamDateStorage } from '../lib/exam-date';
-import { buildStudySummary } from '../lib/study-summary';
-import { mergeStudyData } from '../lib/study-data-merge';
-import { formatDeepLink, parseDeepLink, type DeepLink } from '../lib/deep-link';
+import type { DeepLink } from '../lib/deep-link';
 import { AppBottomNav, AppHeader } from './app/AppNavigation';
 import { formatDate } from './app/format';
 import { ImportChoiceDialog } from './app/ImportChoiceDialog';
-import type { View } from './app/types';
+import type { View, ViewTarget } from './app/types';
+import { useDeepLinkRouting } from './app/useDeepLinkRouting';
+import { useExamDate } from './app/useExamDate';
+import { useStudyImport } from './app/useStudyImport';
+import { useStudySummary } from './app/useStudySummary';
 import { GuideEntry } from './GuideEntry';
 import type { LearningStageViewTarget } from './views/GuideView';
 import { HandsOnEntry } from './HandsOnEntry';
@@ -27,9 +29,6 @@ import { ProgressView } from './views/ProgressView';
 import { QuizEntry } from './QuizEntry';
 import { TodayView } from './views/TodayView';
 
-// Keep the Mock Exam engine out of the initial bundle: App never imports it. The
-// exam view (lazily loaded) owns all engine calls and receives only this storage
-// bridge, so the landing route ships none of the exam logic.
 function detectStorageAvailable(): boolean {
   try {
     const probe = '__cca_probe__';
@@ -41,27 +40,39 @@ function detectStorageAvailable(): boolean {
   }
 }
 
-function studyStorage() {
-  try {
-    return createStudyStorage(window.localStorage);
-  } catch {
-    return createStudyStorage(undefined);
-  }
+// parseDeepLink yields at most one target per link, so the first match is the
+// whole target. guideId and stepId are carried together: consuming them
+// separately would let a stepId meant for a different guide leak into whichever
+// guide is currently selected.
+function targetFromDeepLink(link: DeepLink): ViewTarget | null {
+  if (link.sectionId) return { kind: 'guide-section', sectionId: link.sectionId };
+  if (link.cardId) return { kind: 'practice-card', cardId: link.cardId };
+  if (link.questionId) return { kind: 'quiz-question', questionId: link.questionId };
+  if (link.scenarioId) return { kind: 'quiz-scenario', scenarioId: link.scenarioId };
+  if (link.handsOnGuideId) return { kind: 'hands-on', guideId: link.handsOnGuideId, ...(link.handsOnStepId ? { stepId: link.handsOnStepId } : {}) };
+  return null;
 }
 
-function examDateStorage() {
+// Touching window.localStorage can throw outright (a browser with storage
+// disabled, or server-side rendering), so every adapter is built through this:
+// the factory falls back to its no-op form rather than the app failing to render.
+function withLocalStorage<T>(create: (storage: Storage | undefined) => T): T {
   try {
-    return createExamDateStorage(window.localStorage);
+    return create(window.localStorage);
   } catch {
-    return createExamDateStorage(undefined);
+    return create(undefined);
   }
 }
 
 function App({ locale, analyticsEnabled = false }: { locale: Locale; analyticsEnabled?: boolean }) {
   const copy = ui[locale];
+  // The adapters are stateless views onto localStorage, so one of each per mount
+  // is enough. What must stay per-call is `load()`: every mutation still re-reads
+  // the canonical document (see commitData) so another tab's writes are not lost.
+  const studyStore = useMemo(() => withLocalStorage(createStudyStorage), []);
+  const examDateStore = useMemo(() => withLocalStorage(createExamDateStorage), []);
   const [view, setView] = useState<View>('today');
   const [data, setData] = useState<StudyData>(createEmptyStudyData);
-  const [examDate, setExamDate] = useState<string | null>(null);
   const [now, setNow] = useState<Date | null>(null);
   const [ready, setReady] = useState(false);
   const [query, setQuery] = useState('');
@@ -70,51 +81,41 @@ function App({ locale, analyticsEnabled = false }: { locale: Locale; analyticsEn
   const [revealed, setRevealed] = useState<Record<string, boolean>>({});
   const [sessionCards, setSessionCards] = useState<string[] | null>(null);
   const [notice, setNotice] = useState('');
-  // A parsed import awaiting the learner's replace/merge/cancel choice. Set by
-  // applyImport, cleared by finishImport/cancelImport.
-  const [pendingImport, setPendingImport] = useState<ImportedStudyData | null>(null);
-  // Precomputed clipboard digest for the Progress view; null until (or unless) it
-  // can be built. See the effect below for why it is not built inside the click.
-  const [summaryText, setSummaryText] = useState<string | null>(null);
-  const [practiceTargetCardId, setPracticeTargetCardId] = useState<string | null>(null);
-  const [quizTargetQuestionId, setQuizTargetQuestionId] = useState<string | null>(null);
-  const [quizTargetScenarioId, setQuizTargetScenarioId] = useState<string | null>(null);
-  const [handsOnTargetGuideId, setHandsOnTargetGuideId] = useState<string | null>(null);
-  const [guideTargetSectionId, setGuideTargetSectionId] = useState<string | null>(null);
-  const [handsOnTargetStepId, setHandsOnTargetStepId] = useState<string | null>(null);
+  // At most one pending target at a time; the destination view clears it on arrival.
+  const [target, setTarget] = useState<ViewTarget | null>(null);
   const [storageAvailable, setStorageAvailable] = useState(true);
   const [dataUnreadable, setDataUnreadable] = useState(false);
   // Which Mock Exam screen to land on when the view opens: the start screen, or
   // straight to the learning analysis (used by Today/Progress/learning-path CTAs).
   const [mockExamIntent, setMockExamIntent] = useState<'landing' | 'analysis'>('landing');
   const noticeRef = useRef<HTMLParagraphElement>(null);
-  const dataRef = useRef<StudyData>(createEmptyStudyData());
-  // Serializes imports: a second file picked while one is still being read
-  // would otherwise apply in resolution order, not selection order.
-  const importBusyRef = useRef(false);
-  // Skips the very first run of the hash-reflecting effect below (see its
-  // comment): the first run always fires during this same mount, before or
-  // regardless of whether a deep link was just applied, so acting on it would
-  // risk clobbering the hash the learner actually opened.
-  const hashReflectSkippedRef = useRef(false);
 
-  // Routes a parsed deep link onto the existing per-view target state. Each
-  // field feeds the same "target id" plumbing the app already uses for
-  // in-app navigation (e.g. openGuideCard) — a deep link is just another way
-  // to arrive at one of those targets.
+  const focusNotice = () => requestAnimationFrame(() => noticeRef.current?.focus());
+  const notify = (message: string) => { setNotice(message); focusNotice(); };
+
+  const { examDate, saveExamDate, clearExamDate, clearExamDateSilently } = useExamDate({ storage: examDateStore, copy, notify });
+  const { pendingImport, importFile, finishImport, cancelImport } = useStudyImport({
+    storage: studyStore,
+    copy,
+    notify,
+    onImported: (next) => { setData(next); setRevealed({}); },
+  });
+  const summaryText = useStudySummary({ view, data, dataUnreadable, now });
+
+  // A deep link is just another way to arrive at one of the targets in-app
+  // navigation already produces (e.g. openGuideCard).
   const applyDeepLink = (link: DeepLink) => {
-    if (link.sectionId) setGuideTargetSectionId(link.sectionId);
-    if (link.cardId) { setQuery(''); setDomainFilter('all'); setStateFilter('all'); setPracticeTargetCardId(link.cardId); }
-    if (link.questionId) setQuizTargetQuestionId(link.questionId);
-    if (link.scenarioId) setQuizTargetScenarioId(link.scenarioId);
-    if (link.handsOnGuideId) setHandsOnTargetGuideId(link.handsOnGuideId);
-    if (link.handsOnStepId) setHandsOnTargetStepId(link.handsOnStepId);
+    const linkTarget = targetFromDeepLink(link);
+    if (link.cardId) { setQuery(''); setDomainFilter('all'); setStateFilter('all'); }
+    if (linkTarget) setTarget(linkTarget);
     // Same rule as `navigate`: leaving the practice view ends a running session
     // (its ratings are already persisted). A hash arriving mid-session must not
     // leave an orphaned session behind the new view.
     if (link.view !== 'practice') setSessionCards(null);
     setView(link.view);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    // A step target scrolls itself into view inside HandsOnView; running App's
+    // own smooth scroll at the same time would fight that scroll.
+    if (!link.handsOnStepId) window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   useEffect(() => {
@@ -123,25 +124,11 @@ function App({ locale, analyticsEnabled = false }: { locale: Locale; analyticsEn
       if (!document.hidden) refreshNow();
     };
 
-    const loaded = studyStorage().load();
-    dataRef.current = loaded;
-    setData(loaded);
-    setExamDate(examDateStorage().load());
+    setData(studyStore.load());
     setStorageAvailable(detectStorageAvailable());
-    setDataUnreadable(studyStorage().hasUnreadableCurrentDocument());
+    setDataUnreadable(studyStore.hasUnreadableCurrentDocument());
     refreshNow();
     setReady(true);
-
-    // Deep-link entry: a hash present at load time (someone opened a shared
-    // link) opens straight onto its target. `hashchange` covers both the
-    // browser Back/Forward buttons moving across a hash we wrote ourselves
-    // and a link pasted into the address bar of an already-open tab.
-    const applyHashLink = () => {
-      const link = parseDeepLink(window.location.hash);
-      if (link) applyDeepLink(link);
-    };
-    applyHashLink();
-    window.addEventListener('hashchange', applyHashLink);
 
     const clock = window.setInterval(refreshNow, 60_000);
     window.addEventListener('focus', refreshNow);
@@ -151,69 +138,23 @@ function App({ locale, analyticsEnabled = false }: { locale: Locale; analyticsEn
       window.clearInterval(clock);
       window.removeEventListener('focus', refreshNow);
       document.removeEventListener('visibilitychange', refreshWhenVisible);
-      window.removeEventListener('hashchange', applyHashLink);
     };
   }, []);
 
-  // Keeps the address bar in sync with the current view — but only once a
-  // hash is already present. `replaceState` (never `pushState`) so this never
-  // adds history entries — Back/Forward keep navigating the browser's normal
-  // page history, not view-by-view.
-  //
-  // The first run is skipped (see hashReflectSkippedRef above) so mounting
-  // never immediately overwrites a hash the learner just opened, before the
-  // effect above has had a chance to read and apply it.
-  //
-  // The `!window.location.hash` guard is deliberate, not an afterthought: a
-  // session that never involved a deep link must reload back to Today, which
-  // is the app's existing, tested contract (e.g. the Mock Exam and chunk-
-  // recovery flows all reload and expect to land on Today, with progress
-  // resumed from storage rather than from the URL). Writing a hash for every
-  // ordinary in-app navigation — as an unconditional `[view]` effect would —
-  // breaks that contract, because whatever hash a plain reload finds is what
-  // the mount effect above re-applies. So this effect only ever *maintains*
-  // a hash that a deep link already established; it never *creates* one from
-  // an empty address bar.
-  //
-  // Once a deep link's target is applied, `applyDeepLink`'s own `setView`
-  // triggers this same effect again, which then overwrites a target-bearing
-  // hash (`#/guide/sg-x`) with the target-less form (`#/guide`). This is
-  // intentional, not a bug to fix: the target has already been applied to
-  // the view's state, and from this point the hash's job is to describe the
-  // current view, not to replay the one-time entry target. From here on,
-  // navigating further within the same deep-linked session keeps the address
-  // bar in sync (it is no longer empty), which is the desired "this is now a
-  // real address" behavior a deep link is supposed to establish.
-  useEffect(() => {
-    if (!hashReflectSkippedRef.current) {
-      hashReflectSkippedRef.current = true;
-      return;
-    }
-    if (!window.location.hash) return;
-    try {
-      history.replaceState(null, '', formatDeepLink({ view }));
-    } catch {
-      // history unavailable in this environment (e.g. a sandboxed preview) —
-      // the app still works, it just cannot own the URL.
-    }
-  }, [view]);
+  useDeepLinkRouting({ view, onApplyLink: applyDeepLink });
 
   const dueCardIds = now ? cardIndex.filter((card) => isDue(data.reviews[card.id], card.revision, now)).map((card) => card.id) : [];
 
-  const focusNotice = () => requestAnimationFrame(() => noticeRef.current?.focus());
-
   // Re-read the canonical document immediately before every mutation. Another
-  // tab may have committed since this component last rendered; building from
-  // dataRef alone would silently replace that newer work.
+  // tab may have committed since this component last rendered; building from the
+  // rendered `data` alone would silently replace that newer work.
   const commitData = (change: (current: StudyData) => StudyData | null): boolean => {
-    const next = change(studyStorage().load());
+    const next = change(studyStore.load());
     if (!next) return false;
-    if (!studyStorage().save(next)) {
-      setNotice(copy.notices.saveFailed);
-      focusNotice();
+    if (!studyStore.save(next)) {
+      notify(copy.notices.saveFailed);
       return false;
     }
-    dataRef.current = next;
     setData(next);
     return true;
   };
@@ -226,16 +167,12 @@ function App({ locale, analyticsEnabled = false }: { locale: Locale; analyticsEn
   const saveRating = (cardId: string, rating: Rating) => {
     if (!persistRating(cardId, rating)) return;
     setRevealed((value) => ({ ...value, [cardId]: false }));
-    setNotice(rating === 'again' ? copy.notices.ratingAgain : rating === 'hard' ? copy.notices.ratingHard : copy.notices.ratingGood);
-    focusNotice();
+    notify(rating === 'again' ? copy.notices.ratingAgain : rating === 'hard' ? copy.notices.ratingHard : copy.notices.ratingGood);
   };
 
   const endSession = (aborted: boolean) => {
     setSessionCards(null);
-    if (aborted) {
-      setNotice(copy.session.abortedNotice);
-      focusNotice();
-    }
+    if (aborted) notify(copy.session.abortedNotice);
   };
 
   const recordQuizAnswer = (questionId: string, outcome: AnswerOutcome): boolean =>
@@ -247,16 +184,16 @@ function App({ locale, analyticsEnabled = false }: { locale: Locale; analyticsEn
         correct: (previous?.correct ?? 0) + (correct ? 1 : 0),
         lastAnsweredAt: new Date().toISOString(),
         lastCorrect: correct,
-        // Bump `partial` only on an outcome that actually landed partial, and
-        // otherwise carry the prior count forward as-is (spread, not a fallback
-        // to 0) — a stat that has never seen a partial answer must keep the
-        // field absent rather than gain an explicit `partial: 0`.
-        ...(outcome === 'partial' ? { partial: (previous?.partial ?? 0) + 1 } : previous?.partial !== undefined ? { partial: previous.partial } : {}),
-        // Confidence is reported separately (recordQuizConfidence), so an answer
-        // submission alone must not clear what was recorded for a prior attempt.
-        ...(previous?.lastConfidence !== undefined ? { lastConfidence: previous.lastConfidence } : {}),
-        ...(previous?.guessedCorrect !== undefined ? { guessedCorrect: previous.guessedCorrect } : {}),
       };
+      // Each optional field is assigned only when there is a value for it: a stat
+      // that has never seen a partial answer must keep `partial` absent rather
+      // than gain an explicit `partial: 0`.
+      if (outcome === 'partial') stat.partial = (previous?.partial ?? 0) + 1;
+      else if (previous?.partial !== undefined) stat.partial = previous.partial;
+      // Confidence is reported separately (recordQuizConfidence), so an answer
+      // submission alone must not clear what was recorded for a prior attempt.
+      if (previous?.lastConfidence !== undefined) stat.lastConfidence = previous.lastConfidence;
+      if (previous?.guessedCorrect !== undefined) stat.guessedCorrect = previous.guessedCorrect;
       return { ...current, quizStats: { ...current.quizStats, [questionId]: stat } };
     });
 
@@ -281,7 +218,7 @@ function App({ locale, analyticsEnabled = false }: { locale: Locale; analyticsEn
 
   const exportData = () => {
     if (dataUnreadable) return;
-    const blob = new Blob([JSON.stringify(buildStudyDataExport(studyStorage().load(), new Date()), null, 2)], { type: 'application/json' });
+    const blob = new Blob([JSON.stringify(buildStudyDataExport(studyStore.load(), new Date()), null, 2)], { type: 'application/json' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
     link.download = `cca-field-notes-${new Date().toISOString().slice(0, 10)}.json`;
@@ -290,171 +227,36 @@ function App({ locale, analyticsEnabled = false }: { locale: Locale; analyticsEn
     setNotice(copy.notices.exported);
   };
 
-  // The pasteable digest is built ahead of the click, not inside it. Safari (and
-  // iOS in particular) only honours navigator.clipboard.writeText while the user
-  // gesture is still active, and the content chunks this digest needs are
-  // dynamically imported — awaiting them inside the handler would routinely spend
-  // that activation and fail the copy. So the text is precomputed whenever the
-  // Progress view is open and the document changes, and the button itself does
-  // nothing but write an already-built string.
-  //
-  // content/questions, content/study-guide and content/hands-on stay dynamic so
-  // none of them reaches the initial landing bundle; cardIndex/domainIndex are the
-  // lightweight spine already eager here and cover cards/domains without pulling
-  // in cards.ts/domains.ts.
-  useEffect(() => {
-    // Invalidate first. Without this, a digest built on a previous visit stays
-    // copyable in the window before the rebuild resolves, so a learner who left
-    // Progress, answered questions, and came straight back could copy stale
-    // numbers. Reporting "unavailable" for that instant is the honest failure.
-    setSummaryText(null);
-    if (view !== 'progress' || dataUnreadable) return;
-    let cancelled = false;
-    void Promise.all([
-      import('../content/questions'),
-      import('../content/study-guide'),
-      import('../content/hands-on'),
-    ]).then(([{ questions }, { studyGuideSections }, { handsOnGuides }]) => {
-      if (cancelled) return;
-      const studyGuide = deriveStudyGuideProgress(studyGuideSections, data.studyGuideProgress);
-      const handsOn = deriveHandsOnProgress(handsOnGuides, data.handsOnProgress);
-      setSummaryText(buildStudySummary({
-        data,
-        cards: cardIndex,
-        questions,
-        domains: domainIndex,
-        studyGuideTotal: studyGuide.totalSections,
-        studyGuideCompleted: studyGuide.completed,
-        handsOnTotal: handsOn.totalGuides,
-        handsOnCompleted: handsOn.completed,
-        now: new Date(),
-      }));
-    }, () => {
-      // A failed chunk load leaves the digest unavailable; the button reports that
-      // rather than copying a stale or partial summary.
-      if (!cancelled) setSummaryText(null);
-    });
-    return () => { cancelled = true; };
-  }, [view, data, dataUnreadable]);
-
   // Nothing here sends anything anywhere: the Clipboard API is local to this
   // device, and the learner chooses where the text is pasted.
   const copySummary = () => {
     if (dataUnreadable) return;
     if (!summaryText || !navigator.clipboard) {
-      setNotice(copy.notices.summaryCopyFailed);
-      focusNotice();
+      notify(copy.notices.summaryCopyFailed);
       return;
     }
     void navigator.clipboard.writeText(summaryText).then(
-      () => { setNotice(copy.notices.summaryCopied); focusNotice(); },
-      () => { setNotice(copy.notices.summaryCopyFailed); focusNotice(); },
+      () => notify(copy.notices.summaryCopied),
+      () => notify(copy.notices.summaryCopyFailed),
     );
-  };
-
-  const applyImport = (imported: ImportedStudyData | null) => {
-    if (!imported) {
-      setNotice(copy.notices.importInvalid);
-      focusNotice();
-      return;
-    }
-    setPendingImport(imported);
-  };
-
-  // Resolves the pending import once the learner picks replace or merge.
-  const finishImport = (mode: 'replace' | 'merge') => {
-    const pending = pendingImport;
-    setPendingImport(null);
-    if (!pending) return;
-    // Re-read canonical storage: another tab may have written since the file was
-    // picked, and a merge must combine with what is actually stored now.
-    const next = mode === 'merge' ? mergeStudyData(studyStorage().load(), pending.data) : pending.data;
-    if (!studyStorage().save(next)) {
-      setNotice(copy.notices.saveFailed);
-      focusNotice();
-      return;
-    }
-    dataRef.current = next;
-    setData(next);
-    setRevealed({});
-    setNotice(mode === 'merge' ? copy.notices.importMerged : copy.notices.importDone);
-    focusNotice();
-  };
-
-  const cancelImport = () => {
-    setPendingImport(null);
-    setNotice(copy.notices.importCancelled);
-    focusNotice();
-  };
-
-  const importData = (event: Event) => {
-    const input = event.currentTarget as HTMLInputElement;
-    const file = input.files?.[0];
-    input.value = '';
-    if (!file || importBusyRef.current) return;
-    // Reject an oversized file by its reported size, before reading it into memory
-    // or handing it to JSON.parse — parseStudyDataImport repeats this check on the
-    // decoded text, but that check should never fire when this one already ran.
-    if (!isImportSizeAllowed(file.size)) {
-      setNotice(copy.notices.importTooLarge(MAX_IMPORT_TEXT_LENGTH / (1024 * 1024)));
-      focusNotice();
-      return;
-    }
-    importBusyRef.current = true;
-    void file.text()
-      .then((text) => applyImport(parseStudyDataImport(text)), () => applyImport(null))
-      .finally(() => {
-        importBusyRef.current = false;
-      });
   };
 
   const resetData = () => {
     if (dataUnreadable) return;
     if (!window.confirm(copy.notices.resetConfirm)) return;
-    if (!studyStorage().reset()) {
-      setNotice(copy.notices.resetFailed);
-      focusNotice();
+    if (!studyStore.reset()) {
+      notify(copy.notices.resetFailed);
       return;
     }
-    // The planned exam date lives under its own key, so resetting the study
-    // document would otherwise leave it behind — and the confirm text promises to
-    // delete everything this device holds. A failure to clear it is not worth
-    // overriding the reset-succeeded notice with; the exam-date panel keeps its
-    // own clear button.
-    examDateStorage().clear();
-    setExamDate(null);
+    // The exam date lives under its own key, and the confirm text promises to
+    // delete everything this device holds. A failed clear leaves the date in
+    // storage, so the notice — and the still-visible date — must say so.
+    const examDateCleared = clearExamDateSilently();
     const empty = createEmptyStudyData();
-    dataRef.current = empty;
     setData(empty);
     setRevealed({});
     setDataUnreadable(false);
-    setNotice(copy.notices.resetDone);
-  };
-
-  const clearExamDate = (): void => {
-    if (!examDateStorage().clear()) {
-      setNotice(copy.notices.examDateSaveFailed);
-      focusNotice();
-      return;
-    }
-    setExamDate(null);
-    setNotice(copy.notices.examDateCleared);
-    focusNotice();
-  };
-
-  const saveExamDate = (value: string): void => {
-    if (!value) {
-      clearExamDate();
-      return;
-    }
-    if (!examDateStorage().save(value)) {
-      setNotice(copy.notices.examDateSaveFailed);
-      focusNotice();
-      return;
-    }
-    setExamDate(value);
-    setNotice(copy.notices.examDateSaved);
-    focusNotice();
+    setNotice(examDateCleared ? copy.notices.resetDone : copy.notices.resetDonePartial);
   };
 
   const navigate = (next: View) => {
@@ -465,14 +267,11 @@ function App({ locale, analyticsEnabled = false }: { locale: Locale; analyticsEn
   };
 
   const openGuideCard = (cardId: string) => {
-    setQuery(''); setDomainFilter('all'); setStateFilter('all'); setPracticeTargetCardId(cardId); navigate('practice');
+    setQuery(''); setDomainFilter('all'); setStateFilter('all'); setTarget({ kind: 'practice-card', cardId }); navigate('practice');
   };
-  const openGuideQuestion = (questionId: string) => { setQuizTargetQuestionId(questionId); navigate('quiz'); };
-  // Exact-target navigation out of the official scenarios view. Each sets a typed
-  // target the destination view consumes and clears, so the learner lands on the
-  // specific case, guide, or question rather than the destination's list.
-  const openPracticeScenario = (scenarioId: string) => { setQuizTargetScenarioId(scenarioId); navigate('quiz'); };
-  const openHandsOnGuide = (guideId: string) => { setHandsOnTargetGuideId(guideId); navigate('hands-on'); };
+  const openGuideQuestion = (questionId: string) => { setTarget({ kind: 'quiz-question', questionId }); navigate('quiz'); };
+  const openPracticeScenario = (scenarioId: string) => { setTarget({ kind: 'quiz-scenario', scenarioId }); navigate('quiz'); };
+  const openHandsOnGuide = (guideId: string) => { setTarget({ kind: 'hands-on', guideId }); navigate('hands-on'); };
   const saveGuideProgress = (sectionId: string, revision: number, action: 'start' | 'complete' | 'reconfirm') => {
     const saved = commitData((current) => {
       const record = current.studyGuideProgress[sectionId];
@@ -484,18 +283,13 @@ function App({ locale, analyticsEnabled = false }: { locale: Locale; analyticsEn
       if (!next || next === record) return null;
       return { ...current, studyGuideProgress: { ...current.studyGuideProgress, [sectionId]: next } };
     });
-    if (saved) {
-      setNotice(copy.guide.actionDone[action]);
-      focusNotice();
-    }
+    if (saved) notify(copy.guide.actionDone[action]);
     return saved;
   };
 
-  // Save-first Hands-on updates. Each re-reads canonical storage inside
-  // commitData so a concurrent tab's change is never lost, and the visible state
-  // only advances after the save succeeds. Guide-level transitions move focus to
-  // the notice because the pressed control unmounts; a step toggle only announces
-  // through the aria-live notice so keyboard focus stays on the checkbox.
+  // Guide-level Hands-on transitions move focus to the notice because the
+  // pressed control unmounts; a step toggle only announces through the aria-live
+  // notice so keyboard focus stays on the checkbox.
   type HandsOnRecord = StudyData['handsOnProgress'][string];
   const saveHandsOn = (
     guideId: string,
@@ -531,19 +325,16 @@ function App({ locale, analyticsEnabled = false }: { locale: Locale; analyticsEn
   const saveHandsOnReconfirm = (guideId: string, revision: number) =>
     saveHandsOn(guideId, (record) => reconfirmHandsOnGuide(record, revision, new Date()), () => copy.handsOn.actionDone.reconfirm, true);
 
-  // Storage bridge handed to the lazily-loaded Mock Exam view. readData returns
-  // the canonical document (re-read immediately before every exam mutation);
-  // writeData validates and persists the whole document, updates state, and
-  // surfaces the save-failed notice on refusal — mirroring commitData's contract
-  // without pulling any exam logic into this component.
-  const readMockExamData = (): StudyData => studyStorage().load();
+  // Storage bridge handed to the lazily-loaded Mock Exam view: it mirrors
+  // commitData's contract (re-read before every mutation, notice on refusal)
+  // without pulling any exam logic — and so any of the exam engine — into the
+  // initial bundle.
+  const readMockExamData = (): StudyData => studyStore.load();
   const writeMockExamData = (next: StudyData): boolean => {
-    if (!studyStorage().save(next)) {
-      setNotice(copy.notices.saveFailed);
-      focusNotice();
+    if (!studyStore.save(next)) {
+      notify(copy.notices.saveFailed);
       return false;
     }
-    dataRef.current = next;
     setData(next);
     return true;
   };
@@ -558,10 +349,8 @@ function App({ locale, analyticsEnabled = false }: { locale: Locale; analyticsEn
     navigate('practice');
   };
 
-  // Learning-analysis "next action" links reuse the existing Practice view: an
-  // optional domain id preselects that domain's cards, otherwise it opens the
-  // full deck. Skills are not a Practice filter axis, so a skill action falls back
-  // to opening practice unfiltered rather than inventing a route.
+  // Skills are not a Practice filter axis, so a skill action opens practice
+  // unfiltered rather than inventing a route.
   const openMockExamPractice = (domainId?: string) => {
     setQuery('');
     setDomainFilter(domainId ?? 'all');
@@ -569,9 +358,8 @@ function App({ locale, analyticsEnabled = false }: { locale: Locale; analyticsEn
     navigate('practice');
   };
 
-  // Learning-path stage dispatch (in-page Guide anchors are handled inside
-  // GuideView; only view-bound targets reach here). Reuses existing navigation —
-  // no new router or URL is introduced.
+  // Learning-path stage dispatch; in-page Guide anchors are handled inside
+  // GuideView, so only view-bound targets reach here.
   const openLearningStage = (target: LearningStageViewTarget) => {
     switch (target) {
       case 'hands-on': navigate('hands-on'); break;
@@ -589,6 +377,11 @@ function App({ locale, analyticsEnabled = false }: { locale: Locale; analyticsEn
     setSessionCards(dueCardIds.length ? dueCardIds : null);
     navigate('practice');
   };
+
+  // HandsOnView gets the target object itself, not a fresh copy: its effects key
+  // on that object, so the identity has to stay stable across renders.
+  const clearTarget = () => setTarget(null);
+  const handsOnTarget = target?.kind === 'hands-on' ? target : null;
 
   return (
     <div class="app-shell">
@@ -610,9 +403,9 @@ function App({ locale, analyticsEnabled = false }: { locale: Locale; analyticsEn
 
         {view === 'mock-exam' && <MockExamEntry locale={locale} copy={copy} session={data.activeMockExam} attempts={data.mockExamAttempts} storageAvailable={storageAvailable} quizStats={data.quizStats} initialPhase={mockExamIntent} readData={readMockExamData} writeData={writeMockExamData} onOpenPractice={openMockExamPractice}/>}
 
-        {view === 'guide' && <GuideEntry locale={locale} copy={copy} records={data.studyGuideProgress} hasMockExamAttempts={data.mockExamAttempts.length > 0} examDate={examDate} onProgressAction={saveGuideProgress} onOpenCard={openGuideCard} onOpenQuestion={openGuideQuestion} onOpenStage={openLearningStage} onOpenOfficialScenarios={() => navigate('official-scenarios')} targetSectionId={guideTargetSectionId} onTargetSectionOpened={() => setGuideTargetSectionId(null)}/>}
+        {view === 'guide' && <GuideEntry locale={locale} copy={copy} records={data.studyGuideProgress} hasMockExamAttempts={data.mockExamAttempts.length > 0} examDate={examDate} onProgressAction={saveGuideProgress} onOpenCard={openGuideCard} onOpenQuestion={openGuideQuestion} onOpenStage={openLearningStage} onOpenOfficialScenarios={() => navigate('official-scenarios')} targetSectionId={target?.kind === 'guide-section' ? target.sectionId : null} onTargetSectionOpened={clearTarget}/>}
 
-        {view === 'hands-on' && <HandsOnEntry locale={locale} copy={copy} records={data.handsOnProgress} onStart={saveHandsOnStart} onToggleStep={saveHandsOnStep} onComplete={saveHandsOnComplete} onReconfirm={saveHandsOnReconfirm} onOpenCard={openGuideCard} onOpenQuestion={openGuideQuestion} targetGuideId={handsOnTargetGuideId} onTargetOpened={() => setHandsOnTargetGuideId(null)} targetStepId={handsOnTargetStepId} onTargetStepOpened={() => setHandsOnTargetStepId(null)}/>}
+        {view === 'hands-on' && <HandsOnEntry locale={locale} copy={copy} records={data.handsOnProgress} onStart={saveHandsOnStart} onToggleStep={saveHandsOnStep} onComplete={saveHandsOnComplete} onReconfirm={saveHandsOnReconfirm} onOpenCard={openGuideCard} onOpenQuestion={openGuideQuestion} target={handsOnTarget} onTargetOpened={clearTarget}/>}
 
         {view === 'official-scenarios' && <OfficialScenariosEntry locale={locale} copy={copy} onOpenCard={openGuideCard} onOpenQuestion={openGuideQuestion} onOpenPracticeScenario={openPracticeScenario} onOpenHandsOnGuide={openHandsOnGuide}/>}
 
@@ -621,13 +414,13 @@ function App({ locale, analyticsEnabled = false }: { locale: Locale; analyticsEn
           query={query} onQueryChange={setQuery}
           domainFilter={domainFilter} onDomainFilterChange={setDomainFilter}
           stateFilter={stateFilter} onStateFilterChange={setStateFilter}
-          targetCardId={practiceTargetCardId} onTargetOpened={() => setPracticeTargetCardId(null)}
+          targetCardId={target?.kind === 'practice-card' ? target.cardId : null} onTargetOpened={clearTarget}
           revealed={revealed} onToggleRevealed={(cardId) => setRevealed((value) => ({ ...value, [cardId]: !value[cardId] }))}
           sessionCards={sessionCards} onStartSession={setSessionCards} onExitSession={endSession}
           onRateInList={saveRating} onRateInSession={persistRating}
         />}
 
-        {view === 'quiz' && <QuizEntry locale={locale} copy={copy} quizStats={data.quizStats} onAnswer={recordQuizAnswer} onConfidence={recordQuizConfidence} targetQuestionId={quizTargetQuestionId} onTargetOpened={() => setQuizTargetQuestionId(null)} targetScenarioId={quizTargetScenarioId} onTargetScenarioOpened={() => setQuizTargetScenarioId(null)}/>}
+        {view === 'quiz' && <QuizEntry locale={locale} copy={copy} quizStats={data.quizStats} onAnswer={recordQuizAnswer} onConfidence={recordQuizConfidence} targetQuestionId={target?.kind === 'quiz-question' ? target.questionId : null} onTargetOpened={clearTarget} targetScenarioId={target?.kind === 'quiz-scenario' ? target.scenarioId : null} onTargetScenarioOpened={clearTarget}/>}
 
         {view === 'progress' && <ProgressView
           locale={locale} copy={copy}
@@ -635,7 +428,7 @@ function App({ locale, analyticsEnabled = false }: { locale: Locale; analyticsEn
           quizStats={data.quizStats} activeMockExam={data.activeMockExam} mockExamAttempts={data.mockExamAttempts} dueCount={dueCardIds.length}
           analyticsEnabled={analyticsEnabled} dataUnreadable={dataUnreadable}
           examDate={examDate} onExamDateChange={saveExamDate} onExamDateClear={clearExamDate}
-          onExport={exportData} onCopySummary={copySummary} onImportFile={importData} onReset={resetData}
+          onExport={exportData} onCopySummary={copySummary} onImportFile={importFile} onReset={resetData}
           onOpenGuide={() => navigate('guide')} onOpenHandsOn={() => navigate('hands-on')} onOpenPractice={() => openMockExamPractice()}
           onOpenQuiz={() => navigate('quiz')} onOpenMockExam={openMockExam} onOpenMockExamAnalysis={openMockExamAnalysis}
         />}

@@ -19,6 +19,7 @@ export function QuizSummary({ results, correctCount, wrongResults, rationalesSta
 }) {
   const answerText = (question: ChoiceQuestion) =>
     question.choices.filter((choice) => question.correctChoiceIds.includes(choice.id)).map((choice) => localize(choice.text, locale)).join(' / ');
+  const partialCount = results.filter((result) => result.outcome === 'partial').length;
 
   return (
     <div class="quiz-summary">
@@ -29,6 +30,7 @@ export function QuizSummary({ results, correctCount, wrongResults, rationalesSta
           <span>{copy.quiz.accuracy}</span>
           <strong>{results.length ? Math.round((correctCount / results.length) * 100) : 0}%</strong>
           <span>{copy.quiz.scoreLine(correctCount, results.length)}</span>
+          {partialCount > 0 && <span class="quiz-partial-count">{copy.quiz.resultPartial} {partialCount}</span>}
         </div>
       </section>
       <section class="quiz-domains" aria-labelledby="quiz-domains-title">

@@ -1,15 +1,6 @@
-// The learner's planned exam date, kept deliberately OUT of StudyData.
-//
-// Two reasons it lives under its own key rather than in the study document:
-//   1. `parseStudyDataV3` rebuilds the document from the fields it knows about,
-//      so a new top-level field would be silently dropped on every load. Adding
-//      one means touching the version, the migrations, and the export format.
-//   2. It is not study progress. It does not belong in an export a learner hands
-//      to someone else, and losing it must never risk the review history.
-//
-// What it enables is only arithmetic on a calendar: how many days remain. The app
-// does not, here or anywhere, turn that into a pace, a verdict, or a readiness
-// judgement — those are the learner's to make.
+// The learner's planned exam date, under its own key rather than in StudyData
+// (why: DESIGN.md §Study companion affordances). What it enables is arithmetic on
+// a calendar and nothing more — never a pace, a verdict, or a readiness call.
 import type { StorageLike } from './storage';
 
 export const EXAM_DATE_STORAGE_KEY = 'cca-field-notes:exam-date';

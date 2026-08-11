@@ -1,12 +1,6 @@
-// The Mock Exam draws from the same question bank the Quiz does, and the bank has
-// no surplus: the exam is the whole bank. Every question answered in daily Quiz
-// practice is therefore one fewer first-sight question in the exam — and that
-// erosion was invisible, so a perfectly natural study plan ("drill weak areas
-// daily") silently spent the exam's value as a first-sight measurement.
-//
-// This reports the overlap as a bare count. It is not a score, a readiness
-// signal, or a pass probability; it is the number of exam questions the learner
-// has already seen, which only they can decide what to do with.
+// How many exam questions the learner has already met in the Quiz. A bare count,
+// never a score or a readiness signal (see DESIGN.md §Study companion
+// affordances for why the overlap is worth surfacing at all).
 export function countAnsweredExamQuestions(
   questions: readonly { readonly id: string }[],
   quizStats: Readonly<Record<string, unknown>>,

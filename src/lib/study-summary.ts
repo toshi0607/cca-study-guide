@@ -1,21 +1,10 @@
-// A short, pasteable digest of what this device already knows about the learner.
+// A short, pasteable digest for a study companion (see DESIGN.md §Study companion
+// affordances). Every figure is one the Progress view already displays; it derives
+// nothing new and returns a string that only the caller's clipboard ever sees.
 //
-// Why it exists: a study companion (a person or an AI agent) that cannot see the
-// learner's state has to start from a blind diagnostic. The full JSON export is
-// the wrong shape for that — it is long, it carries per-card scheduler internals,
-// and nothing in it says "this is where you are weak". This produces the short
-// form instead: weak domains, weak card ids, low-accuracy question ids, and how
-// much is due.
-//
-// Boundaries this respects, by construction:
-//   * Every figure here is one the app already displays in the Progress view. It
-//     derives nothing new, and in particular no score, pass/fail, or readiness.
-//   * It returns a string. Nothing sends it anywhere — the caller puts it on the
-//     clipboard, and the learner decides who reads it.
-//
-// The text is deliberately locale-independent, with stable English labels and raw
-// content ids: it is written to be read by a study companion, not by the UI, and
-// the ids are the app's compatibility-contract ids, so they stay valid over time.
+// Deliberately locale-independent — stable English labels and raw content ids —
+// because its reader is a companion rather than the UI, and the ids are the app's
+// compatibility-contract ids, so they stay valid over time.
 import { collectQuizInsightIds } from './quiz-insight';
 import { isWeak } from './weakness';
 import type { ReviewState } from './scheduler';

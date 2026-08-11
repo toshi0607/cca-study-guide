@@ -14,31 +14,22 @@
 //
 // Nothing here is a score or a judgement; it only decides which recorded fact
 // survives when both sides recorded one.
-import type { ReviewState } from './scheduler';
+import { AGAIN_DELAY_MS, DAY, type ReviewState } from './scheduler';
 import type { MockExamAttempt } from './mock-exam-types';
 import type { HandsOnProgress, QuizStat, StudyData, StudyGuideProgress } from './storage-schema';
 
-const DAY = 86_400_000;
-// scheduleReview's 'again' branch: due 10 minutes out with intervalDays 0.
-const AGAIN_DELAY_MS = 10 * 60_000;
-
 // When this review actually happened, recovered by inverting scheduleReview.
-//
-// The memo that asked for this proposed comparing `dueAt` directly, but `dueAt`
-// is not a proxy for recency: a card just rated 'again' is due in ten minutes
-// while a card rated 'good' days ago is still due tomorrow, so the raw
-// comparison prefers the older review. ReviewState carries no timestamp, but
-// scheduleReview derives `dueAt` from the review time plus a delay that is fully
-// determined by `lastRating` and `intervalDays` — so the review time is exactly
-// recoverable.
+// `dueAt` alone is NOT a recency proxy — a card just rated 'again' is due in ten
+// minutes while one rated 'good' days ago is still due tomorrow — but the delay
+// scheduleReview added is fully determined by `lastRating` and `intervalDays`,
+// so subtracting it back out is exact.
 export function reviewedAtMs(state: ReviewState): number {
   const due = Date.parse(state.dueAt);
   if (Number.isNaN(due)) return Number.NEGATIVE_INFINITY;
   return state.lastRating === 'again' ? due - AGAIN_DELAY_MS : due - state.intervalDays * DAY;
 }
 
-// Ties keep the local record: a merge that changes nothing is preferable to one
-// that swaps in an identical-age record from elsewhere.
+// Ties keep the local record.
 export function mergeReviews(
   local: Readonly<Record<string, ReviewState>>,
   incoming: Readonly<Record<string, ReviewState>>,
@@ -51,15 +42,11 @@ export function mergeReviews(
   return merged;
 }
 
-// Counters take the larger of the two rather than the sum. The sum is what a
-// learner intuitively wants, but it is not idempotent — re-importing the same
-// file would inflate every count — and the counts are only ever used to rank what
-// to review, where the larger value carries the same signal. `correct`,
-// `partial` and `guessedCorrect` are each bounded by `attempts` on both sides, so
-// taking the maximum of each independently can never break that invariant.
-//
-// The "last answered" facts come as a set from whichever side answered more
-// recently, so `lastCorrect` and `lastConfidence` always describe the same answer.
+// Counters take the larger, never the sum: summing is not idempotent. Each
+// optional counter is bounded by `attempts` on both sides, so an independent
+// maximum cannot break that invariant. The "last answered" facts move together
+// from the more recent side, so `lastCorrect` and `lastConfidence` always
+// describe the same answer.
 export function mergeQuizStat(local: QuizStat, incoming: QuizStat): QuizStat {
   const localIsNewer = Date.parse(local.lastAnsweredAt) >= Date.parse(incoming.lastAnsweredAt);
   const newer = localIsNewer ? local : incoming;
@@ -70,8 +57,7 @@ export function mergeQuizStat(local: QuizStat, incoming: QuizStat): QuizStat {
     correct: Math.max(local.correct, incoming.correct),
     lastAnsweredAt: newer.lastAnsweredAt,
     lastCorrect: newer.lastCorrect,
-    // Absent stays absent, so a merge of two records that never used these fields
-    // does not start writing them.
+    // Absent stays absent.
     ...(partial > 0 ? { partial } : {}),
     ...(guessedCorrect > 0 ? { guessedCorrect } : {}),
     ...(newer.lastConfidence !== undefined ? { lastConfidence: newer.lastConfidence } : {}),
@@ -90,8 +76,22 @@ export function mergeQuizStats(
   return merged;
 }
 
-// Study Guide progress is a single status per section, so the record written more
-// recently simply wins; there is nothing to combine.
+// Which of two progress records is authoritative. `revision` outranks time,
+// because it says WHICH content the record is about: a device that reconfirmed
+// the current revision must not lose to a device that merely touched the previous
+// revision more recently (perfectly possible when one device has not pulled the
+// new content yet). Only within the same revision does `updatedAt` decide, and a
+// tie there keeps the local record.
+function prefersIncoming(
+  local: { revision: number; updatedAt: string },
+  incoming: { revision: number; updatedAt: string },
+): boolean {
+  if (incoming.revision !== local.revision) return incoming.revision > local.revision;
+  return Date.parse(incoming.updatedAt) > Date.parse(local.updatedAt);
+}
+
+// A single status per section, so the authoritative record wins outright; there
+// is nothing to combine.
 export function mergeStudyGuideProgress(
   local: Readonly<Record<string, StudyGuideProgress>>,
   incoming: Readonly<Record<string, StudyGuideProgress>>,
@@ -99,21 +99,20 @@ export function mergeStudyGuideProgress(
   const merged: Record<string, StudyGuideProgress> = { ...local };
   for (const [sectionId, candidate] of Object.entries(incoming)) {
     const current = merged[sectionId];
-    if (!current || Date.parse(candidate.updatedAt) > Date.parse(current.updatedAt)) merged[sectionId] = candidate;
+    if (!current || prefersIncoming(current, candidate)) merged[sectionId] = candidate;
   }
   return merged;
 }
 
-// Hands-on differs from the Study Guide in that it also holds a checklist, and
-// the two-device case this exists for is exactly "steps 1-3 on the laptop, 4-5 on
-// the phone". So the newer record supplies the status while the completed steps
-// are unioned. Unchecking a step on one device therefore does not propagate — a
-// deliberate trade: losing a deliberate uncheck is recoverable by unchecking
-// again, losing finished steps is not.
+// Hands-on also holds a checklist, and the two-device case this exists for is
+// exactly "steps 1-3 on the laptop, 4-5 on the phone" — so the authoritative
+// record supplies the status while completed steps are unioned. Unchecking on one
+// device therefore does not propagate: losing a deliberate uncheck is recoverable
+// by unchecking again, losing finished steps is not.
 export function mergeHandsOnRecord(local: HandsOnProgress, incoming: HandsOnProgress): HandsOnProgress {
-  const newer = Date.parse(incoming.updatedAt) > Date.parse(local.updatedAt) ? incoming : local;
+  const authoritative = prefersIncoming(local, incoming) ? incoming : local;
   const steps = [...new Set([...local.completedStepIds, ...incoming.completedStepIds])];
-  return { ...newer, completedStepIds: steps };
+  return { ...authoritative, completedStepIds: steps };
 }
 
 export function mergeHandsOnProgress(
@@ -129,8 +128,13 @@ export function mergeHandsOnProgress(
 }
 
 // Union by attempt id — an attempt is immutable once finished, so the same id on
-// both sides is the same attempt and the local copy is kept. Sorted by completion
-// time so history reads in order regardless of which side contributed what.
+// both sides is the same attempt and the local copy is kept.
+//
+// Deliberately NOT sorted. Sorting here would break idempotence on an already
+// stored document whose attempts are not in completion order: merging it with
+// itself would reorder it, so merge(a, a) !== a. Every reader sorts for display
+// anyway (MockExamHistory, mock-exam-analysis), so the stored order is not a
+// contract this needs to establish.
 export function mergeMockExamAttempts(
   local: readonly MockExamAttempt[],
   incoming: readonly MockExamAttempt[],
@@ -139,13 +143,11 @@ export function mergeMockExamAttempts(
   for (const attempt of incoming) {
     if (!byId.has(attempt.id)) byId.set(attempt.id, attempt);
   }
-  return [...byId.values()].sort((a, b) => Date.parse(a.completedAt) - Date.parse(b.completedAt));
+  return [...byId.values()];
 }
 
-// Two live exam sessions cannot be combined — they are different draws with
-// different clocks — so the local one is kept whenever it exists. An import only
-// contributes a session when this device has none in flight, which is the case
-// where adopting it loses nothing.
+// Two live exam sessions cannot be combined (different draws, different clocks),
+// so the local one is kept whenever it exists.
 export function mergeStudyData(local: StudyData, incoming: StudyData): StudyData {
   return {
     version: 3,

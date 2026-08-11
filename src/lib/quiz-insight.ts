@@ -1,15 +1,8 @@
-// Reads the optional QuizStat fields back out as three counts the plain
-// right/wrong tally could not express:
-//
-//   close        — answered partially at least once and never fully correct.
-//                  The learner has the concept and is not finishing the
-//                  selection; that is a different problem from not knowing it.
-//   notUnderstood— attempted, never correct, never even partially correct.
-//   guessedRight — correct answers the learner themselves labelled a guess.
-//
-// All three are counts of recorded events, two of which the learner reported
-// about themselves. None is a score, a grade, or a statement about readiness —
-// they exist so review can be aimed at the right questions.
+// Three buckets the plain right/wrong tally cannot express:
+//   close         — partially correct at least once, never fully correct
+//   notUnderstood — attempted, never correct and never even partial
+//   guessedRight  — correct answers the learner themselves labelled a guess
+// Counts of recorded events, not a grade. Field semantics live on `QuizStat`.
 import type { QuizStat } from './storage-schema';
 
 export type QuizInsight = {
