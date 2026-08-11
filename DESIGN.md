@@ -1,6 +1,6 @@
 # CCA Study Guide — Product and Technical Design
 
-Last reviewed: 2026-07-14
+Last reviewed: 2026-08-11
 
 ## Product thesis
 
@@ -138,12 +138,33 @@ The six official exam scenarios (`OfficialScenarioId`) are two layers, not one. 
 
 Official scenarios are a **sub-area under the Guide view**, mirroring hands-on: `'official-scenarios'` is a `View` excluded from the navigable keys, so the 360px five-item bottom bar is unchanged, and the Guide button stays `aria-current` while inside it. The Guide's eight-stage learning path already framed stage five as "scenario judgment"; that stage was a dead label and is now the live link into the list (plus a dedicated Guide entry section). `OfficialScenariosEntry`/`OfficialScenariosView` use the same manual dynamic-import + chunk-error-recovery + list↔detail focus pattern as hands-on, so the long scenario prose never enters the initial route bundle. Exact-target navigation out of a scenario reuses the existing card/question targets and adds two typed targets — `QuizView.targetScenarioId` (opens the practice case's background and focuses its heading) and `HandsOnView.targetGuideId` (opens that guide's detail and focuses its heading) — with no routing framework introduced. Task 6 adds **no persisted state**: viewing a scenario writes nothing, and unknown or future storage records are preserved untouched.
 
+## Study companion affordances
+
+Eight frictions recorded while actually studying with an AI companion (`tasks/agent-study-feedback.md`) are addressed here. Each one displays or records a **fact**; none derives a score, a pass/fail outcome, or a readiness judgement, and none sends anything off the device.
+
+**Time cost of the path.** `learningStageMinutes` (`src/lib/stage-cost.ts`) sums `estimatedMinutes` from the content modules, so the learning path states that the Study Guide is 360 minutes, Hands-on 480, and the mock exam 120. Stages whose content declares no duration (start, Practice, Quiz, analysis, repeat) show nothing rather than a misleading zero; the mock exam's 120 is its own time limit rather than a content sum. Stage 3 being the single largest investment in the path was previously invisible.
+
+**Mock-exam overlap.** The exam draws the whole question bank with zero surplus, so daily Quiz practice silently spends the exam's value as a first-sight measurement. `countAnsweredExamQuestions` (`src/lib/mock-exam-overlap.ts`) states, on the start screen, how many of the 60 questions have already been answered in the Quiz. It reads only the key set of `quizStats`; the exam still writes nothing there.
+
+**Study summary for a companion.** `buildStudySummary` (`src/lib/study-summary.ts`) renders a short, pasteable digest — weak card ids, low-accuracy question ids, due counts, per-domain totals — from figures the Progress view already displays. The text is locale-independent with stable English labels and raw content ids, because its reader is a study companion rather than the UI. The Progress button writes it to the clipboard and nowhere else; it is precomputed while the view is open so the click stays inside the user gesture Safari requires.
+
+**Confidence and partial answers.** `QuizStat` gains three optional fields with no version bump and no migration: `partial` (a non-empty subset of the correct choices with nothing incorrect — a case set equality filed identically to a fully wrong answer), and `lastConfidence` / `guessedCorrect` (the learner's own report, so a topic understood and a topic gotten lucky on stop looking the same). `classifyAnswer` (`src/lib/quiz.ts`) is the pure classifier; `quiz-insight.ts` reads the fields back as "close", "not understood", and "guessed right". The confidence prompt is one tap and skippable. Validators bound the optional counters by `attempts` rather than by a tighter derived invariant, because one failing entry rejects the whole document.
+
+**Planned exam date.** Stored under its own key (`cca-field-notes:exam-date`, `src/lib/exam-date.ts`), never in `StudyData`: `parseStudyDataV3` rebuilds the document from known fields, so a new top-level field would be dropped on every load, and a planned date is not study progress and does not belong in an export. It yields two facts — days remaining (Today view), and minutes of Study Guide material not yet completed plus the next section in `recommendedOrder` (Guide view, which is where the guide content already lives and where TodayView's bundle budget forbids it). No pace, no verdict. The field saves silently as it changes and never on an empty value: `<input type="date">` reports an empty string while a date is half-typed, and both a success notice and a clear-on-empty would fight the learner mid-edit. Resetting local data clears it too, because the reset copy promises to delete everything on the device.
+
+**Deep links.** `src/lib/deep-link.ts` maps `#/guide/<sectionId>`, `#/practice/<cardId>`, `#/quiz/<questionId>`, `#/scenario/<scenarioId>`, `#/hands-on/<guideId>[/<stepId>]`, and the bare view routes onto the typed view targets the app already had. No router, no new pages: the persisted content ids are already a compatibility contract, which is what makes them safe to put in a URL. Ids are validated against a kebab-case pattern; a route that takes a target accepts exactly its own segments and rejects extras, so a typo in a shared link fails visibly rather than opening somewhere else. A URL never carries progress, answers, or any stored value.
+
+The address bar follows three rules, all pinned by `tests/deep-link.spec.ts`. A session that never involved a hash never gains one, so an ordinary reload still lands on Today. A hash whose view matches the current view is left alone, so `#/guide/sg-x` survives for bookmarking and sharing. Only a move to a different view rewrites it, to that view's target-less route. `history.replaceState` throughout, never `pushState`, so Back/Forward keep navigating page history rather than view history.
+
+**Import merge.** Import offered replace-or-nothing, which forced a two-device learner to nominate one device as canonical. `mergeStudyData` (`src/lib/study-data-merge.ts`) adds a merge mode, and every rule in it is **idempotent** — merging the same export twice equals merging it once — which rules out summing counters. Reviews take the more recent review, recovered by inverting `scheduleReview` (`dueAt` alone is not a recency proxy: a card just rated `again` is due in ten minutes while one rated `good` days ago is still due tomorrow). Quiz counters take the maximum of each field; the "last answered" facts come as a set from the more recent side. Study Guide and Hands-on records are compared by `revision` first and only then by `updatedAt`, because a revision says *which content* a record is about and a device that has not pulled new content can touch the old revision at any moment; Hands-on additionally unions completed steps. Attempts union by id and are deliberately **not** re-sorted — sorting would reorder an already-stored unsorted list and break `merge(a, a) === a`, and every reader sorts for display anyway. Two live exam sessions cannot be combined, so the local one is kept. Replace remains available and unchanged, behind a native `<dialog>` so the choice is genuinely modal.
+
 ## Technical architecture
 
 - Astro static output + TypeScript.
 - Preact island(s) for navigation, filters, reveal state, progress, scheduling, and import/export.
 - Static source/content modules validated by Zod at build time.
-- `localStorage` for the small MVP state; keep access behind a storage adapter so IndexedDB can replace it later without rewriting UI.
+- `localStorage` for the small MVP state; keep access behind a storage adapter so IndexedDB can replace it later without rewriting UI. The study document lives under one key; the planned exam date has its own key and its own validator, deliberately outside the versioned document (see Study companion affordances).
+- Hash-only deep links (`#/<route>[/<id>]`) over the existing typed view targets — no routing framework, no additional pages.
 - Vitest for content invariants and scheduler/storage behavior.
 - Playwright/axe for the critical reveal/rating/persistence/keyboard/mobile flow when browser binaries are available.
 - Standard static output deployable unchanged to Vercel or Cloudflare Workers Static Assets.

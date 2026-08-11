@@ -1,16 +1,19 @@
-import { useRef, useState } from 'preact/hooks';
+import { useEffect, useRef, useState } from 'preact/hooks';
 import { studyGuideSections } from '../../content/study-guide';
 import { cards } from '../../content/cards';
 import { questions } from '../../content/questions';
 import { domains } from '../../content/domains';
 import { learningPath, diagnosisStartSectionIds, type LearningStageTarget } from '../../content/learning-path';
+import { getLearningStageMinutes } from '../../lib/stage-cost';
 import { localize, type UiCopy } from '../../i18n/ui';
+import { daysUntilExam, remainingGuideMinutes } from '../../lib/exam-date';
 import {
   deriveStudyGuideProgress,
   getStudyGuideSectionStatus,
 } from '../../lib/study-guide-progress';
 import type { StudyGuideProgress } from '../../lib/storage';
 import { SourceLinks } from '../app/SourceLinks';
+import { CopyLinkButton } from '../app/CopyLinkButton';
 import type { Locale } from '../../i18n/locales';
 
 // View-bound stage targets (in-page anchors are handled locally, never delegated).
@@ -21,11 +24,14 @@ type Props = {
   copy: UiCopy;
   records: Record<string, StudyGuideProgress>;
   hasMockExamAttempts: boolean;
+  examDate: string | null;
   onProgressAction: (sectionId: string, revision: number, action: 'start' | 'complete' | 'reconfirm') => boolean;
   onOpenCard: (cardId: string) => void;
   onOpenQuestion: (questionId: string) => void;
   onOpenStage: (target: LearningStageViewTarget) => void;
   onOpenOfficialScenarios: () => void;
+  targetSectionId: string | null;
+  onTargetSectionOpened: () => void;
 };
 
 const diagnosisStarts = diagnosisStartSectionIds;
@@ -40,13 +46,31 @@ function focusElement(el: HTMLElement | null) {
   el.focus({ preventScroll: true });
 }
 
-export function GuideView({ locale, copy, records, hasMockExamAttempts, onProgressAction, onOpenCard, onOpenQuestion, onOpenStage, onOpenOfficialScenarios }: Props) {
+export function GuideView({ locale, copy, records, hasMockExamAttempts, examDate, onProgressAction, onOpenCard, onOpenQuestion, onOpenStage, onOpenOfficialScenarios, targetSectionId, onTargetSectionOpened }: Props) {
   const [diagnosis, setDiagnosis] = useState('');
   const [recommendation, setRecommendation] = useState<string | null>(null);
   const resultRef = useRef<HTMLDivElement>(null);
   const diagnosisHeadingRef = useRef<HTMLHeadingElement>(null);
   const sectionsHeadingRef = useRef<HTMLHeadingElement>(null);
   const summary = deriveStudyGuideProgress(studyGuideSections, records);
+
+  // A plan line stating only facts: minutes of Study Guide material left, and
+  // (if a planned exam date exists and hasn't passed) days remaining. Never a
+  // pace, a verdict, or a readiness judgement.
+  const remainingMinutes = remainingGuideMinutes(
+    studyGuideSections,
+    (id, revision) => getStudyGuideSectionStatus(records[id], revision) === 'completed',
+  );
+  const nextSection = [...studyGuideSections]
+    .sort((a, b) => a.recommendedOrder - b.recommendedOrder)
+    .find((section) => getStudyGuideSectionStatus(records[section.id], section.revision) !== 'completed');
+  const days = daysUntilExam(examDate, new Date());
+  const nextSectionTitle = nextSection ? localize(nextSection.title, locale) : null;
+  const planLine = days !== null && days >= 0
+    ? copy.guide.planWithDate(days, remainingMinutes, nextSectionTitle)
+    : remainingMinutes > 0
+      ? copy.guide.planWithoutDate(remainingMinutes, nextSectionTitle)
+      : null;
 
   const recommend = (event: Event) => {
     event.preventDefault();
@@ -67,6 +91,15 @@ export function GuideView({ locale, copy, records, hasMockExamAttempts, onProgre
     const summaryEl = details.querySelector('summary');
     if (summaryEl instanceof HTMLElement) summaryEl.focus({ preventScroll: true });
   };
+
+  // Deep-link entry: open the requested section the same way the diagnosis
+  // result and Practice/Quiz cross-links do. An unknown id is a no-op inside
+  // openSection, so a stale or hand-edited link never throws.
+  useEffect(() => {
+    if (!targetSectionId) return;
+    openSection(targetSectionId);
+    onTargetSectionOpened();
+  }, [targetSectionId]);
 
   // Learning-path CTA dispatch. In-page anchors move focus to the matching
   // heading here; every other target is delegated to App navigation.
@@ -90,6 +123,7 @@ export function GuideView({ locale, copy, records, hasMockExamAttempts, onProgre
       <section class="guide-path panel" aria-labelledby="guide-path-title">
         <h3 id="guide-path-title" class="section-title">{copy.guide.pathTitle}</h3>
         <p class="guide-path-note">{copy.guide.pathNote}</p>
+        <p class="guide-path-note">{copy.guide.stageMinutesNote}</p>
 
         <div class="guide-diagnosis panel panel--sm panel--accent" aria-labelledby="guide-diagnosis-title">
           <h4 id="guide-diagnosis-title" class="card-title" tabIndex={-1} ref={diagnosisHeadingRef}>{copy.guide.diagnosisLegend}</h4>
@@ -115,8 +149,13 @@ export function GuideView({ locale, copy, records, hasMockExamAttempts, onProgre
           // exists (there is nothing to analyze yet), so its CTA states that
           // precondition rather than promising an analysis screen it cannot open.
           const cta = stage.id === 'analysis' && !hasMockExamAttempts ? copy.guide.analysisCtaNoAttempt : text.cta;
+          // Minutes appear only for stages whose content declares a duration, so
+          // an open-ended stage is silent rather than claiming a total of zero.
+          const minutes = getLearningStageMinutes(stage.id);
           return <li key={stage.id}>
-            <div class="guide-path-copy"><strong>{text.title}</strong><span>{text.description}</span></div>
+            <div class="guide-path-copy"><strong>{text.title}</strong><span class="guide-path-description">{text.description}</span>
+              {minutes !== null && <span class="badge badge--outline guide-path-minutes">{copy.guide.stageMinutes(minutes)}</span>}
+            </div>
             <button type="button" class="btn--text" onClick={() => openStage(stage.target)}>{cta} <span aria-hidden="true">→</span></button>
           </li>;
         })}</ol>
@@ -128,6 +167,7 @@ export function GuideView({ locale, copy, records, hasMockExamAttempts, onProgre
 
       <section class="guide-sections panel" id="guide-sections" aria-labelledby="guide-sections-title">
         <div class="progress-heading"><div><p class="eyebrow">{copy.guide.sectionsEyebrow}</p><h3 id="guide-sections-title" class="section-title" tabIndex={-1} ref={sectionsHeadingRef}>{copy.guide.progress(summary.completed, summary.totalSections)}</h3></div><progress value={summary.completionRate} max="1">{Math.round(summary.completionRate * 100)}%</progress></div>
+        {planLine && <p class="note note--info guide-plan-line">{planLine}</p>}
         {studyGuideSections.map((section) => {
           const record = records[section.id];
           const status = getStudyGuideSectionStatus(record, section.revision);
@@ -135,6 +175,7 @@ export function GuideView({ locale, copy, records, hasMockExamAttempts, onProgre
           return <details class="guide-section" id={`guide-section-${section.id}`} key={section.id}>
             <summary><span><code>{section.recommendedOrder}</code> {title}</span><span class={`status status-${status}`}>{copy.guide.status[status]}</span></summary>
             <div class="guide-section-body">
+              <p><CopyLinkButton link={{ view: 'guide', sectionId: section.id }} copy={copy} label={title} class="guide-section-copy-link"/></p>
               <p>{localize(section.summary, locale)}</p>
               {status === 'stale' && record && <p class="note note--warn guide-state-note">{copy.guide.staleNote(copy.guide.status[record.status])}</p>}
               {status === 'future' && record && <p class="note note--warn guide-state-note">{copy.guide.futureNote(copy.guide.status[record.status])}</p>}

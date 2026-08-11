@@ -14,6 +14,7 @@ import {
   type MockExamResult,
   type MockExamSession,
 } from '../../lib/mock-exam';
+import { countAnsweredExamQuestions } from '../../lib/mock-exam-overlap';
 import { applyMockExamCreate, applyMockExamDiscard, applyMockExamSessionChange, finalizeMockExam, type MockExamFinalizeOutcome } from '../../lib/mock-exam-controller';
 import type { StudyData } from '../../lib/storage';
 import { useSecondTick } from '../../lib/use-mock-exam';
@@ -42,6 +43,10 @@ export type MockExamViewProps = MockExamStorageBridge & {
   session: MockExamSession | null;
   attempts: readonly MockExamAttempt[];
   storageAvailable: boolean;
+  // Quiz answer history, keyed by question id. Only its key set is read here —
+  // to state how many of the exam's questions the learner has already met in the
+  // Quiz — so the value type stays opaque and the exam keeps no quiz dependency.
+  quizStats: Readonly<Record<string, unknown>>;
   // Which screen to show first when the view mounts. Today/Progress/learning-path
   // "open analysis" CTAs pass 'analysis' to land directly on the learning
   // analysis; the default is the start screen. Mount-time session reconciliation
@@ -65,9 +70,10 @@ function createExamId(): string {
 // through the bridge, calls the pure engine/controller, and writes back. It holds
 // only the screen phase and the graded result being shown. All completion funnels
 // through `finalize`, guarded so submit and auto-expiry never double-grade.
-export function MockExamView({ locale, copy, session, attempts, storageAvailable, initialPhase = 'landing', readData, writeData, onOpenPractice }: MockExamViewProps) {
+export function MockExamView({ locale, copy, session, attempts, storageAvailable, quizStats, initialPhase = 'landing', readData, writeData, onOpenPractice }: MockExamViewProps) {
   const questionById = useMemo(() => new Map(questions.map((question) => [question.id, question])), []);
   const choiceIds = useMemo(() => new Map(questions.map((question) => [question.id, question.choices.map((choice) => choice.id)])), []);
+  const answeredCount = useMemo(() => countAnsweredExamQuestions(questions, quizStats), [quizStats]);
   // The learning analysis is only meaningful with at least one saved attempt; an
   // 'analysis' intent with no history falls back to the start screen.
   const [phase, setPhase] = useState<Phase>(initialPhase === 'analysis' && attempts.length > 0 ? 'analysis' : 'landing');
@@ -240,6 +246,8 @@ export function MockExamView({ locale, copy, session, attempts, storageAvailable
         hasActiveSession={!!session}
         hasHistory={attempts.length > 0}
         createError={createError}
+        answeredCount={answeredCount}
+        answeredTotal={questions.length}
         copy={copy}
         onStart={beginExam}
         onResume={handleResume}

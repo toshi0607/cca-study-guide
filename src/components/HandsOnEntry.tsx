@@ -16,7 +16,7 @@ export function HandsOnEntry(props: {
   onReconfirm: (guideId: string, revision: number) => boolean;
   onOpenCard: (cardId: string) => void;
   onOpenQuestion: (questionId: string) => void;
-  targetGuideId: string | null;
+  target: { guideId: string; stepId?: string } | null;
   onTargetOpened: () => void;
 }) {
   const [HandsOn, setHandsOn] = useState<HandsOnComponent | null>(null);

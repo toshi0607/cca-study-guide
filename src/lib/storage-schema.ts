@@ -16,7 +16,33 @@ export { isParsableDate, isRecord } from './storage-primitives';
 // and completed-attempt history. Only the current version crosses the storage
 // boundary into the app — older versions are migrated here and never leak into
 // the UI.
-export type QuizStat = { attempts: number; correct: number; lastAnsweredAt: string; lastCorrect: boolean };
+// Self-reported certainty attached to an answer. Optional at every level: the
+// learner may skip it, and every release before this field existed wrote answers
+// without it.
+export type QuizConfidence = 'sure' | 'unsure' | 'guess';
+
+// `attempts`/`correct`/`lastAnsweredAt`/`lastCorrect` are the original v1 shape.
+//
+// The three optional fields are backward-compatible additions (no version bump,
+// no migration), each recording something the plain right/wrong tally could not
+// distinguish:
+//   * `partial` — answers that picked a non-empty subset of the correct choices
+//     and nothing incorrect. Set equality alone filed "one of two correct choices
+//     selected" and "two wrong choices selected" as the same non-correct answer.
+//   * `lastConfidence` / `guessedCorrect` — a correct answer the learner was sure
+//     of and one they guessed counted identically, so a topic understood and a
+//     topic gotten lucky on looked the same in the record.
+// None of these is a score or a readiness signal; they are the learner's own
+// report and the shape of their selection, kept so review can be aimed better.
+export type QuizStat = {
+  attempts: number;
+  correct: number;
+  lastAnsweredAt: string;
+  lastCorrect: boolean;
+  partial?: number;
+  lastConfidence?: QuizConfidence;
+  guessedCorrect?: number;
+};
 
 export type StudyDataV1 = {
   version: 1;
@@ -81,11 +107,26 @@ export function createEmptyStudyData(): StudyData {
 }
 
 const ratings = new Set(['again', 'hard', 'good']);
+const confidences = new Set<string>(['sure', 'unsure', 'guess']);
+
+// Optional counters are bounded by `attempts` rather than by a tighter derived
+// invariant (`partial <= attempts - correct`, `guessedCorrect <= correct`). Those
+// tighter rules hold for anything this app writes, but a v3 document failing one
+// entry rejects the WHOLE document and the caller then refuses to overwrite it —
+// so a stricter check trades a real risk of stranding a learner's history for no
+// protection this loose one does not already give.
+function isOptionalCount(value: unknown, attempts: number): boolean {
+  if (value === undefined) return true;
+  return Number.isInteger(value) && Number(value) >= 0 && Number(value) <= attempts;
+}
 
 function isQuizStat(value: unknown): value is QuizStat {
   if (!isRecord(value)) return false;
-  return Number.isInteger(value.attempts) && Number(value.attempts) >= 1
-    && Number.isInteger(value.correct) && Number(value.correct) >= 0 && Number(value.correct) <= Number(value.attempts)
+  if (!Number.isInteger(value.attempts) || Number(value.attempts) < 1) return false;
+  const attempts = Number(value.attempts);
+  if (!isOptionalCount(value.partial, attempts) || !isOptionalCount(value.guessedCorrect, attempts)) return false;
+  if (value.lastConfidence !== undefined && !(typeof value.lastConfidence === 'string' && confidences.has(value.lastConfidence))) return false;
+  return Number.isInteger(value.correct) && Number(value.correct) >= 0 && Number(value.correct) <= attempts
     && isParsableDate(value.lastAnsweredAt)
     && typeof value.lastCorrect === 'boolean';
 }

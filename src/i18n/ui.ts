@@ -33,14 +33,28 @@ export type UiCopy = {
     ratingHard: string;
     ratingGood: string;
     exported: string;
-    importConfirm: (count: number, exportedAt: string | null) => string;
     importInvalid: string;
     importTooLarge: (limitMb: number) => string;
     importDone: string;
+    importChoiceTitle: string;
+    importChoiceSummary: (reviewedTotal: number, exportedAt: string | null) => string;
+    importChoiceMergeNote: string;
+    importChoiceReplaceNote: string;
+    importChoiceMerge: string;
+    importChoiceReplace: string;
+    importChoiceCancel: string;
+    importMerged: string;
+    importCancelled: string;
+    importSaveFailed: string;
     resetConfirm: string;
     resetFailed: string;
     resetDone: string;
+    resetDonePartial: string;
     dataUnreadable: string;
+    summaryCopied: string;
+    summaryCopyFailed: string;
+    examDateCleared: string;
+    examDateSaveFailed: string;
   };
   today: {
     eyebrow: string;
@@ -50,6 +64,8 @@ export type UiCopy = {
     dueTitle: string;
     dueCount: (count: number) => string;
     startReview: string;
+    examDaysLeft: (days: number) => string;
+    examDatePassed: (days: number) => string;
   };
   blueprint: {
     eyebrow: string;
@@ -115,6 +131,16 @@ export type UiCopy = {
     // Analysis-stage CTA shown when no attempt exists yet: names the precondition
     // instead of promising an analysis screen the learner cannot reach.
     analysisCtaNoAttempt: string;
+    // Time cost of a stage, in minutes, summed from the content that stage opens.
+    // A plain fact about how much material a stage contains — never a judgement
+    // about pace, readiness, or outcome.
+    stageMinutes: (count: number) => string;
+    stageMinutesNote: string;
+    // Facts only, derived from the learner's optional planned exam date and
+    // remaining Study Guide material: days left / minutes left / next section in
+    // the recommended order. Never a pace, a verdict, or a readiness judgement.
+    planWithDate: (days: number, minutes: number, nextTitle: string | null) => string;
+    planWithoutDate: (minutes: number, nextTitle: string | null) => string;
     // Display text only. Stage identity, order, and target live in the
     // locale-independent typed data (`src/content/learning-path.ts`); this map is
     // keyed by that data's stage id so ja/en can never disagree on structure.
@@ -313,7 +339,16 @@ export type UiCopy = {
     choicesLegend: string;
     submitAnswer: string;
     resultCorrect: string;
+    resultPartial: string;
     resultIncorrect: string;
+    // Self-reported certainty prompt shown right after the verdict, before the
+    // rationale review. Optional and not a grade — see storage-schema.ts.
+    confidenceLegend: string;
+    confidence: Record<'sure' | 'unsure' | 'guess', string>;
+    confidenceRecorded: (label: string) => string;
+    // Shown instead of confidenceRecorded when another tab overwrote this stat
+    // with a newer answer before the confidence pick was saved.
+    confidenceStale: string;
     correctAnswerLabel: string;
     correctBadge: string;
     selectedBadge: string;
@@ -371,6 +406,11 @@ export type UiCopy = {
       quizAnswered: (count: number) => string;
       quizAttempts: (count: number) => string;
       quizCorrect: (count: number) => string;
+      // Buckets that only exist once the optional QuizStat fields have been
+      // written. Counts of recorded answers — never a grade or a readiness call.
+      quizClose: (count: number) => string;
+      quizNotUnderstood: (count: number) => string;
+      quizGuessedRight: (count: number) => string;
       openQuiz: string;
       mockExamTitle: string;
       mockExamCompleted: (count: number) => string;
@@ -382,10 +422,16 @@ export type UiCopy = {
       openMockExam: string;
       openMockExamAnalysis: string;
     };
+    examDateTitle: string;
+    examDateDescription: string;
+    examDateLabel: string;
+    examDateClear: string;
     localData: string;
     localDataDescription: string;
+    copySummaryDescription: string;
     analyticsDisclosure: string;
     details: string;
+    copySummary: string;
     exportJson: string;
     dataUnreadableActions: string;
     importJson: string;
@@ -412,6 +458,7 @@ export type UiCopy = {
     specQuestions: (count: number) => string;
     specDuration: (minutes: number) => string;
     specDomainBased: string;
+    answeredInQuiz: (answered: number, total: number) => string;
     disclaimerNot4of6: string;
     disclaimerRawOnly: string;
     disclaimerNoScaled: string;
@@ -600,6 +647,7 @@ export type UiCopy = {
     analytics: string;
     github: string;
   };
+  deepLink: { copy: string; copied: string; copyFailed: string };
 };
 
 export const localize = <T>(text: LocalizedText<T>, locale: Locale): T => text[locale];
@@ -629,14 +677,28 @@ export const ui = {
       ratingHard: '明日もう一度確認します。',
       ratingGood: 'できた：次の復習日を更新しました。',
       exported: '進捗をJSONで書き出しました。',
-      importConfirm: (count, exportedAt) => `${exportedAt ? `${exportedAt}に書き出した進捗` : '読み込んだ進捗'}（復習済みカード${count}枚）で、この端末の現在の進捗を上書きします。よろしいですか？`,
       importInvalid: '進捗データとして読み込めませんでした。このアプリで書き出したJSONファイルを選択してください。',
       importTooLarge: (limitMb) => `選択したファイルは大きすぎるため読み込めませんでした（上限${limitMb}MB）。このアプリで書き出したJSONファイルを選択してください。`,
       importDone: 'JSONから進捗を読み込みました。',
+      importChoiceTitle: '読み込んだデータの扱いを選んでください',
+      importChoiceSummary: (reviewedTotal, exportedAt) => `復習記録${reviewedTotal}件を含むファイルです。${exportedAt ? `書き出し日: ${exportedAt}。` : ''}`,
+      importChoiceMergeNote: '統合: この端末の記録を残したまま合流します。カードは新しい方の評価、演習は回数の多い方、模試は両方の履歴を残します。同じファイルを2回読み込んでも件数は増えません。',
+      importChoiceReplaceNote: '置き換える: この端末の記録をすべて破棄し、ファイルの内容に入れ替えます。元に戻せません。',
+      importChoiceMerge: '統合する',
+      importChoiceReplace: '置き換える',
+      importChoiceCancel: 'キャンセル',
+      importMerged: '読み込んだデータをこの端末の記録に統合しました。',
+      importCancelled: '読み込みをキャンセルしました。記録は変更していません。',
+      importSaveFailed: '保存できませんでした。読み込んだ内容はまだ保持しています。もう一度お試しいただくか、キャンセルしてください。',
       resetConfirm: 'この端末の学習進捗をすべて削除します。元に戻せません。',
       resetFailed: '進捗を削除できませんでした。ブラウザのサイトデータ設定を確認してください。',
       resetDone: 'この端末の進捗を削除しました。',
+      resetDonePartial: '学習進捗を削除しました。受験予定日は削除できませんでした。',
       dataUnreadable: 'この端末の保存データを読み込めませんでした。新しい変更は保存できません。データはこの端末に残っている場合があるため、復元できる可能性があります。リセットは行わないでください。',
+      summaryCopied: '学習状況の要約をクリップボードへコピーしました。',
+      summaryCopyFailed: 'クリップボードへコピーできませんでした。JSONエクスポートをお使いください。',
+      examDateCleared: '受験予定日を消しました。',
+      examDateSaveFailed: '受験予定日を保存できませんでした。',
     },
     today: {
       eyebrow: 'TODAY',
@@ -646,6 +708,8 @@ export const ui = {
       dueTitle: '今日の復習',
       dueCount: () => '枚のカード',
       startReview: '復習を始める',
+      examDaysLeft: (days) => days === 0 ? '受験予定日は本日です。' : `受験予定日まで残り${days}日です。`,
+      examDatePassed: (days) => `受験予定日から${days}日が経過しています。`,
     },
     blueprint: {
       eyebrow: 'EXAM BLUEPRINT',
@@ -701,6 +765,10 @@ export const ui = {
       pathTitle: '推奨学習サイクル',
       pathNote: 'これはこのサービス独自の学習上の提案で、公式の推奨順序ではありません。合格や準備完了を示すものではなく、すべての段階が今すぐ利用できます。自分のペースで繰り返してください。',
       analysisCtaNoAttempt: '模試を受けて分析を利用する',
+      stageMinutes: (count) => `教材の目安 約${count}分`,
+      stageMinutesNote: '所要時間は、各段階のコンテンツに記載された目安の合計です（模試だけは試験時間そのもの）。所要時間が定まらない段階には表示しません。',
+      planWithDate: (days, minutes, nextTitle) => `受験予定日まで残り${days}日。学習ガイドの未消化はあと約${minutes}分です。${nextTitle ? `推奨順で次は「${nextTitle}」です。` : '推奨順のセクションはすべて完了しています。'}`,
+      planWithoutDate: (minutes, nextTitle) => `学習ガイドの未消化はあと約${minutes}分です。${nextTitle ? `推奨順で次は「${nextTitle}」です。` : ''}`,
       stages: {
         start: { title: '学習開始地点を選ぶ', description: 'まず下の「学習開始地点を選ぶ」で、最初に確認したいテーマを決めます。', cta: '開始地点を選ぶ' },
         guide: { title: 'Study Guideで基礎を確認する', description: '5領域・30タスクの独自要約で、対象範囲の全体像と要点を押さえます。', cta: 'Study Guideを開く' },
@@ -899,7 +967,12 @@ export const ui = {
       choicesLegend: '選択肢',
       submitAnswer: '回答する',
       resultCorrect: '正解！',
+      resultPartial: '一部正解',
       resultIncorrect: '不正解',
+      confidenceLegend: 'この回答の確信度を記録できます（任意・スキップ可）。後で「勘で当たった問題」を見分けるために使います。',
+      confidence: { sure: '確信あり', unsure: '迷った', guess: '勘' },
+      confidenceRecorded: (label) => `確信度「${label}」を記録しました。`,
+      confidenceStale: 'この回答は別のタブで更新されていたため、確信度は記録しませんでした。',
       correctAnswerLabel: '正解：',
       correctBadge: '正解',
       selectedBadge: '選択',
@@ -954,6 +1027,9 @@ export const ui = {
         quizAnswered: (count) => `回答した問題 ${count}`,
         quizAttempts: (count) => `回答回数 ${count}`,
         quizCorrect: (count) => `正解回数 ${count}`,
+        quizClose: (count) => `部分正答どまりの問題 ${count}`,
+        quizNotUnderstood: (count) => `まだ正解も部分正答もない問題 ${count}`,
+        quizGuessedRight: (count) => `「勘」と申告して正解した回数 ${count}`,
         openQuiz: 'Quizを開く',
         mockExamTitle: '模試',
         mockExamCompleted: (count) => `完了した模試 ${count}`,
@@ -965,10 +1041,16 @@ export const ui = {
         openMockExam: '模試を開く',
         openMockExamAnalysis: '学習分析を開く',
       },
+      examDateTitle: '受験予定日（任意）',
+      examDateDescription: '受験予定日を入れると、残り日数と学習ガイドの未消化分数を表示します。この端末にのみ保存され、外部には送信されません。JSONエクスポートにも含まれません。合否や準備状況の判断は行いません。',
+      examDateLabel: '受験予定日',
+      examDateClear: '受験予定日を消す',
       localData: 'ローカルデータ',
       localDataDescription: '端末間の同期はありません。ブラウザデータを消す前にJSONを書き出してください。',
+      copySummaryDescription: '弱点カード・低正答率の問題・復習期限の件数を、短いテキストにまとめてクリップボードへコピーします。外部には送信しません。貼り付け先はご自身で選んでください。',
       analyticsDisclosure: 'Google Analyticsで基本的なページ閲覧情報を収集します。学習カード、検索語、評価、進捗データは独自イベントとして送信しません。',
       details: '詳細を見る',
+      copySummary: '学習状況を要約してコピー',
       exportJson: '進捗をJSONで書き出す',
       dataUnreadableActions: '保存データを読み込めないため、書き出しと削除を一時的に無効にしています。データはこの端末に残っている可能性があります。',
       importJson: '進捗をJSONから読み込む',
@@ -993,6 +1075,7 @@ export const ui = {
       specQuestions: (count) => `${count}問`,
       specDuration: (minutes) => `${minutes}分`,
       specDomainBased: '公式のドメイン配分（16 / 11 / 12 / 12 / 9）を再現した出題です。',
+      answeredInQuiz: (answered, total) => `この模試に含まれる${total}問のうち${answered}問は、すでにQuizで回答済みです。初見での確認を重視する場合は、この事実を踏まえて受験時期を選んでください。`,
       disclaimerNot4of6: '公式試験の「6つの応用文脈から4つ」という構成は再現していません。',
       disclaimerRawOnly: '当アプリ独自問題の正答数（単純正答率）のみを表示します。',
       disclaimerNoScaled: '公式のscaled scoreや合否は算出・判定しません。',
@@ -1177,6 +1260,7 @@ export const ui = {
       },
     },
     footer: { analytics: 'アクセス解析について', github: 'GitHub' },
+    deepLink: { copy: 'リンクをコピー', copied: 'リンクをコピーしました', copyFailed: 'リンクをコピーできませんでした' },
   },
   en: {
     brand: {
@@ -1202,14 +1286,28 @@ export const ui = {
       ratingHard: 'This card will appear again tomorrow.',
       ratingGood: 'Got it: the next review date has been updated.',
       exported: 'Your progress was exported as JSON.',
-      importConfirm: (count, exportedAt) => `Overwrite the progress on this device with ${exportedAt ? `the progress exported on ${exportedAt}` : 'the imported progress'} (${count} reviewed ${count === 1 ? 'card' : 'cards'})?`,
       importInvalid: 'The file could not be read as progress data. Choose a JSON file exported from this app.',
       importTooLarge: (limitMb) => `The selected file is too large to import (limit: ${limitMb}MB). Choose a JSON file exported from this app.`,
       importDone: 'Progress was imported from JSON.',
+      importChoiceTitle: 'Choose what to do with the imported data',
+      importChoiceSummary: (reviewedTotal, exportedAt) => `This file contains ${reviewedTotal} review record(s).${exportedAt ? ` Exported on ${exportedAt}.` : ''}`,
+      importChoiceMergeNote: 'Merge: keeps this device’s records and combines the two. Cards take the more recent rating, quiz questions the higher counts, and both mock-exam histories are kept. Importing the same file twice does not inflate any count.',
+      importChoiceReplaceNote: 'Replace: discards every record on this device and swaps in the file’s contents. This cannot be undone.',
+      importChoiceMerge: 'Merge',
+      importChoiceReplace: 'Replace',
+      importChoiceCancel: 'Cancel',
+      importMerged: 'Merged the imported data into this device’s records.',
+      importCancelled: 'Import cancelled. Nothing was changed.',
+      importSaveFailed: 'Could not save. The imported data is still held — try again, or cancel.',
       resetConfirm: 'Delete all study progress on this device? This cannot be undone.',
       resetFailed: 'Your progress could not be deleted. Check this browser’s site-data settings.',
       resetDone: 'Progress on this device was deleted.',
+      resetDonePartial: 'Deleted your study progress. The planned exam date could not be deleted.',
       dataUnreadable: 'The study data saved on this device could not be read. New changes cannot be saved. Your data may still be on this device and could be recoverable, so avoid resetting it.',
+      summaryCopied: 'Study summary copied to the clipboard.',
+      summaryCopyFailed: 'Could not copy to the clipboard. Use the JSON export instead.',
+      examDateCleared: 'Cleared your planned exam date.',
+      examDateSaveFailed: 'Could not save your planned exam date.',
     },
     today: {
       eyebrow: 'TODAY',
@@ -1219,6 +1317,8 @@ export const ui = {
       dueTitle: 'Due today',
       dueCount: (count) => `${count === 1 ? 'card' : 'cards'} due`,
       startReview: 'Start review',
+      examDaysLeft: (days) => days === 0 ? 'Your planned exam date is today.' : `${days} day(s) until your planned exam date.`,
+      examDatePassed: (days) => `Your planned exam date was ${days} day(s) ago.`,
     },
     blueprint: {
       eyebrow: 'EXAM BLUEPRINT',
@@ -1274,6 +1374,10 @@ export const ui = {
       pathTitle: 'Recommended study cycle',
       pathNote: 'This is this service’s own study guidance, not an official recommended order. It does not indicate passing or readiness, and every stage is available right now. Repeat the cycle at your own pace.',
       analysisCtaNoAttempt: 'Take a mock exam to use learning analysis',
+      stageMinutes: (count) => `About ${count} min of material`,
+      stageMinutesNote: 'Durations are the sum of the estimates stated in each stage’s content — except the mock exam, which is the exam’s own time limit. Stages with no fixed duration show none.',
+      planWithDate: (days, minutes, nextTitle) => `${days} day(s) until your planned exam date. About ${minutes} minutes of Study Guide material remain.${nextTitle ? ` Next in the recommended order: “${nextTitle}.”` : ' Every section in the recommended order is complete.'}`,
+      planWithoutDate: (minutes, nextTitle) => `About ${minutes} minutes of Study Guide material remain.${nextTitle ? ` Next in the recommended order: “${nextTitle}.”` : ''}`,
       stages: {
         start: { title: 'Choose where to start', description: 'Start by picking the theme you want to review first in “Choose where to start” below.', cta: 'Choose a starting point' },
         guide: { title: 'Confirm the fundamentals in the Study Guide', description: 'Use the independent summaries of 5 domains and 30 tasks to grasp the scope and key points.', cta: 'Open the Study Guide' },
@@ -1472,7 +1576,12 @@ export const ui = {
       choicesLegend: 'Options',
       submitAnswer: 'Submit answer',
       resultCorrect: 'Correct!',
+      resultPartial: 'Partially correct',
       resultIncorrect: 'Incorrect',
+      confidenceLegend: 'You can record how sure you were (optional — you may skip it). It is used later to tell apart answers you guessed.',
+      confidence: { sure: 'Sure', unsure: 'Unsure', guess: 'Guessed' },
+      confidenceRecorded: (label) => `Recorded your confidence: ${label}.`,
+      confidenceStale: 'This answer had already been replaced in another tab, so the confidence was not recorded.',
       correctAnswerLabel: 'Correct answer:',
       correctBadge: 'Correct',
       selectedBadge: 'Your pick',
@@ -1527,6 +1636,9 @@ export const ui = {
         quizAnswered: (count) => `Questions answered ${count}`,
         quizAttempts: (count) => `Answer attempts ${count}`,
         quizCorrect: (count) => `Correct attempts ${count}`,
+        quizClose: (count) => `Questions only ever partially correct ${count}`,
+        quizNotUnderstood: (count) => `Questions never correct or partial ${count}`,
+        quizGuessedRight: (count) => `Correct answers you marked as a guess ${count}`,
         openQuiz: 'Open the Quiz',
         mockExamTitle: 'Mock exam',
         mockExamCompleted: (count) => `Completed exams ${count}`,
@@ -1538,10 +1650,16 @@ export const ui = {
         openMockExam: 'Open the Mock Exam',
         openMockExamAnalysis: 'Open Learning analysis',
       },
+      examDateTitle: 'Planned exam date (optional)',
+      examDateDescription: 'Set a planned exam date to see how many days remain and how many minutes of Study Guide material are left. It is stored on this device only, never sent anywhere, and is not included in the JSON export. It is not used to judge readiness or outcome.',
+      examDateLabel: 'Planned exam date',
+      examDateClear: 'Clear the exam date',
       localData: 'Local data',
       localDataDescription: 'Progress does not sync across devices. Export the JSON before clearing browser data.',
+      copySummaryDescription: 'Copies a short text digest — weak cards, low-accuracy questions, and how many reviews are due — to your clipboard. Nothing is sent anywhere; you choose where to paste it.',
       analyticsDisclosure: 'Google Analytics collects basic page-view information. Study cards, search terms, ratings, and progress are not sent as custom events.',
       details: 'View details',
+      copySummary: 'Copy study summary',
       exportJson: 'Export progress as JSON',
       dataUnreadableActions: 'Export and delete are disabled while saved data cannot be read. Your data may still be on this device.',
       importJson: 'Import progress from JSON',
@@ -1566,6 +1684,7 @@ export const ui = {
       specQuestions: (count) => `${count} questions`,
       specDuration: (minutes) => `${minutes} minutes`,
       specDomainBased: 'Questions follow the official domain distribution (16 / 11 / 12 / 12 / 9).',
+      answeredInQuiz: (answered, total) => `${answered} of the ${total} questions in this mock exam have already been answered in the Quiz. Take that into account when choosing when to sit it.`,
       disclaimerNot4of6: 'It does not reproduce the official "four of six applied contexts" structure.',
       disclaimerRawOnly: 'It shows only the raw number correct (raw accuracy) on this app’s own questions.',
       disclaimerNoScaled: 'It does not compute an official scaled score or a pass/fail verdict.',
@@ -1750,5 +1869,6 @@ export const ui = {
       },
     },
     footer: { analytics: 'Analytics information', github: 'GitHub' },
+    deepLink: { copy: 'Copy link', copied: 'Link copied', copyFailed: 'Could not copy the link' },
   },
 } satisfies Record<Locale, UiCopy>;

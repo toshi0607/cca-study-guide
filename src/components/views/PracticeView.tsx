@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import { dateLocale } from '../app/format';
 import { CardAnswer } from '../practice/CardAnswer';
 import { PracticeSession } from '../practice/PracticeSession';
+import { CopyLinkButton } from '../app/CopyLinkButton';
 import { cards } from '../../content/cards';
 import { domains } from '../../content/domains';
 import type { Locale } from '../../i18n/locales';
@@ -87,7 +88,7 @@ export function PracticeView({
         const isOpen = Boolean(revealed[card.id]);
         const review = reviews[card.id];
         return <article class="practice-card" key={card.id}>
-          <header><div><span class="badge badge--ink">D{domain.number}</span><span>{copy.practice.kinds[card.kind]}</span></div><code>{String(index + 1).padStart(2, '0')} / {String(filteredCards.length).padStart(2, '0')}</code></header>
+          <header><div><span class="badge badge--ink">D{domain.number}</span><span>{copy.practice.kinds[card.kind]}</span></div><code>{String(index + 1).padStart(2, '0')} / {String(filteredCards.length).padStart(2, '0')}</code><CopyLinkButton link={{ view: 'practice', cardId: card.id }} copy={copy} label={card.id} class="practice-copy-link"/></header>
           <div class="card-prompt"><p class="eyebrow">{copy.practice.question}</p><h3>{localize(card.prompt, locale)}</h3></div>
           <button class="btn btn--wide reveal-button" aria-expanded={isOpen} aria-controls={answerId} onClick={() => onToggleRevealed(card.id)}>{isOpen ? copy.practice.hideAnswer : copy.practice.revealAnswer} <span aria-hidden="true">{isOpen ? '−' : '+'}</span></button>
           {isOpen && <CardAnswer card={card} review={review} locale={locale} copy={copy} id={answerId} onRate={(rating) => onRateInList(card.id, rating)}/>}

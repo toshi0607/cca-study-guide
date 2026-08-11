@@ -4,10 +4,15 @@ import { MOCK_EXAM_DURATION_SECONDS, MOCK_EXAM_QUESTION_COUNT } from '../../lib/
 // Start screen. Exam size and duration come from the blueprint constants, never
 // re-hardcoded here. When a session is already in flight, resume is the primary
 // action and starting over is a distinct, guarded secondary action.
-export function MockExamLanding({ hasActiveSession, hasHistory, createError, copy, onStart, onResume, onNewExam, onOpenHistory, onOpenAnalysis }: {
+export function MockExamLanding({ hasActiveSession, hasHistory, createError, answeredCount, answeredTotal, copy, onStart, onResume, onNewExam, onOpenHistory, onOpenAnalysis }: {
   hasActiveSession: boolean;
   hasHistory: boolean;
   createError: boolean;
+  answeredCount: number;
+  // Total the count was taken over — the question bank, which equals the exam
+  // size today but is passed explicitly so the sentence stays true if the bank
+  // ever grows past MOCK_EXAM_QUESTION_COUNT.
+  answeredTotal: number;
   copy: UiCopy;
   onStart: () => void;
   onResume: () => void;
@@ -27,6 +32,7 @@ export function MockExamLanding({ hasActiveSession, hasHistory, createError, cop
         <li>{copy.mockExam.specDuration(Math.round(MOCK_EXAM_DURATION_SECONDS / 60))}</li>
         <li>{copy.mockExam.specDomainBased}</li>
       </ul>
+      {answeredCount > 0 && <p class="note note--info mock-exam-answered-note">{copy.mockExam.answeredInQuiz(answeredCount, answeredTotal)}</p>}
       <ul class="mock-exam-disclaimers">
         <li>{copy.mockExam.disclaimerNot4of6}</li>
         <li>{copy.mockExam.disclaimerRawOnly}</li>
