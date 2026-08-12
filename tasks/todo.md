@@ -29,11 +29,11 @@
 - [x] `origin/main` を merge し、PR #72 の受験予定日・要約コピー・import改善を保持しつつ Analytics 撤去を維持
 - [x] `tasks/todo.md` に PR #72、セキュリティ対応、旧動画作業の全履歴を保存
 - [x] 統合後の unit/build/CSP/no-analytics/styles/bundle/Playwright と独立reviewを完了
-- [ ] merge commit を push し、GitHub API で PR の conflict 解消を再確認
+- [x] merge commit を push し、GitHub API で PR の conflict 解消を再確認
 
 Decision: 既存PRへ force-push する rebase ではなく、最新 `main` の merge commit を作る。公開済みブランチ履歴を書き換えず、コンフリクト解決を1つの監査可能なコミットに限定するため。
 
-Review: 統合後は `pnpm test` 625件、`pnpm build`、`pnpm test:csp`、`pnpm test:no-analytics`、`pnpm test:styles`、`pnpm test:bundle`、`pnpm test:e2e` 148件が成功。独立reviewerは履歴復元後にfindingなしと判定した。
+Review: 統合後は `pnpm test` 625件、`pnpm build`、`pnpm test:csp`、`pnpm test:no-analytics`、`pnpm test:styles`、`pnpm test:bundle`、`pnpm test:e2e` 148件が成功。独立reviewerは履歴復元後にfindingなしと判定した。merge commit `c6c647b` push後、GitHub APIは base `5225765`、head `c6c647b`を認識し `mergeable: MERGEABLE`を返した。`mergeStateStatus: BLOCKED`は新しい CI と Vercel の pending による。
 
 ---
 
