@@ -51,10 +51,14 @@ export function cspScriptHashes(vercelJson) {
     ?.flatMap((entry) => entry.headers ?? [])
     .find((h) => h.key.toLowerCase() === 'content-security-policy');
   if (!header) throw new Error('vercel.json is missing a Content-Security-Policy header.');
-  const scriptSrc = header.value
-    .split(';')
-    .map((directive) => directive.trim())
-    .find((directive) => directive.startsWith('script-src'));
+  const overrides = ['script-src-elem', 'script-src-attr'].filter((name) => findCspDirective(header.value, name));
+  if (overrides.length) {
+    throw new Error(
+      `${overrides.join(' and ')} must not be defined. ` +
+        `Remove these directives so script-src remains the single mechanically verified script capability boundary.`,
+    );
+  }
+  const scriptSrc = findCspDirective(header.value, 'script-src');
   if (!scriptSrc) throw new Error('The Content-Security-Policy header is missing a script-src directive.');
   const tokens = scriptSrc.split(/\s+/).slice(1);
   const hashes = new Set();
@@ -71,6 +75,15 @@ export function cspScriptHashes(vercelJson) {
     );
   }
   return hashes;
+}
+
+/** Find one CSP directive by its exact, case-insensitive directive name. */
+export function findCspDirective(policy, name) {
+  const expected = name.toLowerCase();
+  return policy
+    .split(';')
+    .map((directive) => directive.trim())
+    .find((directive) => directive.split(/\s+/, 1)[0]?.toLowerCase() === expected);
 }
 
 export async function checkCspHashes({ dist = 'dist', vercelPath = 'vercel.json' } = {}) {

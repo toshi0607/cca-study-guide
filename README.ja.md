@@ -123,7 +123,7 @@ pnpm --dir video install --frozen-lockfile
 pnpm --dir video exec remotion render promo out/promo.mp4
 # HyperFrames（PATH上に system ffmpeg が必要）
 pnpm --dir video-hf install --frozen-lockfile
-pnpm --dir video-hf render -- --quality high --output out/promo.mp4
+pnpm --dir video-hf render --quality high --output out/promo.mp4
 ```
 
 `out/`の生成物はコミットせず、完成した動画はGitHub Release（[promo-video-v2](https://github.com/toshi0607/cca-study-guide/releases/tag/promo-video-v2)）で配布します。

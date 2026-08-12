@@ -42,7 +42,20 @@ full with no escape-hatch bow-out.
   touch differently on `chrome-headless-shell` vs Remotion's bundled Chromium
   (~0.025 SSIM at the noise floor). Families and weights match the source. HF
   advises local `@font-face` for zero-latency compile; kept the Google Fonts
-  `<link>` to preserve the exact source families (warning, non-blocking).
+  `<link>` to preserve the exact source families (warning, non-blocking). The
+  Google Fonts stylesheet and font files remain render-time network dependencies
+  without SRI because their responses and resolved URLs vary by user agent; use
+  local `@font-face` assets if hermetic, offline rendering becomes a requirement.
+- **GSAP integrity.** The executable CDN dependency is version-pinned and guarded
+  by SHA-384 SRI. Recompute the reviewed response when updating it:
+
+  ```sh
+  curl -s https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js \
+    | openssl dgst -sha384 -binary | openssl base64 -A
+  ```
+
+  Prefix the result with `sha384-` and update both `index.html` and
+  `scripts/check-video-dependencies.test.mjs` together.
 - **Spring→power ease.** `spring()` is the lossiest map; the damping-200 config
   is nearly critically damped, so the `power3.out` approximation is visually
   tight (no overshoot to reproduce).

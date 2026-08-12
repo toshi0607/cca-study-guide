@@ -29,7 +29,8 @@ describe('video-hf dependency boundary', () => {
       const readme = await readFile(path.join(repoRoot, filename), 'utf8');
       expect(readme, `${filename} must not bypass the video lockfile with npx`).not.toMatch(/\bnpx\s+(?:--yes\s+)?hyperframes\b/);
       expect(readme).toContain('pnpm --dir video-hf install --frozen-lockfile');
-      expect(readme).toContain('pnpm --dir video-hf render -- --quality high --output out/promo.mp4');
+      expect(readme).toContain('pnpm --dir video-hf render --quality high --output out/promo.mp4');
+      expect(readme).not.toContain('pnpm --dir video-hf render -- --quality');
     }
   });
 

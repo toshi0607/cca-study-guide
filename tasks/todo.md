@@ -1,3 +1,30 @@
+# PR #73 レビュー指摘対応
+
+2026-08-13 のレビュー指摘2件を、既存のsecurity boundaryを変えずに修正する。
+
+## Plan
+
+- [x] READMEのHyperFrames引数転送を再現する回帰テストを先に失敗させ、裸の`--`を除去する
+- [x] CSP directive選択をexact matchにし、`script-src-elem`/`script-src-attr`を明示拒否するテストを追加する
+- [x] GSAP SRI再計算手順とGoogle Fontsの残余ネットワーク依存を翻訳ノートに記録する
+- [x] focused tests → `pnpm test` → `pnpm build` → `pnpm test:csp` → `pnpm test:no-analytics`を検証する
+- [x] 独立reviewとsource-to-sink再追跡後、Review/decision logを記録する
+
+## Decision log
+
+- verifierのbounded concurrency化は現状の規模で実害がなく、失敗集計とrequest timingを変えるため今回のレビュー修正には含めない。
+- Google Fontsは実行可能コードではなく、HyperFrames compile時の可用性/再現性リスクとして既知化する。セルフホスト化は別タスクとする。
+
+## Review
+
+- 修正前のfocused testは4件失敗し、READMEの裸`--`とCSPのprefix誤認を再現した。修正後はfocused 12件が成功。
+- README記載コマンドへ`--help`を足して実行し、pnpm 10.30.3が`hyperframes render --quality high --output out/promo.mp4 --help`へ展開し、CLIが両flagを受理することを確認した。
+- `script-src`はdirective名のcase-insensitive exact matchで取得し、`script-src-elem`/`script-src-attr`が存在すれば順序に関係なくfail closedする。
+- CDN実レスポンスからGSAP SHA-384を再計算し、`index.html`のSRIと一致することを確認した。Google Fontsは非実行コンテンツの外部依存として既知化した。
+- 検証: `pnpm test` 473件、`pnpm build`、`pnpm test:csp`、`pnpm test:no-analytics`、`git diff --check`が成功。独立reviewerは追加findingなし、push可と判定。
+
+---
+
 # Codex Security 指摘5件の修正
 
 2026-08-09 の標準スキャン（5 low）を、共通原因ごとに3パッチへまとめて修正する。
