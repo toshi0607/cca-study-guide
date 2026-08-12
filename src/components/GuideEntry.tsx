@@ -12,11 +12,14 @@ export function GuideEntry(props: {
   copy: UiCopy;
   records: Record<string, StudyGuideProgress>;
   hasMockExamAttempts: boolean;
+  examDate: string | null;
   onProgressAction: (sectionId: string, revision: number, action: 'start' | 'complete' | 'reconfirm') => boolean;
   onOpenCard: (cardId: string) => void;
   onOpenQuestion: (questionId: string) => void;
   onOpenStage: (target: LearningStageViewTarget) => void;
   onOpenOfficialScenarios: () => void;
+  targetSectionId: string | null;
+  onTargetSectionOpened: () => void;
 }) {
   const [Guide, setGuide] = useState<GuideComponent | null>(null);
   const [error, setError] = useState(false);

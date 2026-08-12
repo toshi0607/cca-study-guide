@@ -1,18 +1,20 @@
 import type { MutableRef } from 'preact/hooks';
+import { useRef, useState } from 'preact/hooks';
 import { formatDate } from '../app/format';
 import { SourceLinks } from '../app/SourceLinks';
 import type { ChoiceQuestion, Scenario } from '../../content/types';
 import type { Locale } from '../../i18n/locales';
 import { localize, type UiCopy } from '../../i18n/ui';
 import type { RationalesState } from '../../lib/rationales-loader';
+import type { QuizConfidence } from '../../lib/storage-schema';
 import { AnswerReview } from './AnswerReview';
 import { QuestionMetadata } from './QuestionMetadata';
 import { ScenarioBackground } from './ScenarioBackground';
-import type { QuizResult } from './types';
+import type { ConfidenceOutcome, QuizResult } from './types';
 
 export function QuizQuestion({
   current, index, total, scenario, locale, copy, selected, answered, currentResult, rationalesState, feedbackRef,
-  onSelectSingle, onToggleMultiple, onSubmitMultiple, onAdvance, onQuit,
+  onSelectSingle, onToggleMultiple, onSubmitMultiple, onAdvance, onQuit, onConfidence,
 }: {
   current: ChoiceQuestion;
   index: number;
@@ -30,7 +32,25 @@ export function QuizQuestion({
   onSubmitMultiple: () => void;
   onAdvance: () => void;
   onQuit: () => void;
+  onConfidence: (confidence: QuizConfidence, wasCorrect: boolean) => ConfidenceOutcome;
 }) {
+  // Which confidence the learner picked for the current answer, if any. Keyed
+  // by the `currentResult` object identity (QuizView pushes a fresh object per
+  // answer) rather than `index`: an exact-target deep link can hashchange this
+  // same mounted instance onto a different question without resetting `index`
+  // to a new value, which would otherwise leave a prior answer's recorded
+  // confidence displayed as pressed for the new question. Derived at render
+  // time rather than reset via a `useEffect`, so there is no frame where a
+  // prior answer's recorded value is still shown for the new one.
+  const [recorded, setRecorded] = useState<{ result: QuizResult; value: QuizConfidence } | null>(null);
+  // Set when a confidence pick came back 'stale' (another tab overwrote this
+  // stat with a newer answer first). Keyed by result identity, same as
+  // `recorded`, so it clears itself once the learner moves to the next answer.
+  const [staleResult, setStaleResult] = useState<QuizResult | null>(null);
+  const confidenceGuardRef = useRef<QuizResult | null>(null);
+  const recordedConfidence = currentResult && recorded?.result === currentResult ? recorded.value : null;
+  const isStale = Boolean(currentResult) && staleResult === currentResult;
+
   const answerText = (question: ChoiceQuestion) =>
     question.choices.filter((choice) => question.correctChoiceIds.includes(choice.id)).map((choice) => localize(choice.text, locale)).join(' / ');
 
@@ -70,8 +90,44 @@ export function QuizQuestion({
         {current.format === 'multiple' && <button class="btn btn--wide quiz-submit" disabled={!selected.length} onClick={onSubmitMultiple}>{copy.quiz.submitAnswer}</button>}
       </>}
       {currentResult && <div class="quiz-feedback" role="status" tabIndex={-1} ref={feedbackRef}>
-        <p class={`quiz-verdict ${currentResult.correct ? 'is-correct' : 'is-incorrect'}`}>{currentResult.correct ? copy.quiz.resultCorrect : copy.quiz.resultIncorrect}</p>
+        <p class={`quiz-verdict ${currentResult.outcome === 'correct' ? 'is-correct' : currentResult.outcome === 'partial' ? 'is-partial' : 'is-incorrect'}`}>{currentResult.outcome === 'correct' ? copy.quiz.resultCorrect : currentResult.outcome === 'partial' ? copy.quiz.resultPartial : copy.quiz.resultIncorrect}</p>
         <p class="quiz-correct-answer"><strong>{copy.quiz.correctAnswerLabel}</strong> {answerText(current)}</p>
+        {/* The buttons stay mounted after a choice is recorded. Swapping them for
+            a confirmation would destroy the element the learner just activated,
+            dropping keyboard focus to <body> and restarting the next Tab from the
+            top of the page. Instead the pressed state is expressed with
+            aria-pressed and a repeat press is ignored, so the count can only ever
+            rise once per answer. The confirmation sits inside the quiz-feedback
+            live region, so it is announced without a nested one. */}
+        <div class="quiz-confidence">
+          <p class="quiz-confidence-legend">{copy.quiz.confidenceLegend}</p>
+          <div class="quiz-confidence-actions">
+            {(['sure', 'unsure', 'guess'] as const).map((value) => (
+              <button
+                key={value}
+                type="button"
+                class="btn btn--secondary quiz-confidence-button"
+                aria-pressed={recordedConfidence === value}
+                onClick={() => {
+                  if (!currentResult || confidenceGuardRef.current === currentResult) return;
+                  confidenceGuardRef.current = currentResult;
+                  const outcome = onConfidence(value, currentResult.outcome === 'correct');
+                  if (outcome === 'saved') {
+                    setRecorded({ result: currentResult, value });
+                  } else if (outcome === 'stale') {
+                    // Leave the guard set: this answer is gone from canonical storage,
+                    // so retrying the same pick would still have nothing to attach to.
+                    setStaleResult(currentResult);
+                  } else {
+                    confidenceGuardRef.current = null;
+                  }
+                }}
+              >{copy.quiz.confidence[value]}</button>
+            ))}
+          </div>
+          {recordedConfidence !== null && <p class="note note--info quiz-confidence-recorded">{copy.quiz.confidenceRecorded(copy.quiz.confidence[recordedConfidence])}</p>}
+          {isStale && <p class="note note--warn quiz-confidence-stale">{copy.quiz.confidenceStale}</p>}
+        </div>
         <AnswerReview question={current} selectedIds={currentResult.selectedIds} rationalesState={rationalesState} locale={locale} copy={copy}/>
         <div class="card-sources"><strong>{copy.quiz.officialSources}</strong><SourceLinks ids={current.sourceIds} copy={copy}/><small>{copy.quiz.verified(formatDate(current.verifiedAt, locale))}</small></div>
         <button class="btn btn--wide quiz-next" onClick={onAdvance}>{index + 1 >= total ? copy.quiz.showResults : copy.quiz.next} <span aria-hidden="true">→</span></button>

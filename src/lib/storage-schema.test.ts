@@ -455,3 +455,56 @@ describe('parseStudyData', () => {
     expect(Object.prototype).not.toHaveProperty('polluted');
   });
 });
+
+describe('parseStudyDataV3 quiz stat optional fields', () => {
+  it('parses a v3 document whose quiz stats omit partial, guessedCorrect and lastConfidence', () => {
+    // #given — the shape every release before these fields existed wrote
+    const document = { ...createEmptyStudyData(), quizStats: { question: stat() } };
+
+    // #when / #then
+    expect(parseStudyDataV3(document)).toEqual(document);
+  });
+
+  it('parses and preserves a quiz stat carrying all three optional fields', () => {
+    // #given
+    const enriched = stat({ attempts: 5, correct: 3, partial: 1, guessedCorrect: 2, lastConfidence: 'guess' });
+    const document = { ...createEmptyStudyData(), quizStats: { question: enriched } };
+
+    // #when
+    const parsed = parseStudyDataV3(document);
+
+    // #then
+    expect(parsed?.quizStats.question).toEqual(enriched);
+  });
+
+  it('rejects the whole document when lastConfidence is not one of sure/unsure/guess', () => {
+    // #given
+    const document = { ...createEmptyStudyData(), quizStats: { question: stat({ lastConfidence: 'certain' as never }) } };
+
+    // #when / #then
+    expect(parseStudyDataV3(document)).toBeNull();
+  });
+
+  it('rejects the whole document when partial is negative, non-integer, or exceeds attempts', () => {
+    // #given
+    const cases: Partial<QuizStat>[] = [
+      { attempts: 3, partial: -1 },
+      { attempts: 3, partial: 1.5 },
+      { attempts: 3, partial: 4 },
+    ];
+    for (const overrides of cases) {
+      const document = { ...createEmptyStudyData(), quizStats: { question: stat(overrides) } };
+
+      // #when / #then
+      expect(parseStudyDataV3(document)).toBeNull();
+    }
+  });
+
+  it('rejects the whole document when guessedCorrect exceeds attempts', () => {
+    // #given
+    const document = { ...createEmptyStudyData(), quizStats: { question: stat({ attempts: 2, guessedCorrect: 3 }) } };
+
+    // #when / #then
+    expect(parseStudyDataV3(document)).toBeNull();
+  });
+});

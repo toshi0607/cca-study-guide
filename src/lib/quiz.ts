@@ -45,6 +45,24 @@ export function isAnswerCorrect(question: ChoiceQuestion, selectedChoiceIds: rea
     && question.correctChoiceIds.every((id) => selectedChoiceIds.includes(id));
 }
 
+// How an answer landed as a whole. `partial` is the case set equality could not
+// see: the learner picked some — but not all — of the correct choices and picked
+// nothing incorrect. On a single-answer question it is unreachable by
+// construction (a non-empty proper subset of a one-element set does not exist),
+// so only multiple-select questions can ever be partial.
+//
+// This is a description of the selection, not a grade: the question is still not
+// answered correctly, and nothing here contributes to a score.
+export type AnswerOutcome = 'correct' | 'partial' | 'incorrect';
+
+export function classifyAnswer(question: ChoiceQuestion, selectedChoiceIds: readonly string[]): AnswerOutcome {
+  if (isAnswerCorrect(question, selectedChoiceIds)) return 'correct';
+  const correct = new Set(question.correctChoiceIds);
+  const pickedSomethingWrong = selectedChoiceIds.some((id) => !correct.has(id));
+  if (pickedSomethingWrong || selectedChoiceIds.length === 0) return 'incorrect';
+  return 'partial';
+}
+
 // The four states a single choice can be in once a question is answered. Kept as
 // a pure function so the post-answer review and the summary review classify a
 // choice identically, and so a partially-correct multiple-select answer is

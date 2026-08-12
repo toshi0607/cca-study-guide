@@ -1,14 +1,23 @@
-import { useEffect, useRef, useState } from 'preact/hooks';
+import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import { cardIndex } from '../content/card-index';
 import { localePaths, type Locale } from '../i18n/locales';
 import { ui } from '../i18n/ui';
+import type { AnswerOutcome } from '../lib/quiz';
 import { isDue, scheduleReview, type Rating } from '../lib/scheduler';
+import type { QuizConfidence, QuizStat } from '../lib/storage-schema';
 import { completeStudyGuideSection, reconfirmStudyGuideSection, startStudyGuideSection } from '../lib/study-guide-progress';
 import { completeHandsOnGuide, reconfirmHandsOnGuide, setHandsOnStepCompletion, startHandsOnGuide } from '../lib/hands-on-progress';
-import { buildStudyDataExport, createEmptyStudyData, createStudyStorage, isImportSizeAllowed, MAX_IMPORT_TEXT_LENGTH, parseStudyDataImport, type ImportedStudyData, type StudyData } from '../lib/storage';
+import { buildStudyDataExport, createEmptyStudyData, createStudyStorage, type StudyData } from '../lib/storage';
+import { createExamDateStorage } from '../lib/exam-date';
+import type { DeepLink } from '../lib/deep-link';
 import { AppBottomNav, AppHeader } from './app/AppNavigation';
 import { formatDate } from './app/format';
-import type { View } from './app/types';
+import { ImportChoiceDialog } from './app/ImportChoiceDialog';
+import type { View, ViewTarget } from './app/types';
+import { useDeepLinkRouting } from './app/useDeepLinkRouting';
+import { useExamDate } from './app/useExamDate';
+import { useStudyImport } from './app/useStudyImport';
+import { useStudySummary } from './app/useStudySummary';
 import { GuideEntry } from './GuideEntry';
 import type { LearningStageViewTarget } from './views/GuideView';
 import { HandsOnEntry } from './HandsOnEntry';
@@ -18,11 +27,9 @@ import { PracticeEntry } from './PracticeEntry';
 import type { StateFilter } from './views/PracticeView';
 import { ProgressView } from './views/ProgressView';
 import { QuizEntry } from './QuizEntry';
+import type { ConfidenceOutcome } from './quiz/types';
 import { TodayView } from './views/TodayView';
 
-// Keep the Mock Exam engine out of the initial bundle: App never imports it. The
-// exam view (lazily loaded) owns all engine calls and receives only this storage
-// bridge, so the landing route ships none of the exam logic.
 function detectStorageAvailable(): boolean {
   try {
     const probe = '__cca_probe__';
@@ -34,16 +41,37 @@ function detectStorageAvailable(): boolean {
   }
 }
 
-function studyStorage() {
+// parseDeepLink yields at most one target per link, so the first match is the
+// whole target. guideId and stepId are carried together: consuming them
+// separately would let a stepId meant for a different guide leak into whichever
+// guide is currently selected.
+function targetFromDeepLink(link: DeepLink): ViewTarget | null {
+  if (link.sectionId) return { kind: 'guide-section', sectionId: link.sectionId };
+  if (link.cardId) return { kind: 'practice-card', cardId: link.cardId };
+  if (link.questionId) return { kind: 'quiz-question', questionId: link.questionId };
+  if (link.scenarioId) return { kind: 'quiz-scenario', scenarioId: link.scenarioId };
+  if (link.handsOnGuideId) return { kind: 'hands-on', guideId: link.handsOnGuideId, ...(link.handsOnStepId ? { stepId: link.handsOnStepId } : {}) };
+  return null;
+}
+
+// Touching window.localStorage can throw outright (a browser with storage
+// disabled, or server-side rendering), so every adapter is built through this:
+// the factory falls back to its no-op form rather than the app failing to render.
+function withLocalStorage<T>(create: (storage: Storage | undefined) => T): T {
   try {
-    return createStudyStorage(window.localStorage);
+    return create(window.localStorage);
   } catch {
-    return createStudyStorage(undefined);
+    return create(undefined);
   }
 }
 
 function App({ locale }: { locale: Locale }) {
   const copy = ui[locale];
+  // The adapters are stateless views onto localStorage, so one of each per mount
+  // is enough. What must stay per-call is `load()`: every mutation still re-reads
+  // the canonical document (see commitData) so another tab's writes are not lost.
+  const studyStore = useMemo(() => withLocalStorage(createStudyStorage), []);
+  const examDateStore = useMemo(() => withLocalStorage(createExamDateStorage), []);
   const [view, setView] = useState<View>('today');
   const [data, setData] = useState<StudyData>(createEmptyStudyData);
   const [now, setNow] = useState<Date | null>(null);
@@ -54,20 +82,38 @@ function App({ locale }: { locale: Locale }) {
   const [revealed, setRevealed] = useState<Record<string, boolean>>({});
   const [sessionCards, setSessionCards] = useState<string[] | null>(null);
   const [notice, setNotice] = useState('');
-  const [practiceTargetCardId, setPracticeTargetCardId] = useState<string | null>(null);
-  const [quizTargetQuestionId, setQuizTargetQuestionId] = useState<string | null>(null);
-  const [quizTargetScenarioId, setQuizTargetScenarioId] = useState<string | null>(null);
-  const [handsOnTargetGuideId, setHandsOnTargetGuideId] = useState<string | null>(null);
+  // At most one pending target at a time; the destination view clears it on arrival.
+  const [target, setTarget] = useState<ViewTarget | null>(null);
   const [storageAvailable, setStorageAvailable] = useState(true);
   const [dataUnreadable, setDataUnreadable] = useState(false);
   // Which Mock Exam screen to land on when the view opens: the start screen, or
   // straight to the learning analysis (used by Today/Progress/learning-path CTAs).
   const [mockExamIntent, setMockExamIntent] = useState<'landing' | 'analysis'>('landing');
   const noticeRef = useRef<HTMLParagraphElement>(null);
-  const dataRef = useRef<StudyData>(createEmptyStudyData());
-  // Serializes imports: a second file picked while one is still being read
-  // would otherwise apply in resolution order, not selection order.
-  const importBusyRef = useRef(false);
+
+  const focusNotice = () => requestAnimationFrame(() => noticeRef.current?.focus());
+  const notify = (message: string) => { setNotice(message); focusNotice(); };
+
+  const { examDate, saveExamDate, clearExamDate, clearExamDateSilently } = useExamDate({ storage: examDateStore, copy, notify });
+  const { pendingImport, importError, importFile, finishImport, cancelImport } = useStudyImport({
+    storage: studyStore,
+    copy,
+    notify,
+    onImported: (next) => { setData(next); setRevealed({}); },
+  });
+  const summaryText = useStudySummary({ view, data, dataUnreadable, now });
+
+  // A deep link is just another way to arrive at one of the targets in-app
+  // navigation already produces (e.g. openGuideCard).
+  const applyDeepLink = (link: DeepLink) => {
+    const linkTarget = targetFromDeepLink(link);
+    if (link.cardId) { setQuery(''); setDomainFilter('all'); setStateFilter('all'); }
+    // Routed through `navigate` so view and target update atomically, same as
+    // every in-app target-bearing navigation. A step target scrolls itself into
+    // view inside HandsOnView; running App's own smooth scroll at the same time
+    // would fight that scroll.
+    navigate(link.view, linkTarget, !link.handsOnStepId);
+  };
 
   useEffect(() => {
     const refreshNow = () => setNow(new Date());
@@ -75,11 +121,9 @@ function App({ locale }: { locale: Locale }) {
       if (!document.hidden) refreshNow();
     };
 
-    const loaded = studyStorage().load();
-    dataRef.current = loaded;
-    setData(loaded);
+    setData(studyStore.load());
     setStorageAvailable(detectStorageAvailable());
-    setDataUnreadable(studyStorage().hasUnreadableCurrentDocument());
+    setDataUnreadable(studyStore.hasUnreadableCurrentDocument());
     refreshNow();
     setReady(true);
 
@@ -94,22 +138,20 @@ function App({ locale }: { locale: Locale }) {
     };
   }, []);
 
+  useDeepLinkRouting({ view, onApplyLink: applyDeepLink });
+
   const dueCardIds = now ? cardIndex.filter((card) => isDue(data.reviews[card.id], card.revision, now)).map((card) => card.id) : [];
 
-  const focusNotice = () => requestAnimationFrame(() => noticeRef.current?.focus());
-
   // Re-read the canonical document immediately before every mutation. Another
-  // tab may have committed since this component last rendered; building from
-  // dataRef alone would silently replace that newer work.
+  // tab may have committed since this component last rendered; building from the
+  // rendered `data` alone would silently replace that newer work.
   const commitData = (change: (current: StudyData) => StudyData | null): boolean => {
-    const next = change(studyStorage().load());
+    const next = change(studyStore.load());
     if (!next) return false;
-    if (!studyStorage().save(next)) {
-      setNotice(copy.notices.saveFailed);
-      focusNotice();
+    if (!studyStore.save(next)) {
+      notify(copy.notices.saveFailed);
       return false;
     }
-    dataRef.current = next;
     setData(next);
     return true;
   };
@@ -122,28 +164,72 @@ function App({ locale }: { locale: Locale }) {
   const saveRating = (cardId: string, rating: Rating) => {
     if (!persistRating(cardId, rating)) return;
     setRevealed((value) => ({ ...value, [cardId]: false }));
-    setNotice(rating === 'again' ? copy.notices.ratingAgain : rating === 'hard' ? copy.notices.ratingHard : copy.notices.ratingGood);
-    focusNotice();
+    notify(rating === 'again' ? copy.notices.ratingAgain : rating === 'hard' ? copy.notices.ratingHard : copy.notices.ratingGood);
   };
 
   const endSession = (aborted: boolean) => {
     setSessionCards(null);
-    if (aborted) {
-      setNotice(copy.session.abortedNotice);
-      focusNotice();
-    }
+    if (aborted) notify(copy.session.abortedNotice);
   };
 
-  const recordQuizAnswer = (questionId: string, correct: boolean): boolean =>
-    commitData((current) => {
+  // Returns the `lastAnsweredAt` of the answer just saved (or null on failure),
+  // so the caller can hand it back to recordQuizConfidence as the token that
+  // proves a later confidence pick still targets this exact answer.
+  const recordQuizAnswer = (questionId: string, outcome: AnswerOutcome): string | null => {
+    const answeredAt = new Date().toISOString();
+    const saved = commitData((current) => {
       const previous = current.quizStats[questionId];
-      const stat = { attempts: (previous?.attempts ?? 0) + 1, correct: (previous?.correct ?? 0) + (correct ? 1 : 0), lastAnsweredAt: new Date().toISOString(), lastCorrect: correct };
+      const correct = outcome === 'correct';
+      const stat: QuizStat = {
+        attempts: (previous?.attempts ?? 0) + 1,
+        correct: (previous?.correct ?? 0) + (correct ? 1 : 0),
+        lastAnsweredAt: answeredAt,
+        lastCorrect: correct,
+      };
+      // Each optional field is assigned only when there is a value for it: a stat
+      // that has never seen a partial answer must keep `partial` absent rather
+      // than gain an explicit `partial: 0`.
+      if (outcome === 'partial') stat.partial = (previous?.partial ?? 0) + 1;
+      else if (previous?.partial !== undefined) stat.partial = previous.partial;
+      if (previous?.guessedCorrect !== undefined) stat.guessedCorrect = previous.guessedCorrect;
       return { ...current, quizStats: { ...current.quizStats, [questionId]: stat } };
     });
+    return saved ? answeredAt : null;
+  };
+
+  // Records the learner's self-reported confidence for the answer they just
+  // submitted. `expectedLastAnsweredAt` is the token recordQuizAnswer returned
+  // for that answer: commitData re-reads canonical storage, and another tab may
+  // have answered this question again since this screen graded it, so the token
+  // is checked against the freshly-read stat before writing anything.
+  const recordQuizConfidence = (questionId: string, confidence: QuizConfidence, wasCorrect: boolean, expectedLastAnsweredAt: string): ConfidenceOutcome => {
+    let stale = false;
+    const saved = commitData((current) => {
+      const previous = current.quizStats[questionId];
+      // lastAnsweredAt is ISO-millisecond precision, so two answers to the same
+      // question could in theory land in the same millisecond; in practice the
+      // synchronous double-fire guard in QuizView means a human can't produce a
+      // second answer to the same question that fast, so the timestamp alone is
+      // a sufficient token here.
+      if (!previous || previous.lastAnsweredAt !== expectedLastAnsweredAt) { stale = true; return null; }
+      // Same rule as `partial` above: only ever write `guessedCorrect` once there
+      // is something to count, so a stat with no guessed-correct answer keeps the
+      // field absent rather than gaining an explicit key.
+      const guessed = confidence === 'guess' && wasCorrect ? (previous.guessedCorrect ?? 0) + 1 : previous.guessedCorrect;
+      const stat: QuizStat = {
+        ...previous,
+        lastConfidence: confidence,
+        ...(guessed !== undefined ? { guessedCorrect: guessed } : {}),
+      };
+      return { ...current, quizStats: { ...current.quizStats, [questionId]: stat } };
+    });
+    if (stale) return 'stale';
+    return saved ? 'saved' : 'failed';
+  };
 
   const exportData = () => {
     if (dataUnreadable) return;
-    const blob = new Blob([JSON.stringify(buildStudyDataExport(studyStorage().load(), new Date()), null, 2)], { type: 'application/json' });
+    const blob = new Blob([JSON.stringify(buildStudyDataExport(studyStore.load(), new Date()), null, 2)], { type: 'application/json' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
     link.download = `cca-field-notes-${new Date().toISOString().slice(0, 10)}.json`;
@@ -152,80 +238,57 @@ function App({ locale }: { locale: Locale }) {
     setNotice(copy.notices.exported);
   };
 
-  const applyImport = (imported: ImportedStudyData | null) => {
-    if (!imported) {
-      setNotice(copy.notices.importInvalid);
-      focusNotice();
+  // Nothing here sends anything anywhere: the Clipboard API is local to this
+  // device, and the learner chooses where the text is pasted.
+  const copySummary = () => {
+    if (dataUnreadable) return;
+    if (!summaryText || !navigator.clipboard) {
+      notify(copy.notices.summaryCopyFailed);
       return;
     }
-    const reviewedTotal = Object.keys(imported.data.reviews).length;
-    const exportedAt = imported.exportedAt ? formatDate(new Date(imported.exportedAt), locale) : null;
-    if (!window.confirm(copy.notices.importConfirm(reviewedTotal, exportedAt))) return;
-    if (!studyStorage().save(imported.data)) {
-      setNotice(copy.notices.saveFailed);
-      focusNotice();
-      return;
-    }
-    dataRef.current = imported.data;
-    setData(imported.data);
-    setRevealed({});
-    setNotice(copy.notices.importDone);
-    focusNotice();
-  };
-
-  const importData = (event: Event) => {
-    const input = event.currentTarget as HTMLInputElement;
-    const file = input.files?.[0];
-    input.value = '';
-    if (!file || importBusyRef.current) return;
-    // Reject an oversized file by its reported size, before reading it into memory
-    // or handing it to JSON.parse — parseStudyDataImport repeats this check on the
-    // decoded text, but that check should never fire when this one already ran.
-    if (!isImportSizeAllowed(file.size)) {
-      setNotice(copy.notices.importTooLarge(MAX_IMPORT_TEXT_LENGTH / (1024 * 1024)));
-      focusNotice();
-      return;
-    }
-    importBusyRef.current = true;
-    void file.text()
-      .then((text) => applyImport(parseStudyDataImport(text)), () => applyImport(null))
-      .finally(() => {
-        importBusyRef.current = false;
-      });
+    void navigator.clipboard.writeText(summaryText).then(
+      () => notify(copy.notices.summaryCopied),
+      () => notify(copy.notices.summaryCopyFailed),
+    );
   };
 
   const resetData = () => {
     if (dataUnreadable) return;
     if (!window.confirm(copy.notices.resetConfirm)) return;
-    if (!studyStorage().reset()) {
-      setNotice(copy.notices.resetFailed);
-      focusNotice();
+    if (!studyStore.reset()) {
+      notify(copy.notices.resetFailed);
       return;
     }
+    // The exam date lives under its own key, and the confirm text promises to
+    // delete everything this device holds. A failed clear leaves the date in
+    // storage, so the notice — and the still-visible date — must say so.
+    const examDateCleared = clearExamDateSilently();
     const empty = createEmptyStudyData();
-    dataRef.current = empty;
     setData(empty);
     setRevealed({});
     setDataUnreadable(false);
-    setNotice(copy.notices.resetDone);
+    setNotice(examDateCleared ? copy.notices.resetDone : copy.notices.resetDonePartial);
   };
 
-  const navigate = (next: View) => {
+  // View and target are updated atomically here so a lazily-loaded view can
+  // never see a target left over from a navigation that never named one: a
+  // target-less navigate always clears it, and a target-bearing one (deep link
+  // or an open* helper) hands it in as `nextTarget` rather than calling
+  // `setTarget` beforehand.
+  const navigate = (next: View, nextTarget: ViewTarget | null = null, scroll = true) => {
     // Leaving the practice view ends a running session; its ratings are already persisted.
     if (next !== 'practice') setSessionCards(null);
+    setTarget(nextTarget);
     setView(next);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    if (scroll) window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const openGuideCard = (cardId: string) => {
-    setQuery(''); setDomainFilter('all'); setStateFilter('all'); setPracticeTargetCardId(cardId); navigate('practice');
+    setQuery(''); setDomainFilter('all'); setStateFilter('all'); navigate('practice', { kind: 'practice-card', cardId });
   };
-  const openGuideQuestion = (questionId: string) => { setQuizTargetQuestionId(questionId); navigate('quiz'); };
-  // Exact-target navigation out of the official scenarios view. Each sets a typed
-  // target the destination view consumes and clears, so the learner lands on the
-  // specific case, guide, or question rather than the destination's list.
-  const openPracticeScenario = (scenarioId: string) => { setQuizTargetScenarioId(scenarioId); navigate('quiz'); };
-  const openHandsOnGuide = (guideId: string) => { setHandsOnTargetGuideId(guideId); navigate('hands-on'); };
+  const openGuideQuestion = (questionId: string) => navigate('quiz', { kind: 'quiz-question', questionId });
+  const openPracticeScenario = (scenarioId: string) => navigate('quiz', { kind: 'quiz-scenario', scenarioId });
+  const openHandsOnGuide = (guideId: string) => navigate('hands-on', { kind: 'hands-on', guideId });
   const saveGuideProgress = (sectionId: string, revision: number, action: 'start' | 'complete' | 'reconfirm') => {
     const saved = commitData((current) => {
       const record = current.studyGuideProgress[sectionId];
@@ -237,18 +300,13 @@ function App({ locale }: { locale: Locale }) {
       if (!next || next === record) return null;
       return { ...current, studyGuideProgress: { ...current.studyGuideProgress, [sectionId]: next } };
     });
-    if (saved) {
-      setNotice(copy.guide.actionDone[action]);
-      focusNotice();
-    }
+    if (saved) notify(copy.guide.actionDone[action]);
     return saved;
   };
 
-  // Save-first Hands-on updates. Each re-reads canonical storage inside
-  // commitData so a concurrent tab's change is never lost, and the visible state
-  // only advances after the save succeeds. Guide-level transitions move focus to
-  // the notice because the pressed control unmounts; a step toggle only announces
-  // through the aria-live notice so keyboard focus stays on the checkbox.
+  // Guide-level Hands-on transitions move focus to the notice because the
+  // pressed control unmounts; a step toggle only announces through the aria-live
+  // notice so keyboard focus stays on the checkbox.
   type HandsOnRecord = StudyData['handsOnProgress'][string];
   const saveHandsOn = (
     guideId: string,
@@ -284,19 +342,16 @@ function App({ locale }: { locale: Locale }) {
   const saveHandsOnReconfirm = (guideId: string, revision: number) =>
     saveHandsOn(guideId, (record) => reconfirmHandsOnGuide(record, revision, new Date()), () => copy.handsOn.actionDone.reconfirm, true);
 
-  // Storage bridge handed to the lazily-loaded Mock Exam view. readData returns
-  // the canonical document (re-read immediately before every exam mutation);
-  // writeData validates and persists the whole document, updates state, and
-  // surfaces the save-failed notice on refusal — mirroring commitData's contract
-  // without pulling any exam logic into this component.
-  const readMockExamData = (): StudyData => studyStorage().load();
+  // Storage bridge handed to the lazily-loaded Mock Exam view: it mirrors
+  // commitData's contract (re-read before every mutation, notice on refusal)
+  // without pulling any exam logic — and so any of the exam engine — into the
+  // initial bundle.
+  const readMockExamData = (): StudyData => studyStore.load();
   const writeMockExamData = (next: StudyData): boolean => {
-    if (!studyStorage().save(next)) {
-      setNotice(copy.notices.saveFailed);
-      focusNotice();
+    if (!studyStore.save(next)) {
+      notify(copy.notices.saveFailed);
       return false;
     }
-    dataRef.current = next;
     setData(next);
     return true;
   };
@@ -311,10 +366,8 @@ function App({ locale }: { locale: Locale }) {
     navigate('practice');
   };
 
-  // Learning-analysis "next action" links reuse the existing Practice view: an
-  // optional domain id preselects that domain's cards, otherwise it opens the
-  // full deck. Skills are not a Practice filter axis, so a skill action falls back
-  // to opening practice unfiltered rather than inventing a route.
+  // Skills are not a Practice filter axis, so a skill action opens practice
+  // unfiltered rather than inventing a route.
   const openMockExamPractice = (domainId?: string) => {
     setQuery('');
     setDomainFilter(domainId ?? 'all');
@@ -322,9 +375,8 @@ function App({ locale }: { locale: Locale }) {
     navigate('practice');
   };
 
-  // Learning-path stage dispatch (in-page Guide anchors are handled inside
-  // GuideView; only view-bound targets reach here). Reuses existing navigation —
-  // no new router or URL is introduced.
+  // Learning-path stage dispatch; in-page Guide anchors are handled inside
+  // GuideView, so only view-bound targets reach here.
   const openLearningStage = (target: LearningStageViewTarget) => {
     switch (target) {
       case 'hands-on': navigate('hands-on'); break;
@@ -343,6 +395,11 @@ function App({ locale }: { locale: Locale }) {
     navigate('practice');
   };
 
+  // HandsOnView gets the target object itself, not a fresh copy: its effects key
+  // on that object, so the identity has to stay stable across renders.
+  const clearTarget = () => setTarget(null);
+  const handsOnTarget = target?.kind === 'hands-on' ? target : null;
+
   return (
     <div class="app-shell">
       <AppHeader locale={locale} copy={copy} view={view} ready={ready} onNavigate={navigate}/>
@@ -350,14 +407,23 @@ function App({ locale }: { locale: Locale }) {
       <main id="main-content">
         <h1 class="sr-only">{copy.pageTitle}</h1>
         <p ref={noticeRef} class="notice" tabIndex={-1} aria-live="polite">{notice}</p>
+        {pendingImport && <ImportChoiceDialog
+          copy={copy}
+          reviewedTotal={Object.keys(pendingImport.data.reviews).length}
+          exportedAt={pendingImport.exportedAt ? formatDate(new Date(pendingImport.exportedAt), locale) : null}
+          saveError={importError}
+          onMerge={() => finishImport('merge')}
+          onReplace={() => finishImport('replace')}
+          onCancel={cancelImport}
+        />}
         {dataUnreadable && <p class="data-alert" role="alert">{copy.notices.dataUnreadable}</p>}
-        {view === 'today' && <TodayView locale={locale} copy={copy} now={now} ready={ready} reviews={data.reviews} dueCount={dueCardIds.length} session={data.activeMockExam} attempts={data.mockExamAttempts} onStartDueReview={startDueReview} onOpenWeakDomain={openWeakPractice} onOpenMockExam={openMockExam} onOpenMockExamAnalysis={openMockExamAnalysis}/>}
+        {view === 'today' && <TodayView locale={locale} copy={copy} now={now} ready={ready} reviews={data.reviews} dueCount={dueCardIds.length} session={data.activeMockExam} attempts={data.mockExamAttempts} examDate={examDate} onStartDueReview={startDueReview} onOpenWeakDomain={openWeakPractice} onOpenMockExam={openMockExam} onOpenMockExamAnalysis={openMockExamAnalysis}/>}
 
-        {view === 'mock-exam' && <MockExamEntry locale={locale} copy={copy} session={data.activeMockExam} attempts={data.mockExamAttempts} storageAvailable={storageAvailable} initialPhase={mockExamIntent} readData={readMockExamData} writeData={writeMockExamData} onOpenPractice={openMockExamPractice}/>}
+        {view === 'mock-exam' && <MockExamEntry locale={locale} copy={copy} session={data.activeMockExam} attempts={data.mockExamAttempts} storageAvailable={storageAvailable} quizStats={data.quizStats} initialPhase={mockExamIntent} readData={readMockExamData} writeData={writeMockExamData} onOpenPractice={openMockExamPractice}/>}
 
-        {view === 'guide' && <GuideEntry locale={locale} copy={copy} records={data.studyGuideProgress} hasMockExamAttempts={data.mockExamAttempts.length > 0} onProgressAction={saveGuideProgress} onOpenCard={openGuideCard} onOpenQuestion={openGuideQuestion} onOpenStage={openLearningStage} onOpenOfficialScenarios={() => navigate('official-scenarios')}/>}
+        {view === 'guide' && <GuideEntry locale={locale} copy={copy} records={data.studyGuideProgress} hasMockExamAttempts={data.mockExamAttempts.length > 0} examDate={examDate} onProgressAction={saveGuideProgress} onOpenCard={openGuideCard} onOpenQuestion={openGuideQuestion} onOpenStage={openLearningStage} onOpenOfficialScenarios={() => navigate('official-scenarios')} targetSectionId={target?.kind === 'guide-section' ? target.sectionId : null} onTargetSectionOpened={clearTarget}/>}
 
-        {view === 'hands-on' && <HandsOnEntry locale={locale} copy={copy} records={data.handsOnProgress} onStart={saveHandsOnStart} onToggleStep={saveHandsOnStep} onComplete={saveHandsOnComplete} onReconfirm={saveHandsOnReconfirm} onOpenCard={openGuideCard} onOpenQuestion={openGuideQuestion} targetGuideId={handsOnTargetGuideId} onTargetOpened={() => setHandsOnTargetGuideId(null)}/>}
+        {view === 'hands-on' && <HandsOnEntry locale={locale} copy={copy} records={data.handsOnProgress} onStart={saveHandsOnStart} onToggleStep={saveHandsOnStep} onComplete={saveHandsOnComplete} onReconfirm={saveHandsOnReconfirm} onOpenCard={openGuideCard} onOpenQuestion={openGuideQuestion} target={handsOnTarget} onTargetOpened={clearTarget}/>}
 
         {view === 'official-scenarios' && <OfficialScenariosEntry locale={locale} copy={copy} onOpenCard={openGuideCard} onOpenQuestion={openGuideQuestion} onOpenPracticeScenario={openPracticeScenario} onOpenHandsOnGuide={openHandsOnGuide}/>}
 
@@ -366,20 +432,21 @@ function App({ locale }: { locale: Locale }) {
           query={query} onQueryChange={setQuery}
           domainFilter={domainFilter} onDomainFilterChange={setDomainFilter}
           stateFilter={stateFilter} onStateFilterChange={setStateFilter}
-          targetCardId={practiceTargetCardId} onTargetOpened={() => setPracticeTargetCardId(null)}
+          targetCardId={target?.kind === 'practice-card' ? target.cardId : null} onTargetOpened={clearTarget}
           revealed={revealed} onToggleRevealed={(cardId) => setRevealed((value) => ({ ...value, [cardId]: !value[cardId] }))}
           sessionCards={sessionCards} onStartSession={setSessionCards} onExitSession={endSession}
           onRateInList={saveRating} onRateInSession={persistRating}
         />}
 
-        {view === 'quiz' && <QuizEntry locale={locale} copy={copy} quizStats={data.quizStats} onAnswer={recordQuizAnswer} targetQuestionId={quizTargetQuestionId} onTargetOpened={() => setQuizTargetQuestionId(null)} targetScenarioId={quizTargetScenarioId} onTargetScenarioOpened={() => setQuizTargetScenarioId(null)}/>}
+        {view === 'quiz' && <QuizEntry locale={locale} copy={copy} quizStats={data.quizStats} onAnswer={recordQuizAnswer} onConfidence={recordQuizConfidence} targetQuestionId={target?.kind === 'quiz-question' ? target.questionId : null} onTargetOpened={clearTarget} targetScenarioId={target?.kind === 'quiz-scenario' ? target.scenarioId : null} onTargetScenarioOpened={clearTarget}/>}
 
         {view === 'progress' && <ProgressView
           locale={locale} copy={copy}
           reviews={data.reviews} studyGuideProgress={data.studyGuideProgress} handsOnProgress={data.handsOnProgress}
           quizStats={data.quizStats} activeMockExam={data.activeMockExam} mockExamAttempts={data.mockExamAttempts} dueCount={dueCardIds.length}
           dataUnreadable={dataUnreadable}
-          onExport={exportData} onImportFile={importData} onReset={resetData}
+          examDate={examDate} onExamDateChange={saveExamDate} onExamDateClear={clearExamDate}
+          onExport={exportData} onCopySummary={copySummary} onImportFile={importFile} onReset={resetData}
           onOpenGuide={() => navigate('guide')} onOpenHandsOn={() => navigate('hands-on')} onOpenPractice={() => openMockExamPractice()}
           onOpenQuiz={() => navigate('quiz')} onOpenMockExam={openMockExam} onOpenMockExamAnalysis={openMockExamAnalysis}
         />}

@@ -6,6 +6,7 @@ import { handsOnGuides } from '../../content/hands-on';
 import type { Locale } from '../../i18n/locales';
 import { localize, type UiCopy } from '../../i18n/ui';
 import type { ReviewState } from '../../lib/scheduler';
+import { deriveQuizInsight } from '../../lib/quiz-insight';
 import { isWeak } from '../../lib/weakness';
 import { deriveStudyGuideProgress } from '../../lib/study-guide-progress';
 import { deriveHandsOnProgress, getHandsOnStepProgress } from '../../lib/hands-on-progress';
@@ -59,6 +60,7 @@ export function ProgressOverview({
   const quizAnswered = quizValues.filter((stat) => stat.attempts > 0).length;
   const quizAttempts = quizValues.reduce((sum, stat) => sum + stat.attempts, 0);
   const quizCorrect = quizValues.reduce((sum, stat) => sum + stat.correct, 0);
+  const quizInsight = deriveQuizInsight(quizStats);
 
   // Latest = the attempt with the most recent completion. Score is read straight
   // from the stored per-answer `correct` flags (content-free, same basis as the
@@ -114,6 +116,11 @@ export function ProgressOverview({
             <li>{o.quizAnswered(quizAnswered)}</li>
             <li>{o.quizAttempts(quizAttempts)}</li>
             <li>{o.quizCorrect(quizCorrect)}</li>
+            {/* Only shown once such an answer exists: on a record written before
+                these fields, every bucket is empty and the lines would be noise. */}
+            {quizInsight.close > 0 && <li>{o.quizClose(quizInsight.close)}</li>}
+            {quizInsight.notUnderstood > 0 && <li>{o.quizNotUnderstood(quizInsight.notUnderstood)}</li>}
+            {quizInsight.guessedRight > 0 && <li>{o.quizGuessedRight(quizInsight.guessedRight)}</li>}
           </ul>
           <button type="button" class="btn btn--secondary" onClick={onOpenQuiz}>{o.openQuiz} <span aria-hidden="true">→</span></button>
         </article>

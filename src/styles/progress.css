@@ -32,6 +32,7 @@
 .data-panel p { max-width: 650px; color: var(--ink-soft); }
 .data-actions { display: grid; min-width: 240px; }
 .data-actions > .btn { margin-top: var(--space-2); }
+.exam-date-input { min-height: 44px; padding: 0 var(--space-3); border: 1px solid var(--grid-strong); background: var(--surface); color: var(--ink); }
 
 .privacy-page { min-height: 100vh; }
 

@@ -55,6 +55,11 @@
 .note--success { border-left-color: var(--green);  background: var(--green-pale); }
 .note--danger  { border-left-color: var(--danger); background: var(--danger-pale); color: var(--danger); font-weight: 700; }
 
+/* A modal <dialog> is centred by the UA and sits in the top layer; it only needs
+   a readable width and the app's own text colour (the UA default is canvastext). */
+.import-choice-dialog { max-width: 44rem; color: var(--ink); }
+.import-choice-dialog::backdrop { background: rgb(0 0 0 / 45%); } /* ds-allow: UA backdrop scrim, no token applies inside ::backdrop */
+
 /* --------------------------------------------------------------- headings */
 
 .page-title    { margin: 0; font-family: var(--display); font-weight: 900; font-size: var(--fs-2xl);

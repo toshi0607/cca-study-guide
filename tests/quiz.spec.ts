@@ -280,3 +280,200 @@ test('reviews a missed question in the summary and adds no new storage keys', as
   expect(data.mockExamAttempts).toEqual([]);
   expect(data.version).toBe(3);
 });
+
+// --- Confidence buttons (self-reported certainty, recorded at most once per answer) ---
+
+test('marks the pressed confidence button, records a guess only once, and never lets a later button overwrite it', async ({ page }) => {
+  // #given — q-d1-fanout is single-select with the unique correct choice c (index 2)
+  await openScenarioQuestion(page, 'ja', 'カスタマーサポート解決エージェント', 'q-d1-fanout');
+  await page.locator('.choice-button').nth(2).click();
+  await expect(page.locator('.quiz-verdict.is-correct')).toBeVisible();
+
+  // #when — picking "勘" (guess) on a correct answer
+  const guessButton = page.getByRole('button', { name: '勘', exact: true });
+  await guessButton.click();
+
+  // #then — the button shows pressed, and the guess is recorded once
+  await expect(guessButton).toHaveAttribute('aria-pressed', 'true');
+  await expect.poll(() => page.evaluate((key) => JSON.parse(localStorage.getItem(key) ?? '{}').quizStats?.['q-d1-fanout']?.guessedCorrect, STORAGE_KEY)).toBe(1);
+
+  // #when — pressing the same button again
+  await guessButton.click();
+
+  // #then — the count does not double
+  const afterRepeat = await page.evaluate((key) => JSON.parse(localStorage.getItem(key) ?? '{}').quizStats['q-d1-fanout'], STORAGE_KEY);
+  expect(afterRepeat.guessedCorrect).toBe(1);
+
+  // #when — pressing a different confidence button afterward
+  await page.getByRole('button', { name: '確信あり', exact: true }).click();
+
+  // #then — the once-recorded confidence is not overwritten, and only "勘" reads pressed
+  const afterOther = await page.evaluate((key) => JSON.parse(localStorage.getItem(key) ?? '{}').quizStats['q-d1-fanout'], STORAGE_KEY);
+  expect(afterOther.lastConfidence).toBe('guess');
+  expect(afterOther.guessedCorrect).toBe(1);
+  await expect(guessButton).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.getByRole('button', { name: '確信あり', exact: true })).toHaveAttribute('aria-pressed', 'false');
+});
+
+test('resets the confidence buttons to unpressed on the next question', async ({ page }) => {
+  // #given — a domain-scoped round with at least two questions
+  await page.getByRole('button', { name: '演習' }).first().click();
+  await page.getByRole('button', { name: '10問' }).click();
+  await page.getByRole('button', { name: 'D2', exact: true }).click();
+  await page.getByRole('button', { name: '演習を始める' }).click();
+
+  const answerCurrentQuestion = async () => {
+    const isMultiple = await page.getByText('複数選択：当てはまる選択肢をすべて選び、「回答する」を押してください。').isVisible();
+    if (isMultiple) {
+      await page.locator('.choice-button').nth(0).click();
+      await page.locator('.choice-button').nth(1).click();
+      await page.getByRole('button', { name: '回答する' }).click();
+    } else {
+      await page.locator('.choice-button').first().click();
+    }
+  };
+
+  // #when — answering question 1 and pressing a confidence button
+  await answerCurrentQuestion();
+  const confidenceButtons = page.locator('.quiz-confidence-button');
+  await expect(confidenceButtons).toHaveCount(3);
+  await confidenceButtons.first().click();
+  await expect(confidenceButtons.first()).toHaveAttribute('aria-pressed', 'true');
+
+  // #then — advancing to question 2, its confidence buttons all start unpressed
+  await page.getByRole('button', { name: '次の問題へ' }).click();
+  await answerCurrentQuestion();
+  const nextConfidenceButtons = page.locator('.quiz-confidence-button');
+  await expect(nextConfidenceButtons).toHaveCount(3);
+  for (const button of await nextConfidenceButtons.all()) await expect(button).toHaveAttribute('aria-pressed', 'false');
+});
+
+test('resets the confidence buttons to unpressed when a same-page deep link switches to a different question', async ({ page }) => {
+  // #given — an exact-target question answered with a recorded confidence, without unmounting QuizQuestion
+  await openScenarioQuestion(page, 'ja', 'カスタマーサポート解決エージェント', 'q-d1-fanout');
+  await page.locator('.choice-button').nth(2).click();
+  await expect(page.locator('.quiz-verdict.is-correct')).toBeVisible();
+  const sureButton = page.getByRole('button', { name: '確信あり', exact: true });
+  await sureButton.click();
+  await expect(sureButton).toHaveAttribute('aria-pressed', 'true');
+
+  // #when — a hashchange (not a page reload) targets a different question while this instance stays mounted
+  await page.evaluate(() => { window.location.hash = '#/quiz/q-d3-skill'; });
+  await expect(page.locator('.quiz-feedback')).toHaveCount(0);
+  await expect(page.getByText('複数選択：', { exact: false })).toBeVisible();
+  await page.locator('.choice-button').nth(0).click();
+  await page.locator('.choice-button').nth(2).click();
+  await page.getByRole('button', { name: '回答する' }).click();
+
+  // #then — every confidence button for the new question starts unpressed, not the previous question's pick
+  const confidenceButtons = page.locator('.quiz-confidence-button');
+  await expect(confidenceButtons).toHaveCount(3);
+  for (const button of await confidenceButtons.all()) await expect(button).toHaveAttribute('aria-pressed', 'false');
+
+  // #when — recording a confidence for the new question
+  const unsureButton = page.getByRole('button', { name: '迷った', exact: true });
+  await unsureButton.click();
+
+  // #then — it saves once for the new question, and does not overwrite the earlier question's recorded confidence
+  await expect(unsureButton).toHaveAttribute('aria-pressed', 'true');
+  const stats = await page.evaluate((key) => JSON.parse(localStorage.getItem(key) ?? '{}').quizStats, STORAGE_KEY);
+  expect(stats['q-d3-skill'].lastConfidence).toBe('unsure');
+  expect(stats['q-d1-fanout'].lastConfidence).toBe('sure');
+});
+
+test('does not inherit confidence on a new answer', async ({ page }) => {
+  // #given — an exact-target question with the unique correct choice c (index 2)
+  await openScenarioQuestion(page, 'ja', 'カスタマーサポート解決エージェント', 'q-d1-fanout');
+  await page.locator('.choice-button').nth(2).click();
+  await expect(page.locator('.quiz-verdict.is-correct')).toBeVisible();
+
+  // #when — recording "勘" (guess) on the correct answer
+  await page.locator('.quiz-confidence-button').nth(2).click();
+
+  // #then — the correct guess is recorded once
+  await expect.poll(() => page.evaluate((key) => JSON.parse(localStorage.getItem(key) ?? '{}').quizStats?.['q-d1-fanout']?.guessedCorrect, STORAGE_KEY)).toBe(1);
+
+  // #when — re-opening the same exact-target question and answering without selecting confidence
+  await openScenarioQuestion(page, 'ja', 'カスタマーサポート解決エージェント', 'q-d1-fanout');
+  await page.locator('.choice-button').nth(2).click();
+  await expect(page.locator('.quiz-verdict.is-correct')).toBeVisible();
+  await page.getByRole('button', { name: '結果を見る' }).click();
+
+  // #then — answering without confidence does not inherit the prior confidence or guess count
+  await expect(page.getByRole('heading', { name: '演習結果' })).toBeVisible();
+  const stats = await page.evaluate((key) => JSON.parse(localStorage.getItem(key) ?? '{}').quizStats ?? {}, STORAGE_KEY);
+  const stat = stats['q-d1-fanout'];
+  expect('lastConfidence' in stat).toBe(false);
+  expect(stat.guessedCorrect).toBe(1);
+
+  // #when — launching the exact-target question once more and recording a new "確信あり" confidence
+  await openScenarioQuestion(page, 'ja', 'カスタマーサポート解決エージェント', 'q-d1-fanout');
+  await page.locator('.choice-button').nth(2).click();
+  await expect(page.locator('.quiz-verdict.is-correct')).toBeVisible();
+  await page.getByRole('button', { name: '確信あり', exact: true }).click();
+
+  // #then — the newly recorded confidence is saved
+  await expect.poll(() => page.evaluate((key) => JSON.parse(localStorage.getItem(key) ?? '{}').quizStats?.['q-d1-fanout']?.lastConfidence, STORAGE_KEY)).toBe('sure');
+});
+
+test('records a double-clicked guess once', async ({ page }) => {
+  // #given — an exact-target question with the unique correct choice c (index 2)
+  await openScenarioQuestion(page, 'ja', 'カスタマーサポート解決エージェント', 'q-d1-fanout');
+  await page.locator('.choice-button').nth(2).click();
+  await expect(page.locator('.quiz-verdict.is-correct')).toBeVisible();
+
+  // #when — synchronously clicking the third confidence button ("勘") twice
+  await page.evaluate(() => {
+    const b = document.querySelectorAll('.quiz-confidence-button')[2] as HTMLButtonElement;
+    b.click();
+    b.click();
+  });
+
+  // #then — both the guess count and confidence are persisted exactly once
+  await expect.poll(() => page.evaluate((key) => JSON.parse(localStorage.getItem(key) ?? '{}').quizStats?.['q-d1-fanout']?.guessedCorrect, STORAGE_KEY)).toBe(1);
+  const stats = await page.evaluate((key) => JSON.parse(localStorage.getItem(key) ?? '{}').quizStats ?? {}, STORAGE_KEY);
+  expect(stats['q-d1-fanout'].guessedCorrect).toBe(1);
+  expect(stats['q-d1-fanout'].lastConfidence).toBe('guess');
+});
+
+test('does not attach confidence to an answer another tab already overwrote, and shows a stale notice', async ({ page }) => {
+  // #given — an exact-target question answered correctly in this tab, confidence not yet chosen
+  await openScenarioQuestion(page, 'ja', 'カスタマーサポート解決エージェント', 'q-d1-fanout');
+  await page.locator('.choice-button').nth(2).click();
+  await expect(page.locator('.quiz-verdict.is-correct')).toBeVisible();
+
+  // #when — another tab answers the same question again with a newer, incorrect
+  // result, simulated by writing canonical storage directly (no reload, so this
+  // tab's mounted screen keeps grading the now-superseded answer)
+  const newerAnsweredAt = await page.evaluate((key) => {
+    const raw = JSON.parse(localStorage.getItem(key) ?? '{}');
+    const previous = raw.quizStats['q-d1-fanout'];
+    const newer = new Date(Date.parse(previous.lastAnsweredAt) + 60_000).toISOString();
+    raw.quizStats['q-d1-fanout'] = { attempts: previous.attempts + 1, correct: previous.correct, lastAnsweredAt: newer, lastCorrect: false };
+    localStorage.setItem(key, JSON.stringify(raw));
+    return newer;
+  }, STORAGE_KEY);
+
+  // #when — this tab records "勘" for its now-stale answer
+  await page.locator('.quiz-confidence-button').nth(2).click();
+
+  // #then — a stale notice is shown instead of a recorded-confidence notice
+  await expect(page.locator('.quiz-confidence-stale')).toBeVisible();
+  await expect(page.locator('.quiz-confidence-recorded')).toHaveCount(0);
+
+  // #then — the newer answer from "tab B" is left exactly as written: no
+  // confidence or guess count crossed over from tab A's stale grading
+  const stat = await page.evaluate((key) => JSON.parse(localStorage.getItem(key) ?? '{}').quizStats['q-d1-fanout'], STORAGE_KEY);
+  expect(stat.lastAnsweredAt).toBe(newerAnsweredAt);
+  expect(stat.lastCorrect).toBe(false);
+  expect('lastConfidence' in stat).toBe(false);
+  expect('guessedCorrect' in stat).toBe(false);
+
+  // #when — pressing another confidence button afterward
+  await page.getByRole('button', { name: '確信あり', exact: true }).click();
+
+  // #then — the guard from the first click holds: still stale, still nothing written
+  await expect(page.locator('.quiz-confidence-stale')).toBeVisible();
+  const statAfterRetry = await page.evaluate((key) => JSON.parse(localStorage.getItem(key) ?? '{}').quizStats['q-d1-fanout'], STORAGE_KEY);
+  expect('lastConfidence' in statAfterRetry).toBe(false);
+});

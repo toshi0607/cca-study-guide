@@ -5,14 +5,14 @@ import { scenarios } from '../../content/scenarios';
 import type { ChoiceQuestion, Scenario } from '../../content/types';
 import type { Locale } from '../../i18n/locales';
 import { localize, type UiCopy } from '../../i18n/ui';
-import { isAnswerCorrect, pickQuizQuestions, type QuizCount, type QuizDomainChoice } from '../../lib/quiz';
+import { classifyAnswer, pickQuizQuestions, type AnswerOutcome, type QuizCount, type QuizDomainChoice } from '../../lib/quiz';
 import { useChoiceRationales } from '../../lib/rationales-loader';
-import type { QuizStat } from '../../lib/storage';
+import type { QuizConfidence, QuizStat } from '../../lib/storage-schema';
 import { QuizQuestion } from '../quiz/QuizQuestion';
 import { QuizSetup } from '../quiz/QuizSetup';
 import { QuizSummary } from '../quiz/QuizSummary';
 import { ScenarioBackground } from '../quiz/ScenarioBackground';
-import type { QuizMode, QuizResult } from '../quiz/types';
+import type { ConfidenceOutcome, QuizMode, QuizResult } from '../quiz/types';
 
 const questionsByScenario = new Map(
   scenarios.map((scenario) => [scenario.id, questions.filter((question) => question.scenarioId === scenario.id)]),
@@ -21,7 +21,7 @@ const questionsByScenario = new Map(
 const domainBadges = (domainIds: string[]) =>
   domains.filter((domain) => domainIds.includes(domain.id)).map((domain) => <span key={domain.id} class="badge badge--ink">D{domain.number}</span>);
 
-export function QuizView({ locale, copy, quizStats, onAnswer, targetQuestionId, onTargetOpened, targetScenarioId, onTargetScenarioOpened }: { locale: Locale; copy: UiCopy; quizStats?: Record<string, QuizStat>; onAnswer: (questionId: string, correct: boolean) => boolean; targetQuestionId: string | null; onTargetOpened: () => void; targetScenarioId: string | null; onTargetScenarioOpened: () => void }) {
+export function QuizView({ locale, copy, quizStats, onAnswer, onConfidence, targetQuestionId, onTargetOpened, targetScenarioId, onTargetScenarioOpened }: { locale: Locale; copy: UiCopy; quizStats?: Record<string, QuizStat>; onAnswer: (questionId: string, outcome: AnswerOutcome) => string | null; onConfidence: (questionId: string, confidence: QuizConfidence, wasCorrect: boolean, expectedLastAnsweredAt: string) => ConfidenceOutcome; targetQuestionId: string | null; onTargetOpened: () => void; targetScenarioId: string | null; onTargetScenarioOpened: () => void }) {
   const [phase, setPhase] = useState<'setup' | 'background' | 'question' | 'summary'>('setup');
   const [mode, setMode] = useState<QuizMode>('random');
   const [scenario, setScenario] = useState<Scenario | null>(null);
@@ -109,12 +109,14 @@ export function QuizView({ locale, copy, quizStats, onAnswer, targetQuestionId, 
 
   const answer = (question: ChoiceQuestion, selectedIds: string[]) => {
     if (answeredIdRef.current === question.id) return;
-    const correct = isAnswerCorrect(question, selectedIds);
+    const outcome = classifyAnswer(question, selectedIds);
+    const correct = outcome === 'correct';
     // Save-first: the answered UI (and the rationale request) only advances once
     // the stat is persisted, so a failed save never shows a "recorded" answer.
-    if (!onAnswer(question.id, correct)) return;
+    const token = onAnswer(question.id, outcome);
+    if (!token) return;
     answeredIdRef.current = question.id;
-    setResults((value) => [...value, { question, selectedIds, correct }]);
+    setResults((value) => [...value, { question, selectedIds, correct, outcome, answerToken: token }]);
     setRationalesRequested(true);
     requestAnimationFrame(() => feedbackRef.current?.focus());
   };
@@ -172,6 +174,7 @@ export function QuizView({ locale, copy, quizStats, onAnswer, targetQuestionId, 
         onSubmitMultiple={() => answer(current, selected)}
         onAdvance={advance}
         onQuit={reset}
+        onConfidence={(confidence, wasCorrect) => (currentResult ? onConfidence(current.id, confidence, wasCorrect, currentResult.answerToken) : 'failed')}
       />}
 
       {phase === 'summary' && <QuizSummary results={results} correctCount={correctCount} wrongResults={wrongResults} rationalesState={rationalesState} locale={locale} copy={copy} onRetry={reset}/>}

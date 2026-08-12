@@ -27,7 +27,8 @@ const mockExamAttempt = {
 };
 
 test('exports, resets, and re-imports the full study document on production', async ({ page }, testInfo) => {
-  // Accept both the Reset and the Import confirmation dialogs.
+  // Accept the native Reset confirmation dialog. Import no longer uses a native
+  // dialog — it opens an in-page choice dialog handled below.
   page.on('dialog', (dialog) => dialog.accept());
 
   // #given — a fully-populated v3 document
@@ -68,10 +69,11 @@ test('exports, resets, and re-imports the full study document on production', as
   expect(await page.evaluate((key) => localStorage.getItem(key), STORAGE_KEY)).toBeNull();
   expect(await page.evaluate((key) => localStorage.getItem(key), LEGACY_STORAGE_KEY)).toBeNull();
 
-  // #when — importing the real downloaded file restores every record
+  // #when — importing the real downloaded file and choosing to replace restores every record
   const chooserPromise = page.waitForEvent('filechooser');
   await page.getByRole('button', { name: '進捗をJSONから読み込む' }).click();
   await (await chooserPromise).setFiles(exportPath);
+  await page.getByRole('button', { name: '置き換える' }).click();
   await expect(page.getByText('JSONから進捗を読み込みました。')).toBeVisible();
 
   const restored = await page.evaluate((key) => JSON.parse(localStorage.getItem(key) ?? 'null'), STORAGE_KEY);
