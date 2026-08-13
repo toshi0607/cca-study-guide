@@ -23,9 +23,14 @@ const card = (
   en: CardCopy,
   sourceIds: string[],
   verifiedAt: string = VERIFIED_AT,
+  // Bump when a revision changes what the card asserts. Readers whose
+  // ReviewState.cardRevisionSeen no longer matches are pulled back into review,
+  // so a learner who studied a superseded claim sees the correction.
+  // Keep it at 1 for wording-only edits, and mirror every bump in card-index.ts.
+  revision: number = 1,
 ): Card => ({
   id,
-  revision: 1,
+  revision,
   domainId,
   objectiveIds,
   kind,
@@ -373,18 +378,19 @@ export const cards: Card[] = [
     'd1-hook-exit-codes', 'd1', ['1.5'], 'recall',
     {
       prompt: 'コマンド型フックの終了コード0と2は、それぞれ何を意味する？',
-      answer: '0は「異議なし」で処理は通常どおり進む（PreToolUseでは通常の権限フローが引き続き適用される）。2はブロックで、stderrへ書いた理由がClaudeへのフィードバックとして渡る。',
-      explanation: 'その他の終了コードはフックのエラーとして扱われつつ処理は続行します。ブロックできないイベントでは終了コード2でもstderr表示のみです。より細かい制御は終了コード0とJSON出力で行います。',
-      pitfall: '終了コード2とJSON出力は併用できません。2で終了するとJSONは無視されます。',
+      answer: '0は「異議なし」で処理は通常どおり進む（PreToolUseでは通常の権限フローが引き続き適用される）。2はブロックで、JSONのブロッキング決定に理由があればその理由が、なければstderrの内容がブロック理由になる。',
+      explanation: 'その他の終了コード（1や3など）は、多くのイベントでそれ単体ではブロックしません。stdoutに妥当なJSONがあればJSONが結果を決め、なければ非ブロッキングエラーとして処理は続行します。ブロックできないイベントもあり、そこでは終了コード2でも表示にとどまります。構造化された制御は終了コード0とJSON出力で行うのが基本形です。',
+      pitfall: '終了コード1ではブロックできません。ポリシーを強制するなら2を使います。なお終了コード2はJSONを出していてもブロックし、JSONのpermissionDecision: "allow"では覆せません。JSON自体が無視されるわけではなく、ブロッキング決定に理由を書いていればそれがブロック理由の文言として使われます。',
     },
     {
       prompt: 'In a command hook, what do exit codes 0 and 2 mean?',
-      answer: 'Exit 0 means “no objection” and processing continues normally (for PreToolUse, the regular permission flow still applies). Exit 2 blocks the action, and the reason written to stderr is fed back to Claude.',
-      explanation: 'Other exit codes are treated as hook errors while the action proceeds. Some events cannot be blocked; there, exit 2 only shows stderr to the user. For finer control, exit 0 and print structured JSON.',
-      pitfall: 'Do not combine exit code 2 with JSON output. When you exit with 2, the JSON is ignored.',
+      answer: 'Exit 0 means “no objection” and processing continues normally (for PreToolUse, the regular permission flow still applies). Exit 2 blocks the action. The blocking message comes from the reason supplied by a blocking decision in valid JSON, or from stderr otherwise.',
+      explanation: 'Other exit codes such as 1 or 3 do not block on their own for most events. If stdout carries valid JSON, that JSON decides the outcome; otherwise it is a non-blocking error and the action proceeds. Some events cannot block at all, where exit 2 only surfaces the message. Structured control is normally done with exit 0 plus JSON output.',
+      pitfall: 'Exit code 1 does not block — use exit 2 to enforce policy. Note also that exit 2 blocks even when you print JSON, and a JSON permissionDecision of “allow” cannot override it. The JSON is not ignored, though: a reason carried by a blocking decision inside it becomes the blocking message.',
     },
-    ['hooks'],
-    EXPANSION_VERIFIED_AT,
+    ['hooks', 'hooks-reference'],
+    '2026-08-13',
+    2,
   ),
   card(
     'd1-fixed-vs-loop', 'd1', ['1.6'], 'contrast',

@@ -10,6 +10,7 @@ export const sources: Source[] = [
   { id: 'tool-use', title: 'How tool use works', publisher: 'Anthropic', url: 'https://platform.claude.com/docs/en/agents-and-tools/tool-use/how-tool-use-works', official: true, verifiedAt: VERIFIED_AT },
   { id: 'structured', title: 'Structured outputs', publisher: 'Anthropic', url: 'https://platform.claude.com/docs/en/build-with-claude/structured-outputs', official: true, verifiedAt: VERIFIED_AT },
   { id: 'hooks', title: 'Automate workflows with hooks', publisher: 'Anthropic', url: 'https://code.claude.com/docs/en/hooks-guide', official: true, verifiedAt: VERIFIED_AT },
+  { id: 'hooks-reference', title: 'Hooks reference', publisher: 'Anthropic', url: 'https://code.claude.com/docs/en/hooks', official: true, verifiedAt: '2026-08-13' },
   { id: 'code-features', title: 'Claude Code features overview', publisher: 'Anthropic', url: 'https://code.claude.com/docs/en/features-overview', official: true, verifiedAt: VERIFIED_AT },
   { id: 'sdk-features', title: 'Agent SDK: Claude Code features', publisher: 'Anthropic', url: 'https://code.claude.com/docs/en/agent-sdk/claude-code-features', official: true, verifiedAt: VERIFIED_AT },
   { id: 'subagents', title: 'Agent SDK: subagents', publisher: 'Anthropic', url: 'https://code.claude.com/docs/en/agent-sdk/subagents', official: true, verifiedAt: VERIFIED_AT },
