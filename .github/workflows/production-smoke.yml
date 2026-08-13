@@ -39,15 +39,9 @@ jobs:
           node-version: 24
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      # Build WITH a GA measurement id so the analytics snippet is structurally
-      # present, exactly as production's build has it. The identity check hashes
-      # HTML after normalizing the GA id and the per-build astro-island uid, so
-      # the specific value here is irrelevant — but the snippet must exist or the
-      # HTML would differ from production by a whole block. The manifest compares
-      # the full dist output (all JS/CSS/HTML/assets), not just the island bundles.
+      # Build with the same no-analytics configuration as Production. The
+      # verifier compares every served local-manifest file directly.
       - run: pnpm build
-        env:
-          PUBLIC_GA_MEASUREMENT_ID: G-TEST123456
       - run: mkdir -p tmp
       # `--` lets pnpm forward the flags; `--commit` records the audited main SHA.
       - run: pnpm verify:production -- --json tmp/production-deployment-report.json --commit "${{ steps.sha.outputs.audited }}"

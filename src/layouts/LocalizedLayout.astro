@@ -1,5 +1,4 @@
 ---
-import GoogleAnalytics from '../components/GoogleAnalytics.astro';
 import { localePaths, type Locale } from '../i18n/locales';
 import { siteCopy, type SitePage } from '../i18n/site';
 import fontManifest from '../../public/fonts/manifest.json';
@@ -69,7 +68,6 @@ const fontFaceCss = [latinFont, japaneseFont]
     <meta name="twitter:image" content={socialImageUrl} />
     <meta name="twitter:image:alt" content={copy.socialImageAlt} />
     <title>{metadata.title}</title>
-    <GoogleAnalytics />
   </head>
   <body class={bodyClass}>
     <a class="skip-link" href="#main-content">{copy.skipLink}</a>

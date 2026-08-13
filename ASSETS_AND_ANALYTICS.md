@@ -1,4 +1,4 @@
-# Assets and Analytics
+# Assets and Privacy
 
 ## Social preview
 
@@ -20,19 +20,14 @@
 - Subset scope: printable ASCII, kana, CJK punctuation, full-width forms, every `src/i18n/ui.ts` string literal, and the display-font text in the built HTML — the characters the `--display` stack (`.wordmark b`, `.today-hero h2`, `.page-header h2`) can render.
 - Regenerate with `pnpm build && pnpm fonts:subset` when `src/lib/fonts.test.ts` reports missing characters after copy changes.
 
-## Analytics
+## Privacy
 
-- Configuration: optional `PUBLIC_GA_MEASUREMENT_ID` in `G-...` form.
-- Missing ID: no Google script, cookie, analytics request, or analytics-specific disclosure.
-- Configured ID: load `gtag.js` normally and configure the default page view. The measurement ID is exposed to the client through a `<meta name="ga-measurement-id">` tag, and a bundled (non-inline) init script reads it and calls `gtag`. This keeps the page free of inline `define:vars` script so `script-src` can omit `'unsafe-inline'` (see Security headers below).
-- Advertising storage, advertising user data, advertising personalization, Google Signals, and ad-personalization signals are disabled in app configuration.
-- `cookie_domain: 'none'` keeps GA cookies host-only instead of sharing them with sibling subdomains.
-- The app emits no custom events for card IDs/content, search terms, ratings, review state, exported data, or other study progress. GA4 Enhanced Measurement can add events such as outbound clicks at the property layer; disable it in the Web data stream to enforce page-view-only collection.
-- The Progress view summarizes the analytics behavior and the app-wide footer links to `/privacy/` for details and opt-out information.
+- The app has no third-party analytics, advertising tags, or behavioral tracking.
+- Study progress is stored only in the browser's localStorage. It is not synchronized to a server or sent to another service.
+- The footer on both application locales always links to `/privacy/` (or `/en/privacy/`), where this behavior is explained to learners.
+- Legacy `PUBLIC_GA_MEASUREMENT_ID` values are not read by the application and therefore cannot re-enable analytics.
 
-Recommended GA4 property settings: keep Google Signals off, do not link Google Ads, disable Enhanced Measurement if only page views are desired, and use the shortest suitable retention period.
-
-Production activation completed on 2026-07-14. The GA4 measurement ID is stored in Vercel's Production environment; the built page exposes it as expected for a public Google tag. Consent gating was removed by user choice on 2026-07-15 in favor of immediate loading plus a dedicated disclosure page. Production smoke checks returned HTTP 200 for `/` and `/privacy/`, found exactly one loader per page, and found no consent runtime remnants.
+Third-party analytics were removed on 2026-08-11: an analytics script executing on the same origin as learner localStorage cannot be meaningfully isolated by this static app's CSP.
 
 ## Security headers
 
@@ -50,14 +45,14 @@ The site is fully static and self-hosted, so `default-src 'self'` is the baselin
 | Directive | Value | Why |
 | --- | --- | --- |
 | `default-src` | `'self'` | Static, same-origin app; everything defaults to first-party. |
-| `script-src` | `'self'` + three `sha256-…` hashes + `https://www.googletagmanager.com` | No `'unsafe-inline'`. Astro emits a few unavoidable inline scripts: the island hydration bootstrap (two scripts, present on pages using a `client:*` component) and the Google Analytics init module. Each is allow-listed by the exact sha256 of its bytes. `gtag.js` is the only external script host. |
+| `script-src` | `'self'` + two `sha256-…` hashes | No `'unsafe-inline'`. Astro emits two unavoidable inline scripts for the island hydration bootstrap; each is allow-listed by the exact sha256 of its bytes. No external scripts are permitted. |
 | `style-src` | `'self' 'unsafe-inline'` | Astro inlines small `<style>` blocks and the layout injects an `is:inline` `@font-face` block; there is no CSP-nonce path for these on static output, so inline styles (data-only, no script capability) are permitted. |
-| `img-src` | `'self' data:` + `https://www.googletagmanager.com https://*.google-analytics.com` | First-party icons/OGP plus the GA measurement pixel; `data:` for any inlined image data. |
+| `img-src` | `'self' data:` | First-party icons/OGP plus `data:` for any inlined image data. |
 | `font-src` | `'self'` | Fonts are self-hosted `.woff2`; no external font CDN. |
-| `connect-src` | `'self'` + `https://www.googletagmanager.com https://*.google-analytics.com https://*.analytics.google.com` | GA4 collection endpoints; nothing else makes network calls. |
+| `connect-src` | `'self'` | The static app makes no third-party network calls. |
 | `object-src` | `'none'` | No plugins/embeds. |
 | `base-uri` / `form-action` | `'self'` | Lock down `<base>` hijacking and form posting. |
 | `frame-src` | `'none'` | The app embeds no iframes. |
 | `upgrade-insecure-requests` | — | Defense in depth; all resources are already same-origin/HTTPS. |
 
-The `script-src` hashes are byte-derived and therefore change when Astro is upgraded or the GA init script is edited. `scripts/check-csp-hashes.mjs` (run via `pnpm test:csp`) rebuilds `dist/`, extracts every inline `<script>` hash, and fails if any is missing from `vercel.json`, converting a silent production CSP breakage into a loud build failure. The hashes above were verified stable across repeated builds and confirmed to execute under the real header (island hydration and GA init both run, zero CSP violations).
+The `script-src` hashes are byte-derived and therefore change when Astro is upgraded. `scripts/check-csp-hashes.mjs` (run via `pnpm test:csp`) rebuilds `dist/`, extracts every inline `<script>` hash, and fails unless `vercel.json` contains exactly that set, converting a silent production CSP breakage or stale capability into a loud build failure. The hashes above were verified against the built hydration scripts on 2026-08-11.

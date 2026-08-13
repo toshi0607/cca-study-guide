@@ -1,41 +1,21 @@
-import { test as base, expect, type ConsoleMessage, type Request } from '@playwright/test';
+import { test as base, expect, type Request } from '@playwright/test';
 
 export { expect };
 
 // Health signals collected across a navigation. A production smoke test fails on
-// any of these being non-empty; external (analytics) failures are deliberately
-// excluded from `failedAssetRequests` — see isSameOriginAssetFailure.
+// any of these being non-empty.
 export type SmokeCollectors = {
   consoleErrors: string[];
   pageErrors: string[];
   failedAssetRequests: string[];
 };
 
-// Only same-origin JS/CSS/font failures matter for a smoke run. An analytics
-// beacon (googletagmanager/google-analytics) that fails or is blocked must never
-// fail the suite, so we filter to the production origin (or a hashed /_astro/
-// asset) and to loadable asset resource types.
-function isSameOriginAssetFailure(request: Request, origin: string): boolean {
-  const url = request.url();
-  const sameOrigin = url.startsWith(origin) || url.includes('/_astro/');
+// JS/CSS/font failures matter for a smoke run. The app is static and does not
+// allow third-party analytics or other external assets.
+function isAssetFailure(request: Request): boolean {
   const type = request.resourceType();
   const isAsset = type === 'script' || type === 'stylesheet' || type === 'font';
-  return sameOrigin && isAsset;
-}
-
-// A console error that originates from an EXTERNAL script/resource (e.g. a
-// blocked or slow gtag.js / GTM subresource emits "Failed to load resource:
-// net::ERR_…") must not fail a smoke run — transient analytics failures are
-// tolerated by design (same policy as isSameOriginAssetFailure). App-thrown
-// console.error calls carry a same-origin (/_astro/) source location and are
-// kept; a message with no source location is kept, conservatively. Same-origin
-// resource failures are still caught here (and redundantly on the request
-// channel).
-function isExternalConsoleError(message: ConsoleMessage, origin: string): boolean {
-  const url = message.location()?.url ?? '';
-  if (!url) return false;
-  if (url.startsWith(origin) || url.includes('/_astro/')) return false;
-  return true;
+  return isAsset;
 }
 
 // Production smoke fixture. Two responsibilities, both opt-in per test:
@@ -57,18 +37,17 @@ export const test = base.extend<{ collectors: SmokeCollectors }>({
     });
     await use(page);
   },
-  collectors: async ({ page, baseURL }, use) => {
-    const origin = new URL(baseURL ?? 'https://cca.toshi0607.com').origin;
+  collectors: async ({ page }, use) => {
     const consoleErrors: string[] = [];
     const pageErrors: string[] = [];
     const failedAssetRequests: string[] = [];
 
     page.on('console', (message) => {
-      if (message.type() === 'error' && !isExternalConsoleError(message, origin)) consoleErrors.push(message.text());
+      if (message.type() === 'error') consoleErrors.push(message.text());
     });
     page.on('pageerror', (error) => pageErrors.push(error.message));
     page.on('requestfailed', (request) => {
-      if (isSameOriginAssetFailure(request, origin)) {
+      if (isAssetFailure(request)) {
         failedAssetRequests.push(`${request.method()} ${request.url()} — ${request.failure()?.errorText ?? 'failed'}`);
       }
     });

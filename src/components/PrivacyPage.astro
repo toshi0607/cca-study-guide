@@ -4,10 +4,9 @@ import { siteCopy } from '../i18n/site';
 
 interface Props {
   locale: Locale;
-  analyticsEnabled: boolean;
 }
 
-const { locale, analyticsEnabled } = Astro.props;
+const { locale } = Astro.props;
 const copy = siteCopy[locale];
 const privacy = copy.privacy;
 ---
@@ -37,19 +36,10 @@ const privacy = copy.privacy;
       <p>{privacy.studyData}</p>
     </section>
 
-    {analyticsEnabled && <section aria-labelledby="analytics-title">
-      <h2 class="section-title" id="analytics-title">{privacy.analyticsHeading}</h2>
-      <p>{privacy.analyticsIntro}</p>
-      <ul>
-        {privacy.analyticsExclusions.map((item) => <li>{item}</li>)}
-      </ul>
-      <p>{privacy.googleDataPrefix}<a href={`https://policies.google.com/technologies/partner-sites?hl=${locale}`} target="_blank" rel="noreferrer">{privacy.googleDataLink}<span class="sr-only"> {privacy.newTab}</span> ↗</a></p>
-    </section>}
-
-    {analyticsEnabled && <section aria-labelledby="cookies-title">
-      <h2 class="section-title" id="cookies-title">{privacy.cookiesHeading}</h2>
-      <p>{privacy.cookiesPrefix}<a href={`https://tools.google.com/dlpage/gaoptout?hl=${locale}`} target="_blank" rel="noreferrer">{privacy.optOutLink}<span class="sr-only"> {privacy.newTab}</span> ↗</a>{privacy.cookiesSuffix}</p>
-    </section>}
+    <section aria-labelledby="local-only-title">
+      <h2 class="section-title" id="local-only-title">{privacy.localOnlyHeading}</h2>
+      <p>{privacy.localOnly}</p>
+    </section>
 
     <section aria-labelledby="contact-title">
       <h2 class="section-title" id="contact-title">{privacy.contactHeading}</h2>

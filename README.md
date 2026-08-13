@@ -30,7 +30,7 @@ The focused review session — **recall → reveal → rate**, entirely in the b
 - The multiple-choice practice includes a scenario mode: an original study aid to get comfortable with reading a fictional company's case description and then answering the linked questions. Not a copy or reproduction of the real exam's scenarios
 - The practice view offers a focused review session in addition to the list view. It cycles through filtered results one card at a time in a "recall → reveal → rate" loop, with keyboard shortcuts (Space/Enter to reveal, 1/2/3 to rate, Esc to stop)
 - Progress is stored only in the browser's localStorage (JSON export/import lets you migrate across devices and browsers)
-- When configured, Google Analytics is loaded normally and does not send any learning data beyond page views as custom events
+- No third-party analytics or tracking is loaded; study progress stays in the browser's localStorage
 
 ## Features
 
@@ -101,8 +101,8 @@ pnpm test:e2e:ui       # Playwright UI mode
 `pnpm test:e2e` rebuilds the production build every time, so repeating it during development gets slow. If you already have a local preview server running, you can explicitly reuse it (reuse is disabled by default to avoid accidentally using a stale build).
 
 ```sh
-# Start in a separate terminal (build with the same ID as the webServer, since the analytics tests require a measurement ID)
-PUBLIC_GA_MEASUREMENT_ID=G-TEST123456 pnpm build && pnpm preview --host 127.0.0.1 --port 4325
+# Start in a separate terminal
+pnpm build && pnpm preview --host 127.0.0.1 --port 4325
 pnpm test:e2e:reuse   # or test:e2e:fast. Runs against the already-running server
 ```
 
@@ -119,26 +119,17 @@ pnpm fonts:subset
 
 File names include a content hash, and references follow automatically via `public/fonts/manifest.json`. Commit the generated woff2 files and the manifest.
 
-## Google Analytics
-
-The measurement ID shown on the GA4 web data stream is set for the Production environment only. If unset, no Google tag or analytics output is emitted. An invalid format is a build error.
-
-```sh
-vercel env add PUBLIC_GA_MEASUREMENT_ID production
-vercel deploy --prod
-```
-
-The value is in `G-...` format. When set, `gtag.js` is loaded normally and configures basic page views with ad storage, ad user data, and ad personalization denied. Google Signals and ad-personalization signals are also disabled, and GA cookies are limited to the host being visited. No app-specific custom events are implemented. To limit to page views only, also disable "enhanced measurement" on the GA4 web data stream. A user-facing explanation is published at `/privacy/`.
-
 ## Promo video
 
 `video/` is a standalone Remotion project that generates a social promo video (about 34 seconds, 1920×1080, H.264). It has its own `package.json` and does not affect the main app's build, test, or deploy. `video-hf/` is the same composition ported to [HyperFrames](https://hyperframes.heygen.com/) (HTML + GSAP) via the `remotion-to-hyperframes` skill — see `video-hf/TRANSLATION_NOTES.md`. Screen material is real screenshots under `video/assets/`.
 
 ```sh
 # Remotion
-cd video && pnpm install && npx remotion render promo out/promo.mp4
+pnpm --dir video install --frozen-lockfile
+pnpm --dir video exec remotion render promo out/promo.mp4
 # HyperFrames (needs a system ffmpeg on PATH)
-cd video-hf && npx hyperframes render --quality high --output out/promo.mp4
+pnpm --dir video-hf install --frozen-lockfile
+pnpm --dir video-hf render --quality high --output out/promo.mp4
 ```
 
 Rendered output under `out/` is not committed — the finished video is published as a GitHub Release ([promo-video-v2](https://github.com/toshi0607/cca-study-guide/releases/tag/promo-video-v2)).

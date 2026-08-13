@@ -11,11 +11,18 @@ async function htmlFiles(directory) {
 }
 
 const forbidden = [
-  'googletagmanager.com/gtag/js',
-  'G-TEST123456',
+  'googletagmanager.com',
+  'google-analytics.com',
+  'analytics.google.com',
+  'ga-measurement-id',
+  'dataLayer',
   'id="analytics-consent"',
   'cca-analytics-consent:v1',
   'アクセス解析の設定',
+];
+const forbiddenPatterns = [
+  /\bG-[A-Z0-9]{6,}\b/,
+  /\bgtag\s*\(/,
 ];
 const routeForbidden = {
   'dist/index.html': [
@@ -42,6 +49,7 @@ const found = [];
 for (const file of await htmlFiles('dist')) {
   const html = await readFile(file, 'utf8');
   for (const value of forbidden) if (html.includes(value)) found.push(`${file}: ${value}`);
+  for (const pattern of forbiddenPatterns) if (pattern.test(html)) found.push(`${file}: ${pattern}`);
 }
 
 for (const [file, values] of Object.entries(routeForbidden)) {
@@ -49,8 +57,6 @@ for (const [file, values] of Object.entries(routeForbidden)) {
   for (const value of values) if (html.includes(value)) found.push(`${file}: ${value}`);
 }
 
-if (found.length) {
-  throw new Error(`Analytics must be omitted when PUBLIC_GA_MEASUREMENT_ID is empty. Found: ${found.join(', ')}`);
-}
+if (found.length) throw new Error(`Analytics must not be present in dist/. Found: ${found.join(', ')}`);
 
-console.log('No-ID build omits analytics loading, consent remnants, and analytics disclosure.');
+console.log('Built output contains no analytics loading, consent remnants, or analytics disclosure.');

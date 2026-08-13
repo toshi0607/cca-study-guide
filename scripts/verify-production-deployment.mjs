@@ -1,17 +1,16 @@
 // Verifies that the live Production deployment serves the SAME build as a local
-// `dist/` build — the WHOLE deployable output, identified two ways:
-//   1. the source `commit` recorded in the build manifest, and
-//   2. the sha256 of EVERY served file (JS, CSS, HTML, fonts, icons, …).
+// `dist/` build. The trusted local deployment manifest is the root of trust:
+// every path in its inventory is fetched from Production and its served bytes
+// are hashed locally.
 // This is intentionally broader than diffing App.*.js / client.*.js alone: a
 // CSS-only, HTML-metadata-only, locale-page-only, or static-asset-only change
 // is still detected. See scripts/deployment-manifest.mjs for how the manifest
 // is generated (at build time, and served by Vercel at /deployment-manifest.json).
 //
-// It also cross-checks that Production's served App island asset actually hashes
-// to what Production's own manifest claims — so a stale-but-present manifest
-// cannot mask a mismatched deploy.
+// Production's deployment manifest is compared as supplementary deployment
+// metadata only. It is never used as evidence for the bytes Production serves.
 //
-// This is a fast smoke check: a single bounded fetch per resource, NO polling.
+// This is a fast smoke check: a single bounded request chain per resource, NO polling.
 // Failing fast on a deploy race (Production still on an older build, or the new
 // manifest not yet served) is intentional and preferred over hiding it.
 //
@@ -35,7 +34,7 @@
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { MANIFEST_FILENAME, MANIFEST_VERSION, sha256Hex } from './deployment-manifest.mjs';
+import { MANIFEST_FILENAME, MANIFEST_VERSION, hashManifestEntry, sha256Hex } from './deployment-manifest.mjs';
 
 /** Default production host and the host allowlist for `--base` overrides. */
 export const DEFAULT_BASE_URL = 'https://cca.toshi0607.com';
@@ -44,28 +43,40 @@ export const DEFAULT_ALLOWED_HOSTS = ['cca.toshi0607.com'];
 /** Bounded per-resource fetch timeout. No retries — a single fetch each. */
 export const FETCH_TIMEOUT_MS = 20000;
 
+/** Maximum number of explicitly validated redirects per production request. */
+export const MAX_REDIRECT_HOPS = 5;
+
 /** Exact phrase required when Production is valid but serves an older build. */
 export const NOT_YET_SERVED_MESSAGE = 'Production does not yet serve this main build';
 
-/**
- * Extract the App island asset path from page HTML. The App island is
- * referenced as `component-url="/_astro/App.<hash>.js"`.
- * @param {string} html
- * @returns {string} the `/_astro/App.<hash>.js` path
- * @throws if it cannot be found.
- */
-export function extractAppAsset(html) {
-  if (typeof html !== 'string' || html.length === 0) {
-    throw new Error('extractAppAsset: HTML input is empty');
-  }
-  const match = html.match(/\/_astro\/App\.[A-Za-z0-9_-]+\.js/);
-  if (!match) throw new Error('extractAppAsset: no App island asset (/_astro/App.<hash>.js) found in HTML');
-  return match[0];
+/** True only for one canonical relative build-output path. */
+export function isSafeManifestKey(key) {
+  return typeof key === 'string'
+    && key.length > 0
+    && !key.startsWith('/')
+    && !key.includes('\\')
+    && !key.includes('?')
+    && !key.includes('#')
+    && !key.includes('%')
+    && !/[\u0000-\u001F\u007F]/.test(key)
+    && !/^[A-Za-z][A-Za-z0-9+.-]*:/.test(key)
+    && !key.split('/').some((part) => part === '' || part === '.' || part === '..');
 }
 
-/** The manifest key (dist-relative POSIX path) for an `/_astro/...` served path. */
-export function manifestKeyForPath(assetPath) {
-  return assetPath.replace(/^\/+/, '');
+/**
+ * Convert one local-manifest key into a safe same-origin production URL.
+ * Manifest keys are paths, never URL references: reject ambiguous encodings and
+ * traversal rather than letting URL parsing silently reinterpret them.
+ * @param {URL} base
+ * @param {string} key
+ * @param {string[]} allowedHosts
+ * @returns {URL}
+ */
+export function productionUrlForManifestKey(base, key, allowedHosts) {
+  if (!isSafeManifestKey(key)) throw new Error(`unsafe manifest path: ${String(key)}`);
+  const url = new URL(`/${key}`, base);
+  assertAllowedRequestUrl(url, allowedHosts, 'manifest path');
+  return url;
 }
 
 /**
@@ -85,6 +96,9 @@ export function parseBaseUrl(rawBase, allowedHosts = DEFAULT_ALLOWED_HOSTS) {
   if (url.protocol !== 'https:') {
     throw new Error(`parseBaseUrl: base URL must use https: (got ${url.protocol}) — ${rawBase}`);
   }
+  if (url.username || url.password) {
+    throw new Error(`parseBaseUrl: base URL must not include credentials — ${rawBase}`);
+  }
   if (!allowedHosts.includes(url.host)) {
     throw new Error(`parseBaseUrl: host "${url.host}" is not allowed. Allowed hosts: ${allowedHosts.join(', ')}`);
   }
@@ -101,8 +115,10 @@ export function isValidManifest(value) {
   const m = /** @type {Record<string, unknown>} */ (value);
   if (m.version !== MANIFEST_VERSION) return false;
   if (!(typeof m.commit === 'string' || m.commit === null)) return false;
-  if (m.files === null || typeof m.files !== 'object') return false;
-  return Object.values(/** @type {Record<string, unknown>} */ (m.files)).every((h) => typeof h === 'string');
+  if (m.files === null || typeof m.files !== 'object' || Array.isArray(m.files)) return false;
+  const entries = Object.entries(/** @type {Record<string, unknown>} */ (m.files));
+  return entries.length > 0
+    && entries.every(([key, hash]) => isSafeManifestKey(key) && typeof hash === 'string' && /^[a-f0-9]{64}$/.test(hash));
 }
 
 /**
@@ -129,42 +145,50 @@ export function compareManifests({ local, production, auditedCommit = null }) {
   const testedCommit = auditedCommit ?? local.commit ?? null;
   const productionCommit = production.commit ?? null;
   let commitMismatch = false;
-  if (testedCommit && productionCommit && testedCommit !== productionCommit) {
+  if (testedCommit && testedCommit !== productionCommit) {
     commitMismatch = true;
-    mismatches.push(`commit differs (tested ${testedCommit} vs production ${productionCommit})`);
+    mismatches.push(`commit differs (tested ${testedCommit} vs production ${productionCommit ?? '(unknown)'})`);
   }
 
   return { ok: filesMatch && !commitMismatch, notYetServed: !filesMatch || commitMismatch, mismatches, testedCommit, productionCommit };
 }
 
-/** Host of a URL string, or null if unparseable/empty. */
-function safeHost(urlStr) {
-  if (!urlStr) return null;
-  try {
-    return new URL(urlStr).host;
-  } catch {
-    return null;
-  }
+/** Reject a URL before it is passed to fetch. */
+function assertAllowedRequestUrl(url, allowedHosts, label) {
+  if (url.protocol !== 'https:') throw new Error(`${label} must use https: (got ${url.protocol})`);
+  if (url.username || url.password) throw new Error(`${label} must not include credentials`);
+  if (!allowedHosts.includes(url.host)) throw new Error(`${label} host "${url.host}" is not allowed. Allowed hosts: ${allowedHosts.join(', ')}`);
 }
 
 /** Fetch a URL with a bounded timeout. One shot, no retry. */
-async function fetchWithTimeout(fetchImpl, url, timeoutMs) {
+async function fetchWithTimeout(fetchImpl, url, signal, timeoutMs) {
   try {
-    return await fetchImpl(url, { redirect: 'follow', signal: AbortSignal.timeout(timeoutMs) });
+    return await fetchImpl(url, { redirect: 'manual', credentials: 'omit', signal });
   } catch (err) {
     const reason = err && err.name === 'TimeoutError' ? `timed out after ${timeoutMs}ms` : String(err?.message ?? err);
     throw new Error(`fetch failed for ${url}: ${reason}`);
   }
 }
 
-/** GET a production resource, asserting the final host stays on the allowlist. */
+/** GET a production resource, validating the initial URL and every redirect before fetch. */
 async function fetchProduction(fetchImpl, url, allowedHosts) {
-  const res = await fetchWithTimeout(fetchImpl, url.toString(), FETCH_TIMEOUT_MS);
-  const finalHost = safeHost(res.url) ?? url.host;
-  if (!allowedHosts.includes(finalHost)) {
-    throw new Error(`${url} redirected off allowed host to ${finalHost}`);
+  let current = url;
+  const signal = AbortSignal.timeout(FETCH_TIMEOUT_MS);
+  for (let hops = 0; ; hops++) {
+    assertAllowedRequestUrl(current, allowedHosts, 'production request');
+    const res = await fetchWithTimeout(fetchImpl, current.toString(), signal, FETCH_TIMEOUT_MS);
+    if (![301, 302, 303, 307, 308].includes(res.status)) return res;
+    if (hops >= MAX_REDIRECT_HOPS) throw new Error(`too many redirects (maximum ${MAX_REDIRECT_HOPS}) for ${url}`);
+    const location = res.headers?.get?.('location');
+    if (!location) throw new Error(`redirect from ${current} is missing a Location header`);
+    try {
+      current = new URL(location, current);
+    } catch {
+      throw new Error(`redirect from ${current} has an invalid Location header`);
+    }
+    // Checked here, before the next loop can give this URL to fetchImpl.
+    assertAllowedRequestUrl(current, allowedHosts, 'redirect target');
   }
-  return res;
 }
 
 /**
@@ -222,9 +246,10 @@ export async function runVerification({
 
   // 1. local manifest (built by astro:build:done)
   let localManifest;
+  let localManifestBytes;
   try {
-    const raw = decode(await readLocalFile(MANIFEST_FILENAME));
-    localManifest = JSON.parse(raw);
+    localManifestBytes = Buffer.from(await readLocalFile(MANIFEST_FILENAME));
+    localManifest = JSON.parse(decode(localManifestBytes));
   } catch {
     return fail('read-local-manifest', `local build manifest not found or invalid: ${join(distDir, MANIFEST_FILENAME)}. Run \`pnpm build\` first.`);
   }
@@ -234,8 +259,46 @@ export async function runVerification({
   const testedCommit = auditedCommit ?? localManifest.commit ?? null;
   lines.push(`Tested commit: ${testedCommit ?? '(unknown)'} — ${Object.keys(localManifest.files).length} files`);
 
-  // 2. production manifest
+  // 2. Fetch every file named by the trusted local manifest. Production cannot
+  //    make this pass by serving an unchanged/self-consistent manifest: the
+  //    bytes are compared directly to local expected hashes.
+  const servedMismatches = [];
+  for (const key of Object.keys(localManifest.files).sort()) {
+    let url;
+    try {
+      url = productionUrlForManifestKey(base, key, allowedHosts);
+    } catch (err) {
+      return fail('validate-local-inventory', String(err.message ?? err), { testedCommit });
+    }
+    try {
+      const res = await fetchProduction(fetchImpl, url, allowedHosts);
+      if (res.status !== 200) {
+        servedMismatches.push(`production ${key} returned HTTP ${res.status}`);
+        continue;
+      }
+      const servedHash = hashManifestEntry(key, Buffer.from(await res.arrayBuffer()));
+      const expectedHash = localManifest.files[key];
+      if (servedHash !== expectedHash) {
+        servedMismatches.push(`served content differs: ${key} (local ${expectedHash.slice(0, 12)}… vs production ${servedHash.slice(0, 12)}…)`);
+      }
+    } catch (err) {
+      return fail('verify-served-files', String(err.message ?? err), { testedCommit });
+    }
+  }
+  if (servedMismatches.length) {
+    lines.push(`Served-file mismatches (${servedMismatches.length}):`);
+    for (const mismatch of servedMismatches.slice(0, 20)) lines.push(`  - ${mismatch}`);
+    if (servedMismatches.length > 20) lines.push(`  … and ${servedMismatches.length - 20} more`);
+    lines.push(NOT_YET_SERVED_MESSAGE);
+    return fail('verify-served-files', NOT_YET_SERVED_MESSAGE, { testedCommit, mismatches: servedMismatches });
+  }
+  lines.push(`Served-file verification: ${Object.keys(localManifest.files).length} local-manifest files match`);
+
+  // 3. Production's self-reported manifest is useful supplementary deployment
+  //    metadata (commit and inventory), but never substitutes for the direct
+  //    served-file comparison above.
   let productionManifest;
+  let productionManifestBytes;
   try {
     const res = await fetchProduction(fetchImpl, new URL(`/${MANIFEST_FILENAME}`, base), allowedHosts);
     if (res.status === 404) {
@@ -245,7 +308,8 @@ export async function runVerification({
     if (res.status !== 200) {
       return fail('fetch-production-manifest', `production /${MANIFEST_FILENAME} returned HTTP ${res.status}`, { testedCommit });
     }
-    productionManifest = JSON.parse(await res.text());
+    productionManifestBytes = Buffer.from(await res.arrayBuffer());
+    productionManifest = JSON.parse(decode(productionManifestBytes));
   } catch (err) {
     return fail('fetch-production-manifest', String(err.message ?? err), { testedCommit });
   }
@@ -255,44 +319,30 @@ export async function runVerification({
   const productionCommit = productionManifest.commit ?? null;
   lines.push(`Production commit: ${productionCommit ?? '(unknown)'} — ${Object.keys(productionManifest.files).length} files`);
 
-  // 3. anti-staleness cross-check: the App island asset Production actually
-  //    serves must hash to what Production's own manifest claims.
-  try {
-    const htmlRes = await fetchProduction(fetchImpl, new URL('/', base), allowedHosts);
-    if (htmlRes.status !== 200) throw new Error(`production / returned HTTP ${htmlRes.status}`);
-    const appPath = extractAppAsset(await htmlRes.text());
-    const key = manifestKeyForPath(appPath);
-    const claimed = productionManifest.files[key];
-    if (!claimed) {
-      return fail('verify-served-asset', `production serves ${appPath} but its manifest has no entry for ${key}`, { testedCommit, productionCommit });
-    }
-    const assetRes = await fetchProduction(fetchImpl, new URL(appPath, base), allowedHosts);
-    if (assetRes.status !== 200) throw new Error(`production asset ${appPath} returned HTTP ${assetRes.status}`);
-    const served = sha256Hex(Buffer.from(await assetRes.arrayBuffer()));
-    if (served !== claimed) {
-      return fail('verify-served-asset', `production manifest is stale: served ${appPath} sha256 ${served.slice(0, 12)}… != manifest ${claimed.slice(0, 12)}…`, { testedCommit, productionCommit });
-    }
-    lines.push(`Served-asset cross-check: ${appPath} matches production manifest`);
-  } catch (err) {
-    return fail('verify-served-asset', String(err.message ?? err), { testedCommit, productionCommit });
-  }
+  const localManifestHash = sha256Hex(localManifestBytes);
+  const productionManifestHash = sha256Hex(productionManifestBytes);
+  const receiptMismatch = localManifestHash !== productionManifestHash
+    ? `production manifest receipt differs (local ${localManifestHash.slice(0, 12)}… vs production ${productionManifestHash.slice(0, 12)}…)`
+    : null;
+  if (!receiptMismatch) lines.push('Production-manifest receipt: raw bytes match local manifest');
 
-  // 4. full manifest comparison (files + commit)
+  // 4. Supplementary production-manifest comparison (files + commit).
   const verdict = compareManifests({ local: localManifest, production: productionManifest, auditedCommit });
-  if (!verdict.ok) {
-    lines.push(`Mismatches (${verdict.mismatches.length}):`);
-    for (const m of verdict.mismatches.slice(0, 20)) lines.push(`  - ${m}`);
-    if (verdict.mismatches.length > 20) lines.push(`  … and ${verdict.mismatches.length - 20} more`);
-    if (verdict.notYetServed) lines.push(NOT_YET_SERVED_MESSAGE);
+  const manifestMismatches = receiptMismatch ? [...verdict.mismatches, receiptMismatch] : verdict.mismatches;
+  if (manifestMismatches.length) {
+    lines.push(`Production-manifest evidence mismatches (${manifestMismatches.length}):`);
+    for (const m of manifestMismatches.slice(0, 20)) lines.push(`  - ${m}`);
+    if (manifestMismatches.length > 20) lines.push(`  … and ${manifestMismatches.length - 20} more`);
+    if (verdict.notYetServed || receiptMismatch) lines.push(NOT_YET_SERVED_MESSAGE);
     const report = buildReport({
-      ok: false, stage: 'compare-manifests', host,
+      ok: false, stage: 'compare-production-manifest', host,
       testedCommit: verdict.testedCommit, productionCommit: verdict.productionCommit,
-      mismatches: verdict.mismatches, error: verdict.mismatches.join('; '), checkedAt,
+      mismatches: manifestMismatches, error: manifestMismatches.join('; '), checkedAt,
     });
     return { ok: false, exitCode: 1, summaryLines: lines, report, error: NOT_YET_SERVED_MESSAGE };
   }
 
-  lines.push(`Overall: MATCH — production serves this build (${Object.keys(localManifest.files).length} files, commit ${verdict.testedCommit ?? '(unknown)'})`);
+  lines.push(`Overall: MATCH — every local-manifest file served by production matches (${Object.keys(localManifest.files).length} files, commit ${verdict.testedCommit ?? '(unknown)'}). This cannot enumerate unknown extra production files.`);
   const report = buildReport({
     ok: true, stage: 'complete', host,
     testedCommit: verdict.testedCommit, productionCommit: verdict.productionCommit,

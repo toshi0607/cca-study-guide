@@ -8,13 +8,10 @@ export { expect };
 // init script guarded by a sessionStorage sentinel — so a later page.reload()
 // keeps whatever the test seeded and reload-persistence tests still exercise the
 // real persist path. The app never reads storage during synchronous render
-// (App.tsx load() runs in a post-mount effect) and the analytics inline script
-// never touches localStorage, so no extra reload is needed for a deterministic
-// clean state. Overriding the `page` fixture (rather than an auto fixture) means
+// (App.tsx load() runs in a post-mount effect), so no extra reload is needed for
+// a deterministic clean state. Overriding the `page` fixture (rather than an auto fixture) means
 // a test that never destructures `page` — the no-JS prerender test, which uses
-// only `browser` — is left untouched. (The analytics test does take `page` and
-// then closes it, so it still pays the one setup navigation, exactly as the
-// original beforeEach did.)
+// only `browser` — is left untouched.
 export const test = base.extend({
   page: async ({ page }, use) => {
     await page.addInitScript(() => {

@@ -24,15 +24,8 @@ type SiteCopy = {
     lead: string;
     studyDataHeading: string;
     studyData: string;
-    analyticsHeading: string;
-    analyticsIntro: string;
-    analyticsExclusions: string[];
-    googleDataPrefix: string;
-    googleDataLink: string;
-    cookiesHeading: string;
-    cookiesPrefix: string;
-    optOutLink: string;
-    cookiesSuffix: string;
+    localOnlyHeading: string;
+    localOnly: string;
     contactHeading: string;
     contactPrefix: string;
     contactSuffix: string;
@@ -53,7 +46,7 @@ export const siteCopy = {
       },
       privacy: {
         title: 'プライバシー — CCA Field Notes',
-        description: 'CCA Field Notesにおける学習データとアクセス解析の取り扱い',
+        description: 'CCA Field Notesにおけるローカルの学習データの取り扱い',
       },
     },
     skipLink: '本文へ移動',
@@ -63,29 +56,18 @@ export const siteCopy = {
     homeAriaLabel: 'CCA Field Notes トップへ',
     backToGuide: '学習ノートへ戻る →',
     privacy: {
-      eyebrow: 'PRIVACY / ANALYTICS',
+      eyebrow: 'PRIVACY / LOCAL DATA',
       heading: 'プライバシー',
-      lead: 'このページでは、学習進捗とサイト利用状況の取り扱いを説明します。',
+      lead: 'このページでは、学習進捗を端末内だけで扱う方法を説明します。',
       studyDataHeading: '学習データと言語',
-      studyData: 'カードの評価と復習予定だけを、このブラウザのlocalStorageに保存します。検索語やフィルターは保存しません。選択中の言語はURLのパス（日本語は /、英語は /en/）で表し、別の設定としてブラウザに保存しません。学習データのサーバーへの同期やアカウントとの紐付けは行いません。',
-      analyticsHeading: 'アクセス解析',
-      analyticsIntro: 'サイト改善のためGoogle Analytics 4を使用し、閲覧ページ、アクセス日時、ブラウザ・端末種別、おおよその地域などの基本的な利用状況を収集します。',
-      analyticsExclusions: [
-        '学習カードの内容、アプリ内検索語、評価、進捗データを独自イベントとして送信しません。',
-        '広告ストレージ、広告向けユーザーデータ、広告パーソナライズを無効にしています。',
-        'Google Signalsと広告パーソナライズ用シグナルを無効にしています。',
-      ],
-      googleDataPrefix: 'Googleによるデータの取り扱いは、',
-      googleDataLink: 'Googleサービスを使用するサイトやアプリから収集した情報の利用方法',
-      cookiesHeading: 'Cookieと無効化',
-      cookiesPrefix: 'Google Analyticsは訪問を区別するためにCookieを使用します。ブラウザの設定でCookieを削除・制限できるほか、',
-      optOutLink: 'Google Analyticsオプトアウト アドオン',
-      cookiesSuffix: 'も利用できます。',
+      studyData: 'カードの評価と復習予定、ガイドとハンズオンの進捗、演習の回答統計、模擬試験の進行状況と履歴を、このブラウザのlocalStorageに保存します。検索語やフィルターは保存しません。選択中の言語はURLのパス（日本語は /、英語は /en/）で表し、別の設定としてブラウザに保存しません。学習データのサーバーへの同期やアカウントとの紐付けは行いません。',
+      localOnlyHeading: '外部送信と第三者解析',
+      localOnly: 'このサイトは第三者のアクセス解析、広告タグ、行動追跡を読み込みません。学習内容や進捗を外部へ送信する機能もありません。',
       contactHeading: 'お問い合わせ',
       contactPrefix: '記載内容への質問や修正依頼は、',
       contactSuffix: 'へお寄せください。',
       newTab: '（新しいタブで開く）',
-      updated: '最終更新: 2026-07-15',
+      updated: '最終更新: 2026-08-11',
     },
   },
   en: {
@@ -99,7 +81,7 @@ export const siteCopy = {
       },
       privacy: {
         title: 'Privacy — CCA Field Notes',
-        description: 'How CCA Field Notes handles study data and site analytics',
+        description: 'How CCA Field Notes handles study data locally',
       },
     },
     skipLink: 'Skip to main content',
@@ -109,29 +91,18 @@ export const siteCopy = {
     homeAriaLabel: 'Go to the CCA Field Notes home page',
     backToGuide: 'Back to the study guide →',
     privacy: {
-      eyebrow: 'PRIVACY / ANALYTICS',
+      eyebrow: 'PRIVACY / LOCAL DATA',
       heading: 'Privacy',
-      lead: 'This page explains how study progress and site-usage data are handled.',
+      lead: 'This page explains how study progress stays on your device.',
       studyDataHeading: 'Study data and language',
-      studyData: 'Only card ratings and review schedules are saved in this browser’s localStorage. Search terms and filters are not saved. Your selected language is represented by the URL path (Japanese at / and English at /en/) and is not stored as a separate browser preference. Study data is neither synchronized to a server nor linked to an account.',
-      analyticsHeading: 'Analytics',
-      analyticsIntro: 'To improve the site, Google Analytics 4 collects basic usage information such as pages viewed, access times, browser and device type, and approximate region.',
-      analyticsExclusions: [
-        'Study-card content, in-app search terms, ratings, and progress data are not sent as custom events.',
-        'Ad storage, ad user data, and ad personalization are disabled.',
-        'Google Signals and signals used for ad personalization are disabled.',
-      ],
-      googleDataPrefix: 'For details about how Google handles this data, see ',
-      googleDataLink: 'How Google uses information from sites or apps that use our services',
-      cookiesHeading: 'Cookies and opting out',
-      cookiesPrefix: 'Google Analytics uses cookies to distinguish visits. You can delete or restrict cookies in your browser settings, or use the ',
-      optOutLink: 'Google Analytics Opt-out Browser Add-on',
-      cookiesSuffix: '.',
+      studyData: 'Card ratings and review schedules, guide and hands-on progress, practice-answer statistics, and mock-exam state and history are saved in this browser’s localStorage. Search terms and filters are not saved. Your selected language is represented by the URL path (Japanese at / and English at /en/) and is not stored as a separate browser preference. Study data is neither synchronized to a server nor linked to an account.',
+      localOnlyHeading: 'No third-party analytics or tracking',
+      localOnly: 'This site does not load third-party analytics, advertising tags, or behavioral tracking. It also has no feature that sends your study content or progress elsewhere.',
       contactHeading: 'Contact',
       contactPrefix: 'For questions or correction requests, please open an issue in ',
       contactSuffix: '.',
       newTab: '(opens in a new tab)',
-      updated: 'Last updated: July 15, 2026',
+      updated: 'Last updated: August 11, 2026',
     },
   },
 } as const satisfies Record<Locale, SiteCopy>;

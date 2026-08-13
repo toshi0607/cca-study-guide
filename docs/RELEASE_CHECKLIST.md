@@ -31,7 +31,7 @@ Layer 4).
 |---|-------|---------------|----------------|-------|
 | 1 | Unit tests | `pnpm test` | all pass | 1 — CI (`perf.yml` runs `pnpm test`) |
 | 2 | Type check + build | `pnpm build` (runs `astro check` then `astro build`) | 0 errors, 0 warnings; build completes | 1 — CI (`perf.yml` runs `pnpm build`) |
-| 3 | No-analytics build | `pnpm test:no-analytics` | passes (no GA loader/consent/disclosure when `PUBLIC_GA_MEASUREMENT_ID` unset) | Pre-merge only — not in CI, run locally |
+| 3 | No-third-party-analytics build | `pnpm test:no-analytics` | passes (no third-party analytics loader, tracking code, or egress allow-list) | Pre-merge only — not in CI, run locally |
 | 4 | Initial bundle guard | `pnpm build && pnpm test:bundle` | `check-initial-bundle: OK`; question bank / rationales / analysis / study-guide / hands-on / official-scenarios / Mock-Exam view chunks NOT in `App.js` static graph | 1 — CI (`perf.yml` runs `check-initial-bundle.mjs`) |
 | 5 | Fast E2E | `pnpm test:e2e:fast` | all pass | Pre-merge only — quick local iteration; CI runs the full suite instead |
 | 6 | Full E2E (incl. @slow) | `pnpm test:e2e` | all pass | 1 — CI (`e2e.yml`) |
@@ -73,7 +73,7 @@ manual fallback if the automation is unavailable.
 | 11 | Progress | open | aggregates for Guide/Hands-on/Practice/Quiz/Mock Exam correct | Partial — Layer 2 confirms the view loads (test 2); aggregate correctness → Layer 4 / Layer 3 |
 | 12 | Export / import | export JSON, reset, re-import | roundtrip restores all progress | **Automated** — Layer 2 (prod smoke test 3: export→reset→import roundtrip) |
 | 13 | Mobile | 360–375px, both locales | no horizontal scroll, controls reachable, palette usable | Partial — Layer 2 covers en @ 360px (prod smoke test 6); ja and the 375px breakpoint → Layer 4 / Layer 3 |
-| 14 | Analytics / network | DevTools Network | only page-view GA when configured; NO custom learning events (answers/ratings/scores/import not sent) | **Automated** — Layer 2 runtime (prod smoke test 8) + Layer 1 static (`pnpm test:no-analytics`) |
+| 14 | Privacy / network | DevTools Network | no third-party analytics, tracking, or learning-data requests; progress remains local | **Automated** — Layer 2 runtime (prod smoke test 8) + Layer 1 static (`pnpm test:no-analytics`) |
 | 15 | Console errors | DevTools Console | none on any primary view | **Automated** — Layer 2 (prod smoke test 1: console health) |
 | 16 | SEO metadata | view-source both locales | correct title/description, canonical, reciprocal hreflang (ja/en/x-default), OG tags | **Automated** — Layer 2 (prod smoke test 1: metadata) |
 | 17 | Unreadable storage safety | corrupt/unreadable `localStorage` doc, ja + en | flagged, never overwritten (same invariant as pre-merge #11, re-verified live) | **Automated** — Layer 2 (prod smoke test 4) |

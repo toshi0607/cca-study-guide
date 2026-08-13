@@ -429,8 +429,6 @@ export type UiCopy = {
     localData: string;
     localDataDescription: string;
     copySummaryDescription: string;
-    analyticsDisclosure: string;
-    details: string;
     copySummary: string;
     exportJson: string;
     dataUnreadableActions: string;
@@ -644,7 +642,7 @@ export type UiCopy = {
     };
   };
   footer: {
-    analytics: string;
+    privacy: string;
     github: string;
   };
   deepLink: { copy: string; copied: string; copyFailed: string };
@@ -1048,8 +1046,6 @@ export const ui = {
       localData: 'ローカルデータ',
       localDataDescription: '端末間の同期はありません。ブラウザデータを消す前にJSONを書き出してください。',
       copySummaryDescription: '弱点カード・低正答率の問題・復習期限の件数を、短いテキストにまとめてクリップボードへコピーします。外部には送信しません。貼り付け先はご自身で選んでください。',
-      analyticsDisclosure: 'Google Analyticsで基本的なページ閲覧情報を収集します。学習カード、検索語、評価、進捗データは独自イベントとして送信しません。',
-      details: '詳細を見る',
       copySummary: '学習状況を要約してコピー',
       exportJson: '進捗をJSONで書き出す',
       dataUnreadableActions: '保存データを読み込めないため、書き出しと削除を一時的に無効にしています。データはこの端末に残っている可能性があります。',
@@ -1259,7 +1255,7 @@ export const ui = {
         emptyBody: '模試を1回以上完了すると、ここに分析が表示されます。',
       },
     },
-    footer: { analytics: 'アクセス解析について', github: 'GitHub' },
+    footer: { privacy: 'プライバシー', github: 'GitHub' },
     deepLink: { copy: 'リンクをコピー', copied: 'リンクをコピーしました', copyFailed: 'リンクをコピーできませんでした' },
   },
   en: {
@@ -1657,8 +1653,6 @@ export const ui = {
       localData: 'Local data',
       localDataDescription: 'Progress does not sync across devices. Export the JSON before clearing browser data.',
       copySummaryDescription: 'Copies a short text digest — weak cards, low-accuracy questions, and how many reviews are due — to your clipboard. Nothing is sent anywhere; you choose where to paste it.',
-      analyticsDisclosure: 'Google Analytics collects basic page-view information. Study cards, search terms, ratings, and progress are not sent as custom events.',
-      details: 'View details',
       copySummary: 'Copy study summary',
       exportJson: 'Export progress as JSON',
       dataUnreadableActions: 'Export and delete are disabled while saved data cannot be read. Your data may still be on this device.',
@@ -1868,7 +1862,7 @@ export const ui = {
         emptyBody: 'Complete at least one mock exam and your analysis will appear here.',
       },
     },
-    footer: { analytics: 'Analytics information', github: 'GitHub' },
+    footer: { privacy: 'Privacy', github: 'GitHub' },
     deepLink: { copy: 'Copy link', copied: 'Link copied', copyFailed: 'Could not copy the link' },
   },
 } satisfies Record<Locale, UiCopy>;
