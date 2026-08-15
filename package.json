@@ -25,8 +25,8 @@
   },
   "dependencies": {
     "@astrojs/preact": "^6.0.2",
-    "astro": "^7.1.6",
-    "preact": "^10.26.9",
+    "astro": "^7.2.0",
+    "preact": "^10.29.8",
     "zod": "^4.4.3"
   },
   "devDependencies": {
