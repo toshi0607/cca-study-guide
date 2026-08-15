@@ -171,6 +171,48 @@
 
 ---
 
+## F-9. 学習ガイドの `relatedCardIds` が、そのセクションの範囲のカードを半分しか指していない
+
+- **問題**: 学習ガイドの各セクションは `taskStatementIds` で範囲を宣言しているのに、
+  `relatedCardIds` はその範囲のカードの一部しか指していない。**8 セクション全部で不足している**。
+  「セクションを読む → 出てきた関連カードを回す」という自然な使い方をすると、
+  宣言した範囲の**約半分が素通り**する。
+
+  | セクション | `taskStatementIds` | `relatedCardIds` | 範囲に該当するカード | 未リンク |
+  | --- | --- | --- | --- | --- |
+  | `sg-agentic-loop` | 1.1, 1.2, 1.3, 1.6 | 3 | 7 | `d1-stop-truncation` `d1-parallel-review` `d1-subagent-input` `d1-fixed-vs-loop` |
+  | `sg-enforcement-and-state` | 1.4, 1.5, 1.7 | 2 | 5 | `d1-advisory-enforced` `d1-hook-exit-codes` `d1-session-lookup` |
+  | `sg-tool-and-mcp` | 2.1〜2.5 | 5 | 10 | `d2-description-depth` `d2-error-channels` `d2-tool-context` `d2-config-scopes` `d2-act-verify` |
+  | `sg-claude-code-foundations` | 3.1, 3.2, 3.3 | 2 | 5 | `d3-file-locations` `d3-trim-scope` `d3-manual-skill` |
+  | `sg-implementation-and-exploration` | 3.4, 3.5, 3.6, 5.4 | 4 | 7 | `d3-reset-context` `d3-print-mode` `d5-research-isolation` |
+  | `sg-prompt-and-structured-output` | 4.1〜4.5 | 4 | 9 | `d4-grader-choice` `d4-example-quality` `d4-output-vs-strict` `d4-schema-gaps` `d4-batch-matching` |
+  | `sg-multipass-context` | 4.6, 5.1 | 2 | 4 | `d4-retry` `d5-window-accounting` |
+  | `sg-context-and-handoff` | 5.2, 5.3, 5.5, 5.6 | 3 | 5 | `d5-provenance` `d5-approval-gaps` |
+
+  合計 **リンク 25 枚 / 範囲に該当 52 枚**（未リンク 27 枚）。
+  未リンク 27 枚のうち **24 枚は 2026-07 の拡張で追加されたカード**（`EXPANSION_VERIFIED_AT`）で、
+  残り 3 枚（`d1-hook-exit-codes` / `d4-retry` / `d5-provenance`）は元からある分。
+  **カードを増やしたときに `relatedCardIds` を更新していない**のが主因と見られる（INFERRED）。
+- **根拠**: セッション7（2026-08-15）。§4 `sg-claude-code-foundations` の範囲（3.1〜3.3）から記述式 6 問を出したところ、
+  **完答した 2 問は `relatedCardIds` の 2 枚（`d3-memory` / `d3-skills`）と完全に一致し、
+  部分点だった 4 問はすべて未リンクのカードから出した問い**だった。
+  学習者は宿題どおりセクションと関連カードを消化していたので、**未リンクのカードだけが穴として残った**。
+  上の表は `taskStatementIds` と各カードの `objectiveIds` の積集合を機械的に取って算出した（VERIFIED）。
+- **影響範囲**: 伴走エージェント固有ではない。アプリだけで学ぶ利用者も、
+  学習ガイドを起点にすると同じ穴が空く。`src/content/validate.ts` は
+  5 領域 30 タスクの網羅は強制しているが、**セクション ⇄ カードの紐付けの網羅は検査していない**ため、
+  この不足は CI を通り抜ける。
+- **提案する機構**: 文章での注意喚起ではなく検査で落とす（`AGENTS.md`「品質はプロンプトでなく機構で守る」に沿う）。
+  - `validate.ts` に検査を 1 つ足す: セクションの `taskStatementIds` に一致する `objectiveIds` を持つカードは、
+    そのセクションの `relatedCardIds` に含まれていること。
+    意図的に外すカードがあるなら、除外理由を持つ明示的な allowlist を置いて、そこにだけ逃がす。
+  - エラーメッセージには「次に何をすべきか」を書く
+    （例: `sg-claude-code-foundations の relatedCardIds に d3-file-locations を追加するか、除外理由を coverage-exceptions に書いてください`）。
+  - 同じ検査は `relatedQuestionIds` にも効くはずなので、あわせて確認する価値がある。
+- **状態**: 未対応（2026-08-15 記録）。
+
+---
+
 （以降、詰まるたびに追記）
 
 ---
