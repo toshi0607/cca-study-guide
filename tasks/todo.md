@@ -21,9 +21,9 @@
 
 | Assumption | Status | Evidence |
 |------------|--------|----------|
-| Claude Code は spec 2026-07-28 (v2 SDK) サーバーに接続できる | UNVERIFIED | Phase 3 で最小サーバー + `claude mcp add` により検証。棄却時は v1 SDK フォールバック（差分を学習ノートへ） |
-| src/content・src/lib は DOM 非依存で Node から import 可能 | UNVERIFIED | Phase 2 で import グラフ確認（storage.ts は StorageLike 注入式の見込み） |
-| mcp/ を video/ 方式（独立 package.json + 自前 lockfile、workspace 不使用）にしても ../src の TS を import してビルドできる | UNVERIFIED | Phase 3 scaffold で tsc/実行確認（src 側の npm 依存を mcp/ 側にも持つ必要の有無を含む） |
+| Claude Code は spec 2026-07-28 (v2 SDK) サーバーに接続できる | UNVERIFIED-ACCEPTED (2026-08-16) | 外形からは検証不能（検証行為そのものが Phase 3 の最小サーバー + `claude mcp add`）。受容が安全な理由: Phase 3 より前に本仮定へ依存する成果物はなく（Phase 2 のツール契約は SDK 非依存の粒度で書く）、棄却時は v1 SDK (1.30.0) フォールバックを計画済みで差分は学習ノート化する |
+| MCP サーバーが必要とする src モジュールは DOM 非依存で Node から import 可能 | VERIFIED | grep: `window`/`document` 使用は use-mock-exam.ts（Preact フック、サーバー不要）のみ。storage.ts は StorageLike 注入式。vitest.config.ts:5 が environment: 'node' で全 unit テストが Node 実行 |
+| mcp/ を video/ 方式（独立パッケージ）にしても ../src の TS を import してビルドできる | VERIFIED | scratchpad から tsx 経由で scheduler/quiz/study-data-merge/cards/questions を import 実行し成功（cards 51・questions 60、scheduleReview('good')→+3日）。ただし素の Node type-stripping は不可（拡張子なし相対 import のため）→ mcp/ は tsx 等のローダー必須。対象モジュールの外部 npm 依存はゼロ（zod は validate.ts のみ、preact は UI フックのみ） |
 | export JSON は StudyDataV3 スキーマ | VERIFIED | src/lib/storage.ts（buildStudyDataExport）、src/lib/storage-schema.ts |
 | import merge では新しいセッション結果が既存進捗に勝つ（UC1 の書き戻しが no-op にならない） | VERIFIED | src/lib/study-data-merge.ts:33-43（reviewedAtMs が新しい側を採用）、同:50-65（quizStats は max + 新しい側の last*） |
 | MCP の 3 プリミティブ tools/resources/prompts、client 側は deprecated | VERIFIED | modelcontextprotocol.io spec 2026-07-28 changelog（調査エージェント報告） |
@@ -56,6 +56,9 @@
   学習素材でもある）。
 - 2026-08-16: video/ の隔離方式を確認 — pnpm workspace ではなく独立 package.json +
   自前 pnpm-lock.yaml。mcp/ も同型を採用。
+- 2026-08-16: import 実験の副産物 — src は拡張子なし相対 import のため素の Node
+  （type stripping）では動かず、mcp/ の実行は tsx 等のローダー前提になる。Phase 3 の
+  scaffold 判断（tsx を devDependency に）に直結。
 
 ## Review
 
