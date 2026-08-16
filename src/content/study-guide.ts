@@ -11,7 +11,7 @@ export const STUDY_GUIDE_VERIFIED_AT = '2026-07-21';
 export const studyGuideSections: StudyGuideSection[] = [
   {
     id: 'sg-agentic-loop',
-    revision: 2,
+    revision: 3,
     recommendedOrder: 1,
     title: localized('エージェントループから始める', 'Start with the agentic loop'),
     summary: localized(
@@ -52,7 +52,7 @@ export const studyGuideSections: StudyGuideSection[] = [
   },
   {
     id: 'sg-enforcement-and-state',
-    revision: 1,
+    revision: 2,
     recommendedOrder: 2,
     title: localized('強制境界とセッション状態', 'Enforcement boundaries and session state'),
     summary: localized(
@@ -93,7 +93,7 @@ export const studyGuideSections: StudyGuideSection[] = [
   },
   {
     id: 'sg-tool-and-mcp',
-    revision: 2,
+    revision: 3,
     recommendedOrder: 3,
     title: localized('ツール契約とMCPの境界', 'Tool contracts and MCP boundaries'),
     summary: localized(
@@ -134,7 +134,7 @@ export const studyGuideSections: StudyGuideSection[] = [
   },
   {
     id: 'sg-claude-code-foundations',
-    revision: 1,
+    revision: 2,
     recommendedOrder: 4,
     title: localized('Claude Codeの設定基盤', 'Claude Code configuration foundations'),
     summary: localized(
@@ -175,7 +175,7 @@ export const studyGuideSections: StudyGuideSection[] = [
   },
   {
     id: 'sg-implementation-and-exploration',
-    revision: 1,
+    revision: 2,
     recommendedOrder: 5,
     title: localized('実装・探索・CIの運用', 'Implementation, exploration, and CI operations'),
     summary: localized(
@@ -216,7 +216,7 @@ export const studyGuideSections: StudyGuideSection[] = [
   },
   {
     id: 'sg-prompt-and-structured-output',
-    revision: 1,
+    revision: 2,
     recommendedOrder: 6,
     title: localized('プロンプト設計と構造化出力', 'Prompt engineering and structured output'),
     summary: localized(
@@ -257,7 +257,7 @@ export const studyGuideSections: StudyGuideSection[] = [
   },
   {
     id: 'sg-multipass-context',
-    revision: 1,
+    revision: 2,
     recommendedOrder: 7,
     title: localized('複数パスのレビューと文脈保持', 'Multi-pass review and context preservation'),
     summary: localized(
@@ -294,7 +294,7 @@ export const studyGuideSections: StudyGuideSection[] = [
   },
   {
     id: 'sg-context-and-handoff',
-    revision: 2,
+    revision: 3,
     recommendedOrder: 8,
     title: localized('人への引き継ぎと信頼性', 'Human handoff and reliability'),
     summary: localized(

@@ -767,6 +767,25 @@ describe('study guide link coverage validation', () => {
 
     expect(validateStudyGuideLinkCoverage([fixtureSection()], [linkedCard], [linkedQuestion, scenarioQuestion])).toEqual([]);
   });
+
+  it('requires an item spanning two sections in each of them, and keeps checking past the first section', () => {
+    // #given — a question whose objectives fall inside both sections, linked in only the first
+    const otherSection = {
+      id: 'sg-fixture-other',
+      taskStatementIds: ['1.2'],
+      relatedCardIds: ['card-other'],
+      relatedQuestionIds: [],
+    };
+    const otherCard = { id: 'card-other', objectiveIds: ['1.2'] };
+    const spanningQuestion = { id: 'q-spanning', objectiveIds: ['1.1', '1.2'] };
+    const section = { ...fixtureSection(), relatedQuestionIds: ['q-linked', 'q-spanning'] };
+
+    // #when
+    const errors = validateStudyGuideLinkCoverage([section, otherSection], [linkedCard, otherCard], [linkedQuestion, spanningQuestion]);
+
+    // #then — only the section that misses the link is reported
+    expect(errors).toEqual(['study guide section sg-fixture-other: question q-spanning covers task statement 1.2 but is missing from relatedQuestionIds — add it there']);
+  });
 });
 
 describe('hands-on validation', () => {
