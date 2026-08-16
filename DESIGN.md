@@ -1,6 +1,6 @@
 # CCA Study Guide — Product and Technical Design
 
-Last reviewed: 2026-08-11
+Last reviewed: 2026-08-16
 
 ## Product thesis
 
