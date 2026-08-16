@@ -735,7 +735,8 @@ export function validateStudyGuideSections(input: unknown, index: ContentIndex):
 // in-scope items. Kept apart from per-entry validation (mirroring
 // validateSkillCoverage) so a single-section fixture test does not trip it.
 // Scenario-bound questions are never linked directly (a direct link would strip
-// their scenario context); instead their scenario must appear in the section's
+// their scenario context) — a relatedQuestionIds entry pointing at one is
+// rejected; instead their scenario must appear in the section's
 // relatedScenarioIds, and every relatedScenarioIds entry must earn its place by
 // carrying at least one in-scope question, so the guide can neither strand a
 // scenario question nor link an unrelated scenario.
@@ -760,6 +761,9 @@ export function validateStudyGuideLinkCoverage(
     for (const question of questionInput) {
       const covered = question.objectiveIds.find((id) => taskStatementIds.has(id));
       if (question.scenarioId !== undefined) {
+        if (linkedQuestionIds.has(question.id)) {
+          errors.push(`study guide section ${section.id}: question ${question.id} is scenario-bound — remove it from relatedQuestionIds and reach it through scenario ${question.scenarioId} in relatedScenarioIds`);
+        }
         if (covered === undefined) continue;
         inScopeScenarioIds.add(question.scenarioId);
         if (!linkedScenarioIds.has(question.scenarioId)) {

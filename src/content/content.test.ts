@@ -785,6 +785,18 @@ describe('study guide link coverage validation', () => {
     expect(errors).toEqual(['study guide section sg-fixture: question q-scenario covers task statement 1.1 through scenario sc-fixture — add sc-fixture to relatedScenarioIds']);
   });
 
+  it('rejects a scenario-bound question that is also linked directly in relatedQuestionIds', () => {
+    // #given — the question is reachable both directly and through its linked scenario
+    const scenarioQuestion = { id: 'q-scenario', objectiveIds: ['1.1'], scenarioId: 'sc-fixture' };
+    const section = { ...fixtureSection(), relatedQuestionIds: ['q-linked', 'q-scenario'], relatedScenarioIds: ['sc-fixture'] };
+
+    // #when
+    const errors = validateStudyGuideLinkCoverage([section], [linkedCard], [linkedQuestion, scenarioQuestion]);
+
+    // #then — the direct link is rejected so the scenario context cannot be bypassed
+    expect(errors).toEqual(['study guide section sg-fixture: question q-scenario is scenario-bound — remove it from relatedQuestionIds and reach it through scenario sc-fixture in relatedScenarioIds']);
+  });
+
   it('rejects a linked scenario that has no question covering a section task statement', () => {
     // #given — a scenario link with no in-scope question backing it
     const outOfScopeScenarioQuestion = { id: 'q-scenario', objectiveIds: ['2.1'], scenarioId: 'sc-fixture' };
