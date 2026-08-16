@@ -117,6 +117,7 @@ export type UiCopy = {
     keyPoints: string;
     relatedCards: string;
     relatedQuestions: string;
+    relatedScenarios: string;
     diagnosisLegend: string;
     diagnosisQuestion: string;
     diagnosisOptions: [string, string, string];
@@ -753,6 +754,7 @@ export const ui = {
       staleNote: (status) => `以前の記録は「${status}」として保持されています。内容を確認した後に再確認を記録できます。`,
       domains: '対象ドメイン', statements: '対象タスクステートメント', keyPoints: '設計で確認すること',
       relatedCards: '関連カードを開く', relatedQuestions: '関連設問を開く',
+      relatedScenarios: '関連シナリオ演習を開く',
       diagnosisLegend: '最初に取り組む場所を選ぶ', diagnosisQuestion: '今いちばん必要な学習を1つ選んでください。',
       diagnosisOptions: ['エージェントループと委譲の基礎から始めたい', 'ツール契約とMCPの境界を整理したい', 'エスカレーション・人のレビュー・出典追跡を整理したい'],
       diagnosisSubmit: '開始セクションを提案する', diagnosisResult: (title) => `まずは「${title}」から始めることを提案します。これはこの端末に保存されません。`,
@@ -1360,6 +1362,7 @@ export const ui = {
       staleNote: (status) => `Your earlier record is retained as “${status}.” You can record a review after checking the updated content.`,
       domains: 'Domains covered', statements: 'Task statements covered', keyPoints: 'Design checks',
       relatedCards: 'Open related cards', relatedQuestions: 'Open related questions',
+      relatedScenarios: 'Open related scenario practice',
       diagnosisLegend: 'Choose where to begin', diagnosisQuestion: 'Choose the one learning need that matters most right now.',
       diagnosisOptions: ['I want to start with agent loops and delegation', 'I need to organize tool contracts and MCP boundaries', 'I need to organize escalation, human review, and provenance'],
       diagnosisSubmit: 'Recommend a starting section', diagnosisResult: (title) => `Start with “${title}.” This suggestion is not saved on this device.`,

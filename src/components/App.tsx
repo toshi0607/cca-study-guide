@@ -421,7 +421,7 @@ function App({ locale }: { locale: Locale }) {
 
         {view === 'mock-exam' && <MockExamEntry locale={locale} copy={copy} session={data.activeMockExam} attempts={data.mockExamAttempts} storageAvailable={storageAvailable} quizStats={data.quizStats} initialPhase={mockExamIntent} readData={readMockExamData} writeData={writeMockExamData} onOpenPractice={openMockExamPractice}/>}
 
-        {view === 'guide' && <GuideEntry locale={locale} copy={copy} records={data.studyGuideProgress} hasMockExamAttempts={data.mockExamAttempts.length > 0} examDate={examDate} onProgressAction={saveGuideProgress} onOpenCard={openGuideCard} onOpenQuestion={openGuideQuestion} onOpenStage={openLearningStage} onOpenOfficialScenarios={() => navigate('official-scenarios')} targetSectionId={target?.kind === 'guide-section' ? target.sectionId : null} onTargetSectionOpened={clearTarget}/>}
+        {view === 'guide' && <GuideEntry locale={locale} copy={copy} records={data.studyGuideProgress} hasMockExamAttempts={data.mockExamAttempts.length > 0} examDate={examDate} onProgressAction={saveGuideProgress} onOpenCard={openGuideCard} onOpenQuestion={openGuideQuestion} onOpenScenario={openPracticeScenario} onOpenStage={openLearningStage} onOpenOfficialScenarios={() => navigate('official-scenarios')} targetSectionId={target?.kind === 'guide-section' ? target.sectionId : null} onTargetSectionOpened={clearTarget}/>}
 
         {view === 'hands-on' && <HandsOnEntry locale={locale} copy={copy} records={data.handsOnProgress} onStart={saveHandsOnStart} onToggleStep={saveHandsOnStep} onComplete={saveHandsOnComplete} onReconfirm={saveHandsOnReconfirm} onOpenCard={openGuideCard} onOpenQuestion={openGuideQuestion} target={handsOnTarget} onTargetOpened={clearTarget}/>}
 

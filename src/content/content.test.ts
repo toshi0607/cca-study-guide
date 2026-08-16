@@ -628,6 +628,7 @@ describe('study guide validation', () => {
       sections[0].sourceIds = ['exam-guide', 'made-up-doc'];
       sections[0].relatedCardIds = ['d1-missing-card'];
       sections[0].relatedQuestionIds = ['q-missing'];
+      sections[0].relatedScenarioIds = ['sc-missing'];
     });
 
     expect(errors).toContain('study guide section sg-agentic-loop: orphan domain d9');
@@ -635,6 +636,7 @@ describe('study guide validation', () => {
     expect(errors).toContain('study guide section sg-agentic-loop: orphan source made-up-doc');
     expect(errors).toContain('study guide section sg-agentic-loop: orphan card d1-missing-card');
     expect(errors).toContain('study guide section sg-agentic-loop: orphan question q-missing');
+    expect(errors).toContain('study guide section sg-agentic-loop: orphan scenario sc-missing');
   });
 
   it('requires exact-once coverage of all 30 task statements', () => {
@@ -734,6 +736,7 @@ describe('study guide link coverage validation', () => {
     taskStatementIds: ['1.1'],
     relatedCardIds: ['card-linked'],
     relatedQuestionIds: ['q-linked'],
+    relatedScenarioIds: [] as string[],
   });
   const linkedCard = { id: 'card-linked', objectiveIds: ['1.1'] };
   const linkedQuestion = { id: 'q-linked', objectiveIds: ['1.1'] };
@@ -762,10 +765,48 @@ describe('study guide link coverage validation', () => {
     expect(errors).toEqual(['study guide section sg-fixture: question q-unlinked covers task statement 1.1 but is missing from relatedQuestionIds — add it there']);
   });
 
-  it('exempts scenario-bound questions from the coverage requirement', () => {
+  it('accepts an in-scope scenario question when its scenario is linked', () => {
+    // #given — the scenario question's route is the linked scenario, not a direct question link
+    const scenarioQuestion = { id: 'q-scenario', objectiveIds: ['1.1'], scenarioId: 'sc-fixture' };
+    const section = { ...fixtureSection(), relatedScenarioIds: ['sc-fixture'] };
+
+    // #when / #then
+    expect(validateStudyGuideLinkCoverage([section], [linkedCard], [linkedQuestion, scenarioQuestion])).toEqual([]);
+  });
+
+  it('rejects an in-scope scenario question whose scenario is missing from relatedScenarioIds', () => {
+    // #given — a scenario question in scope, but the section links no scenario
     const scenarioQuestion = { id: 'q-scenario', objectiveIds: ['1.1'], scenarioId: 'sc-fixture' };
 
-    expect(validateStudyGuideLinkCoverage([fixtureSection()], [linkedCard], [linkedQuestion, scenarioQuestion])).toEqual([]);
+    // #when
+    const errors = validateStudyGuideLinkCoverage([fixtureSection()], [linkedCard], [linkedQuestion, scenarioQuestion]);
+
+    // #then
+    expect(errors).toEqual(['study guide section sg-fixture: question q-scenario covers task statement 1.1 through scenario sc-fixture — add sc-fixture to relatedScenarioIds']);
+  });
+
+  it('rejects a scenario-bound question that is also linked directly in relatedQuestionIds', () => {
+    // #given — the question is reachable both directly and through its linked scenario
+    const scenarioQuestion = { id: 'q-scenario', objectiveIds: ['1.1'], scenarioId: 'sc-fixture' };
+    const section = { ...fixtureSection(), relatedQuestionIds: ['q-linked', 'q-scenario'], relatedScenarioIds: ['sc-fixture'] };
+
+    // #when
+    const errors = validateStudyGuideLinkCoverage([section], [linkedCard], [linkedQuestion, scenarioQuestion]);
+
+    // #then — the direct link is rejected so the scenario context cannot be bypassed
+    expect(errors).toEqual(['study guide section sg-fixture: question q-scenario is scenario-bound — remove it from relatedQuestionIds and reach it through scenario sc-fixture in relatedScenarioIds']);
+  });
+
+  it('rejects a linked scenario that has no question covering a section task statement', () => {
+    // #given — a scenario link with no in-scope question backing it
+    const outOfScopeScenarioQuestion = { id: 'q-scenario', objectiveIds: ['2.1'], scenarioId: 'sc-fixture' };
+    const section = { ...fixtureSection(), relatedScenarioIds: ['sc-fixture'] };
+
+    // #when
+    const errors = validateStudyGuideLinkCoverage([section], [linkedCard], [linkedQuestion, outOfScopeScenarioQuestion]);
+
+    // #then
+    expect(errors).toEqual(['study guide section sg-fixture: scenario sc-fixture has no question covering a section task statement — remove it from relatedScenarioIds']);
   });
 
   it('requires an item spanning two sections in each of them, and keeps checking past the first section', () => {
@@ -775,6 +816,7 @@ describe('study guide link coverage validation', () => {
       taskStatementIds: ['1.2'],
       relatedCardIds: ['card-other'],
       relatedQuestionIds: [],
+      relatedScenarioIds: [] as string[],
     };
     const otherCard = { id: 'card-other', objectiveIds: ['1.2'] };
     const spanningQuestion = { id: 'q-spanning', objectiveIds: ['1.1', '1.2'] };

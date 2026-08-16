@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'preact/hooks';
 import { studyGuideSections } from '../../content/study-guide';
 import { cards } from '../../content/cards';
 import { questions } from '../../content/questions';
+import { scenarios } from '../../content/scenarios';
 import { domains } from '../../content/domains';
 import { learningPath, diagnosisStartSectionIds, type LearningStageTarget } from '../../content/learning-path';
 import { getLearningStageMinutes } from '../../lib/stage-cost';
@@ -28,6 +29,7 @@ type Props = {
   onProgressAction: (sectionId: string, revision: number, action: 'start' | 'complete' | 'reconfirm') => boolean;
   onOpenCard: (cardId: string) => void;
   onOpenQuestion: (questionId: string) => void;
+  onOpenScenario: (scenarioId: string) => void;
   onOpenStage: (target: LearningStageViewTarget) => void;
   onOpenOfficialScenarios: () => void;
   targetSectionId: string | null;
@@ -46,7 +48,7 @@ function focusElement(el: HTMLElement | null) {
   el.focus({ preventScroll: true });
 }
 
-export function GuideView({ locale, copy, records, hasMockExamAttempts, examDate, onProgressAction, onOpenCard, onOpenQuestion, onOpenStage, onOpenOfficialScenarios, targetSectionId, onTargetSectionOpened }: Props) {
+export function GuideView({ locale, copy, records, hasMockExamAttempts, examDate, onProgressAction, onOpenCard, onOpenQuestion, onOpenScenario, onOpenStage, onOpenOfficialScenarios, targetSectionId, onTargetSectionOpened }: Props) {
   const [diagnosis, setDiagnosis] = useState('');
   const [recommendation, setRecommendation] = useState<string | null>(null);
   const resultRef = useRef<HTMLDivElement>(null);
@@ -190,6 +192,10 @@ export function GuideView({ locale, copy, records, hasMockExamAttempts, examDate
               {section.relatedQuestionIds.length > 0 && <><h4 class="sub-title">{copy.guide.relatedQuestions}</h4><div class="target-list">{section.relatedQuestionIds.map((id) => {
                 const question = questions.find((candidate) => candidate.id === id);
                 return question ? <button type="button" class="btn btn--secondary" key={id} onClick={() => onOpenQuestion(id)}>{localize(question.stem, locale)} <code>{id}</code></button> : null;
+              })}</div></>}
+              {section.relatedScenarioIds.length > 0 && <><h4 class="sub-title">{copy.guide.relatedScenarios}</h4><div class="target-list">{section.relatedScenarioIds.map((id) => {
+                const scenario = scenarios.find((candidate) => candidate.id === id);
+                return scenario ? <button type="button" class="btn btn--secondary" key={id} onClick={() => onOpenScenario(id)}>{localize(scenario.title, locale)} <code>{id}</code></button> : null;
               })}</div></>}
               <h4 class="sub-title">{copy.guide.officialSources}</h4><SourceLinks ids={section.sourceIds} copy={copy}/>
               <div class="guide-actions">

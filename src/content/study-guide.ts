@@ -11,7 +11,7 @@ export const STUDY_GUIDE_VERIFIED_AT = '2026-07-21';
 export const studyGuideSections: StudyGuideSection[] = [
   {
     id: 'sg-agentic-loop',
-    revision: 3,
+    revision: 4,
     recommendedOrder: 1,
     title: localized('エージェントループから始める', 'Start with the agentic loop'),
     summary: localized(
@@ -47,6 +47,7 @@ export const studyGuideSections: StudyGuideSection[] = [
     estimatedMinutes: 45,
     relatedCardIds: ['d1-loop-stop', 'd1-orchestration', 'd1-task-agent', 'd1-stop-truncation', 'd1-parallel-review', 'd1-subagent-input', 'd1-fixed-vs-loop'],
     relatedQuestionIds: ['q-d1-loop-continue', 'q-d1-fanout', 'q-d1-subagent-input', 'q-d1-loop-toolresult', 'q-d1-stop-max-tokens', 'q-d1-single-vs-multi', 'q-d1-coordination', 'q-d1-subagent-scope'],
+    relatedScenarioIds: ['sc-support-agents'],
     sourceIds: ['exam-guide', 'stop-reasons', 'tool-use', 'subagents'],
     verifiedAt: STUDY_GUIDE_VERIFIED_AT,
   },
@@ -88,12 +89,13 @@ export const studyGuideSections: StudyGuideSection[] = [
     estimatedMinutes: 40,
     relatedCardIds: ['d1-hooks', 'd1-resume-vs-fork', 'd1-advisory-enforced', 'd1-hook-exit-codes', 'd1-session-lookup'],
     relatedQuestionIds: ['q-d1-enforcement', 'q-d1-hook-timing', 'q-d1-session-state', 'q-d1-subagent-scope', 'q-d1-handoff-data', 'q-d1-hook-exitcode', 'q-d1-fork-resume'],
+    relatedScenarioIds: [],
     sourceIds: ['exam-guide', 'hooks', 'sessions'],
     verifiedAt: STUDY_GUIDE_VERIFIED_AT,
   },
   {
     id: 'sg-tool-and-mcp',
-    revision: 3,
+    revision: 4,
     recommendedOrder: 3,
     title: localized('ツール契約とMCPの境界', 'Tool contracts and MCP boundaries'),
     summary: localized(
@@ -129,12 +131,13 @@ export const studyGuideSections: StudyGuideSection[] = [
     estimatedMinutes: 55,
     relatedCardIds: ['d2-interface', 'd2-errors', 'd2-consolidation', 'd2-scope', 'd2-builtin-map', 'd2-description-depth', 'd2-error-channels', 'd2-tool-context', 'd2-config-scopes', 'd2-act-verify'],
     relatedQuestionIds: ['q-d2-tool-contract', 'q-d2-transient-error', 'q-d2-tool-overload', 'q-d2-mcp-secrets', 'q-d2-builtin-tools', 'q-d2-tool-disambiguation'],
+    relatedScenarioIds: ['sc-mcp-tool-design', 'sc-code-rollout'],
     sourceIds: ['exam-guide', 'define-tools', 'tool-use', 'mcp-tools', 'code-mcp', 'code-how'],
     verifiedAt: STUDY_GUIDE_VERIFIED_AT,
   },
   {
     id: 'sg-claude-code-foundations',
-    revision: 2,
+    revision: 3,
     recommendedOrder: 4,
     title: localized('Claude Codeの設定基盤', 'Claude Code configuration foundations'),
     summary: localized(
@@ -170,12 +173,13 @@ export const studyGuideSections: StudyGuideSection[] = [
     estimatedMinutes: 35,
     relatedCardIds: ['d3-memory', 'd3-skills', 'd3-file-locations', 'd3-trim-scope', 'd3-manual-skill'],
     relatedQuestionIds: ['q-d3-claudemd', 'q-d3-skill', 'q-d3-glob', 'q-d3-command-vs-skill'],
+    relatedScenarioIds: ['sc-code-rollout'],
     sourceIds: ['exam-guide', 'code-memory', 'skills'],
     verifiedAt: STUDY_GUIDE_VERIFIED_AT,
   },
   {
     id: 'sg-implementation-and-exploration',
-    revision: 2,
+    revision: 3,
     recommendedOrder: 5,
     title: localized('実装・探索・CIの運用', 'Implementation, exploration, and CI operations'),
     summary: localized(
@@ -211,12 +215,13 @@ export const studyGuideSections: StudyGuideSection[] = [
     estimatedMinutes: 50,
     relatedCardIds: ['d3-plan-when', 'd3-verifiable-goal', 'd3-ci', 'd5-scoped-reads', 'd3-reset-context', 'd3-print-mode', 'd5-research-isolation'],
     relatedQuestionIds: ['q-d3-ci-design', 'q-d3-plan-mode', 'q-d3-iterative-eval', 'q-d3-headless-perms', 'q-d5-exploration'],
+    relatedScenarioIds: ['sc-code-rollout'],
     sourceIds: ['exam-guide', 'code-best-practices', 'prompting-best', 'headless', 'large-codebases'],
     verifiedAt: STUDY_GUIDE_VERIFIED_AT,
   },
   {
     id: 'sg-prompt-and-structured-output',
-    revision: 2,
+    revision: 3,
     recommendedOrder: 6,
     title: localized('プロンプト設計と構造化出力', 'Prompt engineering and structured output'),
     summary: localized(
@@ -252,12 +257,13 @@ export const studyGuideSections: StudyGuideSection[] = [
     estimatedMinutes: 55,
     relatedCardIds: ['d4-criteria', 'd4-schema', 'd4-retry', 'd4-batch-shape', 'd4-grader-choice', 'd4-example-quality', 'd4-output-vs-strict', 'd4-schema-gaps', 'd4-batch-matching'],
     relatedQuestionIds: ['q-d4-rubric', 'q-d4-structured-guarantee', 'q-d4-retry-feedback', 'q-d4-batch', 'q-d4-fewshot', 'q-d4-review-criteria', 'q-d4-schema-design', 'q-d4-batch-tradeoff'],
+    relatedScenarioIds: ['sc-extraction-pipeline'],
     sourceIds: ['exam-guide', 'evals', 'prompting-best', 'structured', 'batch'],
     verifiedAt: STUDY_GUIDE_VERIFIED_AT,
   },
   {
     id: 'sg-multipass-context',
-    revision: 2,
+    revision: 3,
     recommendedOrder: 7,
     title: localized('複数パスのレビューと文脈保持', 'Multi-pass review and context preservation'),
     summary: localized(
@@ -289,12 +295,13 @@ export const studyGuideSections: StudyGuideSection[] = [
     estimatedMinutes: 35,
     relatedCardIds: ['d4-fresh-reviewer', 'd5-context', 'd4-retry', 'd5-window-accounting'],
     relatedQuestionIds: ['q-d5-summarize', 'q-d4-multipass'],
+    relatedScenarioIds: ['sc-support-agents', 'sc-extraction-pipeline'],
     sourceIds: ['exam-guide', 'evals', 'context-windows', 'context-editing'],
     verifiedAt: STUDY_GUIDE_VERIFIED_AT,
   },
   {
     id: 'sg-context-and-handoff',
-    revision: 3,
+    revision: 4,
     recommendedOrder: 8,
     title: localized('人への引き継ぎと信頼性', 'Human handoff and reliability'),
     summary: localized(
@@ -330,6 +337,7 @@ export const studyGuideSections: StudyGuideSection[] = [
     estimatedMinutes: 45,
     relatedCardIds: ['d5-escalate', 'd5-actionable-errors', 'd5-claim-shape', 'd5-provenance', 'd5-approval-gaps'],
     relatedQuestionIds: ['q-d5-escalation', 'q-d5-provenance', 'q-d5-provenance-carry', 'q-d5-error-propagation'],
+    relatedScenarioIds: ['sc-support-agents', 'sc-extraction-pipeline'],
     sourceIds: ['exam-guide', 'user-input', 'tool-use', 'evals', 'structured'],
     verifiedAt: STUDY_GUIDE_VERIFIED_AT,
   },
