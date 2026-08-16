@@ -16,6 +16,7 @@ export function GuideEntry(props: {
   onProgressAction: (sectionId: string, revision: number, action: 'start' | 'complete' | 'reconfirm') => boolean;
   onOpenCard: (cardId: string) => void;
   onOpenQuestion: (questionId: string) => void;
+  onOpenScenario: (scenarioId: string) => void;
   onOpenStage: (target: LearningStageViewTarget) => void;
   onOpenOfficialScenarios: () => void;
   targetSectionId: string | null;

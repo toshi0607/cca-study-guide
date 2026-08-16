@@ -39,6 +39,13 @@ test('uses the keyboard diagnosis, saves only explicit guide progress, and opens
   await relatedQuestion.click();
   await expect(page.locator('.quiz-target')).toBeFocused();
   await expect(page.locator('.quiz-question')).toHaveCount(1);
+
+  // Related scenario -> that practice case's background, heading focused.
+  await page.getByRole('button', { name: 'ガイド' }).first().click();
+  await page.locator('.guide-section').first().locator('summary').press('Enter');
+  const relatedScenario = page.locator('.guide-section').first().locator('.target-list').nth(2).getByRole('button', { name: /sc-support-agents/ });
+  await relatedScenario.click();
+  await expect(page.getByRole('heading', { name: 'ECカスタマーサポートのエージェント構成選定' })).toBeFocused();
 });
 
 test('drops a synchronous duplicate guide action before it can write twice', async ({ page }) => {

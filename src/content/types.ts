@@ -232,6 +232,10 @@ export type StudyGuideSection = {
   estimatedMinutes: number;
   relatedCardIds: string[];
   relatedQuestionIds: string[];
+  // Practice scenarios whose questions overlap this section's task statements.
+  // Scenario-bound questions are reached through their scenario (not linked
+  // directly), so this is the section's only route to them.
+  relatedScenarioIds: string[];
   sourceIds: string[];
   verifiedAt: string;
 };

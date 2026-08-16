@@ -110,6 +110,7 @@ const studyGuideSectionSchema = z.object({
   estimatedMinutes: z.number().int().positive(),
   relatedCardIds: idListSchema,
   relatedQuestionIds: idListSchema,
+  relatedScenarioIds: idListSchema,
   sourceIds: requiredIdListSchema,
   verifiedAt: date,
 });
@@ -641,11 +642,13 @@ export function validateStudyGuideSections(input: unknown, index: ContentIndex):
     checkReferences(section.taskStatementIds, index.objectiveIds, label, 'task statement', errors);
     checkReferences(section.relatedCardIds, index.cardIds, label, 'card', errors);
     checkReferences(section.relatedQuestionIds, index.questionIds, label, 'question', errors);
+    checkReferences(section.relatedScenarioIds, index.scenarioIds, label, 'scenario', errors);
     for (const [field, ids] of [
       ['domainIds', section.domainIds],
       ['taskStatementIds', section.taskStatementIds],
       ['relatedCardIds', section.relatedCardIds],
       ['relatedQuestionIds', section.relatedQuestionIds],
+      ['relatedScenarioIds', section.relatedScenarioIds],
       ['sourceIds', section.sourceIds],
     ] as const) {
       unique(ids, `${label} ${field}`, errors);
@@ -731,10 +734,13 @@ export function validateStudyGuideSections(input: unknown, index: ContentIndex):
 // "read the section, then work its related material" flow cannot silently skip
 // in-scope items. Kept apart from per-entry validation (mirroring
 // validateSkillCoverage) so a single-section fixture test does not trip it.
-// Scenario-bound questions are exempt: they are reached through their practice
-// scenario, and a direct link from the guide would strip that context.
+// Scenario-bound questions are never linked directly (a direct link would strip
+// their scenario context); instead their scenario must appear in the section's
+// relatedScenarioIds, and every relatedScenarioIds entry must earn its place by
+// carrying at least one in-scope question, so the guide can neither strand a
+// scenario question nor link an unrelated scenario.
 export function validateStudyGuideLinkCoverage(
-  sectionInput: Array<{ id: string; taskStatementIds: string[]; relatedCardIds: string[]; relatedQuestionIds: string[] }>,
+  sectionInput: Array<{ id: string; taskStatementIds: string[]; relatedCardIds: string[]; relatedQuestionIds: string[]; relatedScenarioIds: string[] }>,
   cardInput: Array<{ id: string; objectiveIds: string[] }>,
   questionInput: Array<{ id: string; objectiveIds: string[]; scenarioId?: string }>,
 ): string[] {
@@ -749,11 +755,25 @@ export function validateStudyGuideLinkCoverage(
       }
     }
     const linkedQuestionIds = new Set(section.relatedQuestionIds);
+    const linkedScenarioIds = new Set(section.relatedScenarioIds);
+    const inScopeScenarioIds = new Set<string>();
     for (const question of questionInput) {
-      if (question.scenarioId !== undefined) continue;
       const covered = question.objectiveIds.find((id) => taskStatementIds.has(id));
+      if (question.scenarioId !== undefined) {
+        if (covered === undefined) continue;
+        inScopeScenarioIds.add(question.scenarioId);
+        if (!linkedScenarioIds.has(question.scenarioId)) {
+          errors.push(`study guide section ${section.id}: question ${question.id} covers task statement ${covered} through scenario ${question.scenarioId} — add ${question.scenarioId} to relatedScenarioIds`);
+        }
+        continue;
+      }
       if (covered !== undefined && !linkedQuestionIds.has(question.id)) {
         errors.push(`study guide section ${section.id}: question ${question.id} covers task statement ${covered} but is missing from relatedQuestionIds — add it there`);
+      }
+    }
+    for (const scenarioId of section.relatedScenarioIds) {
+      if (!inScopeScenarioIds.has(scenarioId)) {
+        errors.push(`study guide section ${section.id}: scenario ${scenarioId} has no question covering a section task statement — remove it from relatedScenarioIds`);
       }
     }
   }
