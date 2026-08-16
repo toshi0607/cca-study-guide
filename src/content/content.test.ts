@@ -27,6 +27,7 @@ import {
   validateSkillCoverage,
   validateSkills,
   validateStudyGuideSections,
+  validateStudyGuideLinkCoverage,
 } from './validate';
 
 describe('study content', () => {
@@ -724,6 +725,47 @@ describe('study guide validation', () => {
 
     expect(errors).toContain('study guide section sg-agentic-loop: learningObjectives must have matching Japanese and English item counts');
     expect(errors).toContain('study guide section sg-agentic-loop: keyPoints must have matching Japanese and English item counts');
+  });
+});
+
+describe('study guide link coverage validation', () => {
+  const fixtureSection = () => ({
+    id: 'sg-fixture',
+    taskStatementIds: ['1.1'],
+    relatedCardIds: ['card-linked'],
+    relatedQuestionIds: ['q-linked'],
+  });
+  const linkedCard = { id: 'card-linked', objectiveIds: ['1.1'] };
+  const linkedQuestion = { id: 'q-linked', objectiveIds: ['1.1'] };
+
+  it('accepts the real study guide with all in-scope links in place', () => {
+    expect(validateStudyGuideLinkCoverage(studyGuideSections, cards, questions)).toEqual([]);
+  });
+
+  it('accepts a section whose in-scope cards and questions are all linked', () => {
+    expect(validateStudyGuideLinkCoverage([fixtureSection()], [linkedCard], [linkedQuestion])).toEqual([]);
+  });
+
+  it('rejects an in-scope card that is missing from relatedCardIds', () => {
+    const unlinkedCard = { id: 'card-unlinked', objectiveIds: ['1.1'] };
+
+    const errors = validateStudyGuideLinkCoverage([fixtureSection()], [linkedCard, unlinkedCard], [linkedQuestion]);
+
+    expect(errors).toEqual(['study guide section sg-fixture: card card-unlinked covers task statement 1.1 but is missing from relatedCardIds — add it there']);
+  });
+
+  it('rejects an in-scope standalone question that is missing from relatedQuestionIds', () => {
+    const unlinkedQuestion = { id: 'q-unlinked', objectiveIds: ['1.1'] };
+
+    const errors = validateStudyGuideLinkCoverage([fixtureSection()], [linkedCard], [linkedQuestion, unlinkedQuestion]);
+
+    expect(errors).toEqual(['study guide section sg-fixture: question q-unlinked covers task statement 1.1 but is missing from relatedQuestionIds — add it there']);
+  });
+
+  it('exempts scenario-bound questions from the coverage requirement', () => {
+    const scenarioQuestion = { id: 'q-scenario', objectiveIds: ['1.1'], scenarioId: 'sc-fixture' };
+
+    expect(validateStudyGuideLinkCoverage([fixtureSection()], [linkedCard], [linkedQuestion, scenarioQuestion])).toEqual([]);
   });
 });
 
