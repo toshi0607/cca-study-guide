@@ -209,7 +209,7 @@
   - エラーメッセージには「次に何をすべきか」を書く
     （例: `sg-claude-code-foundations の relatedCardIds に d3-file-locations を追加するか、除外理由を coverage-exceptions に書いてください`）。
   - 同じ検査は `relatedQuestionIds` にも効くはずなので、あわせて確認する価値がある。
-- **状態**: 未対応（2026-08-15 記録）。
+- **状態**: 実装済み（2026-08-16、PR #76）。`validateStudyGuideLinkCoverage` が範囲内カード・単独設問の紐付け網羅をビルドで強制し、未リンクだったカード27枚・単独設問23問を紐付けた。提案からの逸脱: 許可リストは現時点で例外ゼロのため未導入（必要になったら追加）。`relatedQuestionIds` も同時に強制対象としたが、`scenarioId` 付き設問はシナリオ演習経由で到達すべきものとして除外。詳細は `DESIGN.md` §Content model。
 
 ---
 
