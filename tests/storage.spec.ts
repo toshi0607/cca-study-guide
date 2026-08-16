@@ -1,5 +1,6 @@
 import { readFile } from 'node:fs/promises';
 import { cards } from '../src/content/cards';
+import { studyGuideSections } from '../src/content/study-guide';
 import { expect, openHandsOnList, openOfficialScenarios, supportGuideTitle, test } from './fixtures/app';
 import { LEGACY_STORAGE_KEY, STORAGE_KEY } from './fixtures/storage';
 
@@ -49,7 +50,7 @@ test('does not write stale guide progress on read and reconfirms without replaci
   await expect(page.locator('.guide-section').first()).toContainText('以前の記録は「完了」として保持されています');
   await page.getByRole('button', { name: '更新内容を再確認した' }).click();
   const saved = await page.evaluate((key) => JSON.parse(localStorage.getItem(key) ?? '{}').studyGuideProgress['sg-agentic-loop'], STORAGE_KEY);
-  expect(saved.revision).toBe(2);
+  expect(saved.revision).toBe(studyGuideSections.find((section) => section.id === 'sg-agentic-loop')?.revision);
   expect(saved.completedAt).toBe(originalCompletedAt);
   expect(saved.updatedAt).not.toBe(originalCompletedAt);
 });
@@ -58,7 +59,7 @@ test('keeps future and unrelated v2 records intact while another guide section i
   const review = { cardId: 'd1-loop-stop', cardRevisionSeen: 1, dueAt: '2026-08-01T00:00:00.000Z', intervalDays: 3, streak: 1, lapses: 0, lastRating: 'good' };
   const quizStat = { attempts: 1, correct: 1, lastAnsweredAt: '2026-07-20T00:00:00.000Z', lastCorrect: true };
   const handsOn = { revision: 1, status: 'completed', completedStepIds: ['step-a'], updatedAt: '2026-07-20T00:00:00.000Z', completedAt: '2026-07-20T00:00:00.000Z' };
-  const future = { revision: 3, status: 'in_progress', updatedAt: '2026-07-20T00:00:00.000Z' };
+  const future = { revision: studyGuideSections.find((section) => section.id === 'sg-agentic-loop')!.revision + 1, status: 'in_progress', updatedAt: '2026-07-20T00:00:00.000Z' };
   await page.evaluate(([key, value]) => localStorage.setItem(key, value), [STORAGE_KEY, JSON.stringify({
     version: 2, reviews: { 'd1-loop-stop': review }, quizStats: { 'q-d1-loop-continue': quizStat }, handsOnProgress: { 'hands-on-example': handsOn }, studyGuideProgress: { 'sg-agentic-loop': future },
   })]);

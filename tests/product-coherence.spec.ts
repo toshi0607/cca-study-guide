@@ -1,9 +1,12 @@
 import type { Page } from '@playwright/test';
 import { cards } from '../src/content/cards';
 import { questions } from '../src/content/questions';
+import { studyGuideSections } from '../src/content/study-guide';
 import { expectNoViolations } from './fixtures/accessibility';
 import { expect, test } from './fixtures/app';
 import { seedStorage, STORAGE_KEY } from './fixtures/storage';
+
+const agenticLoopRevision = studyGuideSections.find((section) => section.id === 'sg-agentic-loop')!.revision;
 
 // Task 10A product-coherence E2E. Everything is driven from seeded storage — no
 // 120-minute exam is ever run — and heavy axe/responsive passes are tagged @slow
@@ -226,7 +229,7 @@ test('Progress shows aggregates for every feature with correct seeded values', a
       [cards[1].id]: { cardId: cards[1].id, cardRevisionSeen: cards[1].revision, dueAt: pastDue, intervalDays: 1, streak: 0, lapses: 0, lastRating: 'again' },
     },
     quizStats: { [questions[0].id]: { attempts: 3, correct: 2, lastAnsweredAt: pastDue, lastCorrect: true } },
-    studyGuideProgress: { 'sg-agentic-loop': { revision: 2, status: 'completed', updatedAt: pastDue, completedAt: pastDue } },
+    studyGuideProgress: { 'sg-agentic-loop': { revision: agenticLoopRevision, status: 'completed', updatedAt: pastDue, completedAt: pastDue } },
     mockExamAttempts: [fullAttempt('a1', 1_690_000_000_000, 40)],
   });
   await page.getByRole('button', { name: '進捗' }).first().click();
@@ -281,7 +284,7 @@ test('Progress navigates to each feature', async ({ page }) => {
 
 test('reload preserves seeded progress', async ({ page }) => {
   await seed(page, {
-    studyGuideProgress: { 'sg-agentic-loop': { revision: 2, status: 'completed', updatedAt: new Date(1_690_000_000_000).toISOString(), completedAt: new Date(1_690_000_000_000).toISOString() } },
+    studyGuideProgress: { 'sg-agentic-loop': { revision: agenticLoopRevision, status: 'completed', updatedAt: new Date(1_690_000_000_000).toISOString(), completedAt: new Date(1_690_000_000_000).toISOString() } },
     mockExamAttempts: [fullAttempt('a1', 1_690_000_000_000, 30)],
   });
   await page.getByRole('button', { name: '進捗' }).first().click();

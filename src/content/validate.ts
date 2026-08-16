@@ -726,6 +726,40 @@ export function validateStudyGuideSections(input: unknown, index: ContentIndex):
   return errors;
 }
 
+// Every card and standalone question whose objectives fall inside a section's
+// declared task statements must be linked from that section, so the natural
+// "read the section, then work its related material" flow cannot silently skip
+// in-scope items. Kept apart from per-entry validation (mirroring
+// validateSkillCoverage) so a single-section fixture test does not trip it.
+// Scenario-bound questions are exempt: they are reached through their practice
+// scenario, and a direct link from the guide would strip that context.
+export function validateStudyGuideLinkCoverage(
+  sectionInput: Array<{ id: string; taskStatementIds: string[]; relatedCardIds: string[]; relatedQuestionIds: string[] }>,
+  cardInput: Array<{ id: string; objectiveIds: string[] }>,
+  questionInput: Array<{ id: string; objectiveIds: string[]; scenarioId?: string }>,
+): string[] {
+  const errors: string[] = [];
+  for (const section of sectionInput) {
+    const taskStatementIds = new Set(section.taskStatementIds);
+    const linkedCardIds = new Set(section.relatedCardIds);
+    for (const card of cardInput) {
+      const covered = card.objectiveIds.find((id) => taskStatementIds.has(id));
+      if (covered !== undefined && !linkedCardIds.has(card.id)) {
+        errors.push(`study guide section ${section.id}: card ${card.id} covers task statement ${covered} but is missing from relatedCardIds — add it there`);
+      }
+    }
+    const linkedQuestionIds = new Set(section.relatedQuestionIds);
+    for (const question of questionInput) {
+      if (question.scenarioId !== undefined) continue;
+      const covered = question.objectiveIds.find((id) => taskStatementIds.has(id));
+      if (covered !== undefined && !linkedQuestionIds.has(question.id)) {
+        errors.push(`study guide section ${section.id}: question ${question.id} covers task statement ${covered} but is missing from relatedQuestionIds — add it there`);
+      }
+    }
+  }
+  return errors;
+}
+
 // The four themes Task 5 must cover, expressed as the official scenario each
 // maps to. Every one must be exercised by at least one guide, and the guides
 // carrying them must offer distinct implementation experiences.
@@ -881,6 +915,7 @@ export function validateContent() {
     ...validateScenarios(scenarios, index),
     ...validateScenarioQuestionLinks(scenarios, questions),
     ...validateStudyGuideSections(studyGuideSections, index),
+    ...validateStudyGuideLinkCoverage(studyGuideSections, cards, questions),
     ...validateHandsOnGuides(handsOnGuides, index),
     ...validateHandsOnThemes(handsOnGuides),
   ];
