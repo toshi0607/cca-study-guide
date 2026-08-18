@@ -6,7 +6,10 @@ export type View = 'today' | 'guide' | 'practice' | 'quiz' | 'progress' | 'hands
 // destination view consumes and clears it on arrival.
 export type ViewTarget =
   | { kind: 'guide-section'; sectionId: string }
-  | { kind: 'practice-card'; cardId: string }
+  // Always an array, even for a single card: the array is built once where the
+  // target is created (click handler / deep-link parse), so its identity stays
+  // stable across re-renders — a render-time wrapper array would defeat the
+  // destination view's state identity check and re-fire its focus effect.
   | { kind: 'practice-cards'; cardIds: string[] }
   | { kind: 'quiz-question'; questionId: string }
   | { kind: 'quiz-scenario'; scenarioId: string }

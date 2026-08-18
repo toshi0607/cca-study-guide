@@ -286,7 +286,9 @@ export type UiCopy = {
     targetAnnouncement: (prompt: string) => string;
     // Announced when a multi-card target (e.g. a guide section's related cards)
     // narrows the list; the single-card variant above names the prompt instead.
-    targetAnnouncementMany: (count: number) => string;
+    // Deliberately count-free: the filters stay usable while it shows, so a
+    // count would drift from the visible result-count.
+    targetAnnouncementMany: string;
     showAll: string;
   };
   session: {
@@ -916,7 +918,7 @@ export const ui = {
       emptyTitle: '該当するカードはありません。',
       emptyDescription: '検索語またはフィルターを変えてください。',
       targetAnnouncement: (prompt) => `関連カードを開きました：${prompt}`,
-      targetAnnouncementMany: (count) => `関連カード${count}枚に絞って表示しています。`,
+      targetAnnouncementMany: '関連カードに絞って表示しています。',
       showAll: 'カード一覧に戻る',
     },
     session: {
@@ -1526,7 +1528,7 @@ export const ui = {
       emptyTitle: 'No cards match.',
       emptyDescription: 'Try a different search term or filter.',
       targetAnnouncement: (prompt) => `Opened related card: ${prompt}`,
-      targetAnnouncementMany: (count) => `Showing ${count} related cards.`,
+      targetAnnouncementMany: 'Showing only the related cards.',
       showAll: 'Back to all cards',
     },
     session: {

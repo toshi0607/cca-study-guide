@@ -9,6 +9,12 @@ import type { Locale } from '../../i18n/locales';
 import { localize, type UiCopy } from '../../i18n/ui';
 import { isDue, type Rating, type ReviewState } from '../../lib/scheduler';
 import { isWeak } from '../../lib/weakness';
+import type { Card } from '../../content/types';
+
+// Resolves content ids to cards, silently dropping unknown ids so a stale
+// stored id can never throw.
+const resolveCards = (ids: string[]): Card[] =>
+  ids.flatMap((id) => { const card = cards.find((value) => value.id === id); return card ? [card] : []; });
 
 export const stateFilters = ['due', 'all', 'unseen', 'reviewed', 'weak'] as const;
 export type StateFilter = (typeof stateFilters)[number];
@@ -67,21 +73,24 @@ export function PracticeView({
     // A multi-card target keeps the order the sender listed (e.g. a guide
     // section's pedagogical order), not the content-file order.
     if (!activeTargetCardIds) return matched;
-    return [...matched].sort((a, b) => activeTargetCardIds.indexOf(a.id) - activeTargetCardIds.indexOf(b.id));
+    return matched.sort((a, b) => activeTargetCardIds.indexOf(a.id) - activeTargetCardIds.indexOf(b.id));
   }, [query, domainFilter, stateFilter, reviews, locale, now, activeTargetCardIds]);
 
   return (
     <section class="practice-view" aria-labelledby="practice-title">
       <header class="panel--hero"><p class="eyebrow">{copy.practice.eyebrow}</p><h2 id="practice-title" class="page-title">{copy.practice.title}</h2><p class="hero-lede">{copy.practice.introduction}</p></header>
       {activeTargetCardIds && (() => {
-        const matching = activeTargetCardIds.flatMap((id) => { const card = cards.find((value) => value.id === id); return card ? [card] : []; });
+        const matching = resolveCards(activeTargetCardIds);
         if (!matching.length) return null;
+        // The many-card wording states no count: the state/domain filters stay
+        // usable while the notice shows, so a count claimed here would drift
+        // from the result-count the moment the learner narrows the list.
         const announcement = matching.length === 1
           ? copy.practice.targetAnnouncement(localize(matching[0].prompt, locale))
-          : copy.practice.targetAnnouncementMany(matching.length);
+          : copy.practice.targetAnnouncementMany;
         return <div class="note note--info practice-target"><p tabIndex={-1} role="status" aria-live="polite" ref={targetNoticeRef}>{announcement}</p><button type="button" class="btn--text" onClick={() => { setActiveTargetCardIds(null); requestAnimationFrame(() => searchInputRef.current?.focus()); }}>{copy.practice.showAll}</button></div>;
       })()}
-      {sessionCards && <PracticeSession locale={locale} copy={copy} initialCards={sessionCards.flatMap((id) => { const card = cards.find((value) => value.id === id); return card ? [card] : []; })} reviews={reviews} dueCount={dueCount} onRate={onRateInSession} onExit={onExitSession}/>}
+      {sessionCards && <PracticeSession locale={locale} copy={copy} initialCards={resolveCards(sessionCards)} reviews={reviews} dueCount={dueCount} onRate={onRateInSession} onExit={onExitSession}/>}
       {!sessionCards && <><div class="filter-panel">
         <label class="search-label" for="card-search">{copy.practice.searchLabel}<input ref={searchInputRef} id="card-search" type="search" value={query} onInput={(event) => onQueryChange(event.currentTarget.value)} placeholder={copy.practice.searchPlaceholder}/></label>
         <fieldset><legend>{copy.practice.stateLegend}</legend><div class="chips">{stateFilters.map((key) => <button key={key} type="button" class={`chip${stateFilter === key ? ' is-selected' : ''}`} aria-pressed={stateFilter === key} onClick={() => onStateFilterChange(key)}>{copy.practice.filters[key]}</button>)}</div></fieldset>

@@ -47,7 +47,7 @@ function detectStorageAvailable(): boolean {
 // guide is currently selected.
 function targetFromDeepLink(link: DeepLink): ViewTarget | null {
   if (link.sectionId) return { kind: 'guide-section', sectionId: link.sectionId };
-  if (link.cardId) return { kind: 'practice-card', cardId: link.cardId };
+  if (link.cardId) return { kind: 'practice-cards', cardIds: [link.cardId] };
   if (link.questionId) return { kind: 'quiz-question', questionId: link.questionId };
   if (link.scenarioId) return { kind: 'quiz-scenario', scenarioId: link.scenarioId };
   if (link.handsOnGuideId) return { kind: 'hands-on', guideId: link.handsOnGuideId, ...(link.handsOnStepId ? { stepId: link.handsOnStepId } : {}) };
@@ -107,7 +107,7 @@ function App({ locale }: { locale: Locale }) {
   // navigation already produces (e.g. openGuideCard).
   const applyDeepLink = (link: DeepLink) => {
     const linkTarget = targetFromDeepLink(link);
-    if (link.cardId) { setQuery(''); setDomainFilter('all'); setStateFilter('all'); }
+    if (link.cardId) resetPracticeFilters();
     // Routed through `navigate` so view and target update atomically, same as
     // every in-app target-bearing navigation. A step target scrolls itself into
     // view inside HandsOnView; running App's own smooth scroll at the same time
@@ -283,15 +283,18 @@ function App({ locale }: { locale: Locale }) {
     if (scroll) window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const openGuideCard = (cardId: string) => {
-    setQuery(''); setDomainFilter('all'); setStateFilter('all'); navigate('practice', { kind: 'practice-card', cardId });
+  // Clears every Practice filter axis before a card target lands there, so no
+  // hidden filter can intersect the target away.
+  const resetPracticeFilters = () => {
+    setQuery(''); setDomainFilter('all'); setStateFilter('all');
   };
-  // Bulk variant of openGuideCard: the ids are carried verbatim, so a set that
-  // spans domains needs no filter gymnastics — the state/domain resets below
-  // exist precisely so no hidden filter can intersect the target away.
+  // The ids are carried verbatim, so a set that spans domains needs no filter
+  // gymnastics. The array is built once per call, keeping its identity stable
+  // for the destination view's effect (see the ViewTarget comment in types.ts).
   const openGuideCards = (cardIds: string[]) => {
-    setQuery(''); setDomainFilter('all'); setStateFilter('all'); navigate('practice', { kind: 'practice-cards', cardIds });
+    resetPracticeFilters(); navigate('practice', { kind: 'practice-cards', cardIds });
   };
+  const openGuideCard = (cardId: string) => openGuideCards([cardId]);
   const openGuideQuestion = (questionId: string) => navigate('quiz', { kind: 'quiz-question', questionId });
   const openPracticeScenario = (scenarioId: string) => navigate('quiz', { kind: 'quiz-scenario', scenarioId });
   const openHandsOnGuide = (guideId: string) => navigate('hands-on', { kind: 'hands-on', guideId });
@@ -438,7 +441,7 @@ function App({ locale }: { locale: Locale }) {
           query={query} onQueryChange={setQuery}
           domainFilter={domainFilter} onDomainFilterChange={setDomainFilter}
           stateFilter={stateFilter} onStateFilterChange={setStateFilter}
-          targetCardIds={target?.kind === 'practice-card' ? [target.cardId] : target?.kind === 'practice-cards' ? target.cardIds : null} onTargetOpened={clearTarget}
+          targetCardIds={target?.kind === 'practice-cards' ? target.cardIds : null} onTargetOpened={clearTarget}
           revealed={revealed} onToggleRevealed={(cardId) => setRevealed((value) => ({ ...value, [cardId]: !value[cardId] }))}
           sessionCards={sessionCards} onStartSession={setSessionCards} onExitSession={endSession}
           onRateInList={saveRating} onRateInSession={persistRating}
