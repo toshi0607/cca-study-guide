@@ -70,6 +70,8 @@ production-smoke。リリース検証は `/release-audit smoke|full` スキル�
 - `src/content/validate.ts` — 5領域30タスクの網羅・参照整合をビルドで強制
 - バンドル/Lighthouse 予算（`scripts/check-*.mjs`）— 性能回帰を CI で拒否
 - `scripts/check-no-analytics.mjs` — プライバシー方針の機械的検証
+- `scripts/check-e2e-port.mjs` — E2E 前段でポート 4325 の残存 preview サーバー
+  （別 worktree 起動）を検出し、kill 手順付きで拒否
 
 **エージェント（人間含む）が同じ間違いを二度したら、指示文を増やすのではなく、
 この一覧に機構を一つ足すこと。** エラーメッセージには「次に何をすべきか」を書く。

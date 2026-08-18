@@ -8,6 +8,9 @@ import { localize, type UiCopy } from '../../i18n/ui';
 import { classifyAnswer, pickQuizQuestions, type AnswerOutcome, type QuizCount, type QuizDomainChoice } from '../../lib/quiz';
 import { useChoiceRationales } from '../../lib/rationales-loader';
 import type { QuizConfidence, QuizStat } from '../../lib/storage-schema';
+import { Button } from '../app/Button';
+import { Note } from '../app/Note';
+import type { GuideOrigin } from '../app/types';
 import { QuizQuestion } from '../quiz/QuizQuestion';
 import { QuizSetup } from '../quiz/QuizSetup';
 import { QuizSummary } from '../quiz/QuizSummary';
@@ -21,7 +24,7 @@ const questionsByScenario = new Map(
 const domainBadges = (domainIds: string[]) =>
   domains.filter((domain) => domainIds.includes(domain.id)).map((domain) => <span key={domain.id} class="badge badge--ink">D{domain.number}</span>);
 
-export function QuizView({ locale, copy, quizStats, onAnswer, onConfidence, targetQuestionId, onTargetOpened, targetScenarioId, onTargetScenarioOpened }: { locale: Locale; copy: UiCopy; quizStats?: Record<string, QuizStat>; onAnswer: (questionId: string, outcome: AnswerOutcome) => string | null; onConfidence: (questionId: string, confidence: QuizConfidence, wasCorrect: boolean, expectedLastAnsweredAt: string) => ConfidenceOutcome; targetQuestionId: string | null; onTargetOpened: () => void; targetScenarioId: string | null; onTargetScenarioOpened: () => void }) {
+export function QuizView({ locale, copy, quizStats, onAnswer, onConfidence, targetQuestionId, onTargetOpened, targetScenarioId, onTargetScenarioOpened, guideOrigin, onBackToGuideSection }: { locale: Locale; copy: UiCopy; quizStats?: Record<string, QuizStat>; onAnswer: (questionId: string, outcome: AnswerOutcome) => string | null; onConfidence: (questionId: string, confidence: QuizConfidence, wasCorrect: boolean, expectedLastAnsweredAt: string) => ConfidenceOutcome; targetQuestionId: string | null; onTargetOpened: () => void; targetScenarioId: string | null; onTargetScenarioOpened: () => void; guideOrigin: GuideOrigin | null; onBackToGuideSection: () => void }) {
   const [phase, setPhase] = useState<'setup' | 'background' | 'question' | 'summary'>('setup');
   const [mode, setMode] = useState<QuizMode>('random');
   const [scenario, setScenario] = useState<Scenario | null>(null);
@@ -148,6 +151,9 @@ export function QuizView({ locale, copy, quizStats, onAnswer, onConfidence, targ
       <header class="panel--hero">
         <p class="eyebrow">{copy.quiz.eyebrow}</p><h2 id="quiz-title" class="page-title">{copy.quiz.title}</h2><p class="hero-lede">{copy.quiz.introduction}</p>
       </header>
+      {guideOrigin && <Note kind="info" class="quiz-origin">
+        <Button variant="text" onClick={onBackToGuideSection}><span aria-hidden="true">←</span> {copy.guide.backToSection(guideOrigin.title)}</Button>
+      </Note>}
       {targetAnnouncement && phase === 'question' && <p class="note note--info quiz-target" tabIndex={-1} role="status" aria-live="polite" ref={targetAnnouncementRef}>{targetAnnouncement}</p>}
 
       {phase === 'setup' && <QuizSetup

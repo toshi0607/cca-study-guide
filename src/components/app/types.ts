@@ -14,3 +14,9 @@ export type ViewTarget =
   | { kind: 'quiz-question'; questionId: string }
   | { kind: 'quiz-scenario'; scenarioId: string }
   | { kind: 'hands-on'; guideId: string; stepId?: string };
+
+// Where a cross-view excursion started, so the target view can offer a way back.
+// The title travels with the id: the origin is rendered by Practice/Quiz, and
+// carrying the localized title keeps the Study Guide content out of their —
+// and App's — module graph.
+export type GuideOrigin = { sectionId: string; title: string };

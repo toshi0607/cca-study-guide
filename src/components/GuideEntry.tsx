@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'preact/hooks';
 import type { Locale } from '../i18n/locales';
 import type { UiCopy } from '../i18n/ui';
 import type { StudyGuideProgress } from '../lib/storage';
+import type { GuideOrigin } from './app/types';
 import type { LearningStageViewTarget } from './views/GuideView';
 import { Button } from './app/Button';
 
@@ -14,10 +15,12 @@ export function GuideEntry(props: {
   hasMockExamAttempts: boolean;
   examDate: string | null;
   onProgressAction: (sectionId: string, revision: number, action: 'start' | 'complete' | 'reconfirm') => boolean;
-  onOpenCard: (cardId: string) => void;
-  onOpenCards: (cardIds: string[]) => void;
-  onOpenQuestion: (questionId: string) => void;
-  onOpenScenario: (scenarioId: string) => void;
+  // The origin is the section the link was followed from, so the target view can
+  // offer a way back to it.
+  onOpenCard: (cardId: string, origin: GuideOrigin) => void;
+  onOpenCards: (cardIds: string[], origin: GuideOrigin) => void;
+  onOpenQuestion: (questionId: string, origin: GuideOrigin) => void;
+  onOpenScenario: (scenarioId: string, origin: GuideOrigin) => void;
   onOpenStage: (target: LearningStageViewTarget) => void;
   onOpenOfficialScenarios: () => void;
   targetSectionId: string | null;
