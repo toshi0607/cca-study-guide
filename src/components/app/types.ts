@@ -7,6 +7,7 @@ export type View = 'today' | 'guide' | 'practice' | 'quiz' | 'progress' | 'hands
 export type ViewTarget =
   | { kind: 'guide-section'; sectionId: string }
   | { kind: 'practice-card'; cardId: string }
+  | { kind: 'practice-cards'; cardIds: string[] }
   | { kind: 'quiz-question'; questionId: string }
   | { kind: 'quiz-scenario'; scenarioId: string }
   | { kind: 'hands-on'; guideId: string; stepId?: string };

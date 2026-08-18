@@ -28,6 +28,7 @@ type Props = {
   examDate: string | null;
   onProgressAction: (sectionId: string, revision: number, action: 'start' | 'complete' | 'reconfirm') => boolean;
   onOpenCard: (cardId: string) => void;
+  onOpenCards: (cardIds: string[]) => void;
   onOpenQuestion: (questionId: string) => void;
   onOpenScenario: (scenarioId: string) => void;
   onOpenStage: (target: LearningStageViewTarget) => void;
@@ -48,7 +49,7 @@ function focusElement(el: HTMLElement | null) {
   el.focus({ preventScroll: true });
 }
 
-export function GuideView({ locale, copy, records, hasMockExamAttempts, examDate, onProgressAction, onOpenCard, onOpenQuestion, onOpenScenario, onOpenStage, onOpenOfficialScenarios, targetSectionId, onTargetSectionOpened }: Props) {
+export function GuideView({ locale, copy, records, hasMockExamAttempts, examDate, onProgressAction, onOpenCard, onOpenCards, onOpenQuestion, onOpenScenario, onOpenStage, onOpenOfficialScenarios, targetSectionId, onTargetSectionOpened }: Props) {
   const [diagnosis, setDiagnosis] = useState('');
   const [recommendation, setRecommendation] = useState<string | null>(null);
   const resultRef = useRef<HTMLDivElement>(null);
@@ -185,7 +186,9 @@ export function GuideView({ locale, copy, records, hasMockExamAttempts, examDate
               <h4 class="sub-title">{copy.guide.statements}</h4><p class="statement-ids">{section.taskStatementIds.map((id) => <code key={id}>{id}</code>)}</p>
               <h4 class="sub-title">{copy.guide.mustKnow}</h4><ul>{localize(section.learningObjectives, locale).map((item) => <li key={item}>{item}</li>)}</ul>
               <h4 class="sub-title">{copy.guide.keyPoints}</h4><ul>{localize(section.keyPoints, locale).map((item) => <li key={item}>{item}</li>)}</ul>
-              <h4 class="sub-title">{copy.guide.relatedCards}</h4><div class="target-list">{section.relatedCardIds.map((id) => {
+              <h4 class="sub-title">{copy.guide.relatedCards}</h4>
+              {section.relatedCardIds.length > 1 && <p><button type="button" class="btn btn--secondary guide-related-open-all" onClick={() => onOpenCards(section.relatedCardIds)}>{copy.guide.relatedCardsOpenAll(section.relatedCardIds.length)}</button></p>}
+              <div class="target-list">{section.relatedCardIds.map((id) => {
                 const card = cards.find((candidate) => candidate.id === id);
                 return card ? <button type="button" class="btn btn--secondary" key={id} onClick={() => onOpenCard(id)}>{localize(card.prompt, locale)} <code>{id}</code></button> : null;
               })}</div>

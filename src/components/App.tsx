@@ -286,6 +286,12 @@ function App({ locale }: { locale: Locale }) {
   const openGuideCard = (cardId: string) => {
     setQuery(''); setDomainFilter('all'); setStateFilter('all'); navigate('practice', { kind: 'practice-card', cardId });
   };
+  // Bulk variant of openGuideCard: the ids are carried verbatim, so a set that
+  // spans domains needs no filter gymnastics — the state/domain resets below
+  // exist precisely so no hidden filter can intersect the target away.
+  const openGuideCards = (cardIds: string[]) => {
+    setQuery(''); setDomainFilter('all'); setStateFilter('all'); navigate('practice', { kind: 'practice-cards', cardIds });
+  };
   const openGuideQuestion = (questionId: string) => navigate('quiz', { kind: 'quiz-question', questionId });
   const openPracticeScenario = (scenarioId: string) => navigate('quiz', { kind: 'quiz-scenario', scenarioId });
   const openHandsOnGuide = (guideId: string) => navigate('hands-on', { kind: 'hands-on', guideId });
@@ -421,7 +427,7 @@ function App({ locale }: { locale: Locale }) {
 
         {view === 'mock-exam' && <MockExamEntry locale={locale} copy={copy} session={data.activeMockExam} attempts={data.mockExamAttempts} storageAvailable={storageAvailable} quizStats={data.quizStats} initialPhase={mockExamIntent} readData={readMockExamData} writeData={writeMockExamData} onOpenPractice={openMockExamPractice}/>}
 
-        {view === 'guide' && <GuideEntry locale={locale} copy={copy} records={data.studyGuideProgress} hasMockExamAttempts={data.mockExamAttempts.length > 0} examDate={examDate} onProgressAction={saveGuideProgress} onOpenCard={openGuideCard} onOpenQuestion={openGuideQuestion} onOpenScenario={openPracticeScenario} onOpenStage={openLearningStage} onOpenOfficialScenarios={() => navigate('official-scenarios')} targetSectionId={target?.kind === 'guide-section' ? target.sectionId : null} onTargetSectionOpened={clearTarget}/>}
+        {view === 'guide' && <GuideEntry locale={locale} copy={copy} records={data.studyGuideProgress} hasMockExamAttempts={data.mockExamAttempts.length > 0} examDate={examDate} onProgressAction={saveGuideProgress} onOpenCard={openGuideCard} onOpenCards={openGuideCards} onOpenQuestion={openGuideQuestion} onOpenScenario={openPracticeScenario} onOpenStage={openLearningStage} onOpenOfficialScenarios={() => navigate('official-scenarios')} targetSectionId={target?.kind === 'guide-section' ? target.sectionId : null} onTargetSectionOpened={clearTarget}/>}
 
         {view === 'hands-on' && <HandsOnEntry locale={locale} copy={copy} records={data.handsOnProgress} onStart={saveHandsOnStart} onToggleStep={saveHandsOnStep} onComplete={saveHandsOnComplete} onReconfirm={saveHandsOnReconfirm} onOpenCard={openGuideCard} onOpenQuestion={openGuideQuestion} target={handsOnTarget} onTargetOpened={clearTarget}/>}
 
@@ -432,7 +438,7 @@ function App({ locale }: { locale: Locale }) {
           query={query} onQueryChange={setQuery}
           domainFilter={domainFilter} onDomainFilterChange={setDomainFilter}
           stateFilter={stateFilter} onStateFilterChange={setStateFilter}
-          targetCardId={target?.kind === 'practice-card' ? target.cardId : null} onTargetOpened={clearTarget}
+          targetCardIds={target?.kind === 'practice-card' ? [target.cardId] : target?.kind === 'practice-cards' ? target.cardIds : null} onTargetOpened={clearTarget}
           revealed={revealed} onToggleRevealed={(cardId) => setRevealed((value) => ({ ...value, [cardId]: !value[cardId] }))}
           sessionCards={sessionCards} onStartSession={setSessionCards} onExitSession={endSession}
           onRateInList={saveRating} onRateInSession={persistRating}

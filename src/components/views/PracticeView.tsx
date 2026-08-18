@@ -18,7 +18,7 @@ export function PracticeView({
   query, onQueryChange, domainFilter, onDomainFilterChange, stateFilter, onStateFilterChange,
   revealed, onToggleRevealed,
   sessionCards, onStartSession, onExitSession, onRateInList, onRateInSession,
-  targetCardId, onTargetOpened,
+  targetCardIds, onTargetOpened,
 }: {
   locale: Locale;
   copy: UiCopy;
@@ -38,38 +38,48 @@ export function PracticeView({
   onExitSession: (aborted: boolean) => void;
   onRateInList: (cardId: string, rating: Rating) => void;
   onRateInSession: (cardId: string, rating: Rating) => boolean;
-  targetCardId: string | null;
+  targetCardIds: string[] | null;
   onTargetOpened: () => void;
 }) {
-  const [activeTargetCardId, setActiveTargetCardId] = useState<string | null>(null);
+  const [activeTargetCardIds, setActiveTargetCardIds] = useState<string[] | null>(null);
   const targetNoticeRef = useRef<HTMLParagraphElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   useEffect(() => {
-    if (!targetCardId) return;
-    setActiveTargetCardId(targetCardId);
+    if (!targetCardIds?.length) return;
+    setActiveTargetCardIds(targetCardIds);
     onTargetOpened();
-  }, [targetCardId, onTargetOpened]);
+  }, [targetCardIds, onTargetOpened]);
   useEffect(() => {
-    if (activeTargetCardId) requestAnimationFrame(() => targetNoticeRef.current?.focus());
-  }, [activeTargetCardId]);
-  const filteredCards = useMemo(() => cards.filter((card) => {
-    const text = [card.prompt, card.answer, card.explanation, card.pitfall]
-      .map((field) => localize(field, locale))
-      .join(' ')
-      .toLocaleLowerCase(dateLocale(locale));
-    const matchesQuery = text.includes(query.trim().toLocaleLowerCase(dateLocale(locale)));
-    const matchesDomain = domainFilter === 'all' || card.domainId === domainFilter;
-    const review = reviews[card.id];
-    const matchesState = stateFilter === 'all' || (stateFilter === 'unseen' ? !review : stateFilter === 'reviewed' ? Boolean(review) : stateFilter === 'weak' ? isWeak(review) : Boolean(now && isDue(review, card.revision, now)));
-    return matchesQuery && matchesDomain && matchesState && (!activeTargetCardId || card.id === activeTargetCardId);
-  }), [query, domainFilter, stateFilter, reviews, locale, now, activeTargetCardId]);
+    if (activeTargetCardIds) requestAnimationFrame(() => targetNoticeRef.current?.focus());
+  }, [activeTargetCardIds]);
+  const filteredCards = useMemo(() => {
+    const matched = cards.filter((card) => {
+      const text = [card.prompt, card.answer, card.explanation, card.pitfall]
+        .map((field) => localize(field, locale))
+        .join(' ')
+        .toLocaleLowerCase(dateLocale(locale));
+      const matchesQuery = text.includes(query.trim().toLocaleLowerCase(dateLocale(locale)));
+      const matchesDomain = domainFilter === 'all' || card.domainId === domainFilter;
+      const review = reviews[card.id];
+      const matchesState = stateFilter === 'all' || (stateFilter === 'unseen' ? !review : stateFilter === 'reviewed' ? Boolean(review) : stateFilter === 'weak' ? isWeak(review) : Boolean(now && isDue(review, card.revision, now)));
+      return matchesQuery && matchesDomain && matchesState && (!activeTargetCardIds || activeTargetCardIds.includes(card.id));
+    });
+    // A multi-card target keeps the order the sender listed (e.g. a guide
+    // section's pedagogical order), not the content-file order.
+    if (!activeTargetCardIds) return matched;
+    return [...matched].sort((a, b) => activeTargetCardIds.indexOf(a.id) - activeTargetCardIds.indexOf(b.id));
+  }, [query, domainFilter, stateFilter, reviews, locale, now, activeTargetCardIds]);
 
   return (
     <section class="practice-view" aria-labelledby="practice-title">
       <header class="panel--hero"><p class="eyebrow">{copy.practice.eyebrow}</p><h2 id="practice-title" class="page-title">{copy.practice.title}</h2><p class="hero-lede">{copy.practice.introduction}</p></header>
-      {activeTargetCardId && (() => {
-        const target = cards.find((card) => card.id === activeTargetCardId);
-        return target ? <div class="note note--info practice-target"><p tabIndex={-1} role="status" aria-live="polite" ref={targetNoticeRef}>{copy.practice.targetAnnouncement(localize(target.prompt, locale))}</p><button type="button" class="btn--text" onClick={() => { setActiveTargetCardId(null); requestAnimationFrame(() => searchInputRef.current?.focus()); }}>{copy.practice.showAll}</button></div> : null;
+      {activeTargetCardIds && (() => {
+        const matching = activeTargetCardIds.flatMap((id) => { const card = cards.find((value) => value.id === id); return card ? [card] : []; });
+        if (!matching.length) return null;
+        const announcement = matching.length === 1
+          ? copy.practice.targetAnnouncement(localize(matching[0].prompt, locale))
+          : copy.practice.targetAnnouncementMany(matching.length);
+        return <div class="note note--info practice-target"><p tabIndex={-1} role="status" aria-live="polite" ref={targetNoticeRef}>{announcement}</p><button type="button" class="btn--text" onClick={() => { setActiveTargetCardIds(null); requestAnimationFrame(() => searchInputRef.current?.focus()); }}>{copy.practice.showAll}</button></div>;
       })()}
       {sessionCards && <PracticeSession locale={locale} copy={copy} initialCards={sessionCards.flatMap((id) => { const card = cards.find((value) => value.id === id); return card ? [card] : []; })} reviews={reviews} dueCount={dueCount} onRate={onRateInSession} onExit={onExitSession}/>}
       {!sessionCards && <><div class="filter-panel">

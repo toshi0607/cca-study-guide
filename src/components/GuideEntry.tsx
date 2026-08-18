@@ -15,6 +15,7 @@ export function GuideEntry(props: {
   examDate: string | null;
   onProgressAction: (sectionId: string, revision: number, action: 'start' | 'complete' | 'reconfirm') => boolean;
   onOpenCard: (cardId: string) => void;
+  onOpenCards: (cardIds: string[]) => void;
   onOpenQuestion: (questionId: string) => void;
   onOpenScenario: (scenarioId: string) => void;
   onOpenStage: (target: LearningStageViewTarget) => void;
