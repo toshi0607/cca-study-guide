@@ -75,8 +75,20 @@ export function QuizView({ locale, copy, quizStats, onAnswer, onConfidence, targ
     onTargetOpened();
   }, [targetQuestionId]);
 
+  // Deferred focus onto the exact-target announcement. By the time the frame
+  // fires, the learner may already have claimed focus — focused a choice button
+  // (stealing focus there would swallow their pending key press and drop the
+  // answer), or answered so the feedback region took focus. So the announcement
+  // only takes focus while nothing else holds it: after the originating view
+  // unmounted, focus sits on <body>.
   useEffect(() => {
-    if (targetAnnouncement && phase === 'question') requestAnimationFrame(() => targetAnnouncementRef.current?.focus());
+    if (!(targetAnnouncement && phase === 'question')) return;
+    const frame = requestAnimationFrame(() => {
+      const active = document.activeElement;
+      if (active && active !== document.body && active !== document.documentElement) return;
+      targetAnnouncementRef.current?.focus();
+    });
+    return () => cancelAnimationFrame(frame);
   }, [targetAnnouncement, phase]);
 
   const start = () => {
