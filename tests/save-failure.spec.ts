@@ -91,3 +91,35 @@ test('keeps a session card in place and announces the failure when saving its ra
   await expect(page.locator('.session-card .answer')).toBeVisible();
   expect(await page.evaluate((key) => localStorage.getItem(key), STORAGE_KEY)).toBeNull();
 });
+
+test('keeps a failure notice through a view change, while a confirmation goes with the view', async ({ page }) => {
+  // #given — the study-data key is blocked, so the guide "start" action fails
+  await page.addInitScript((studyKey) => {
+    const original = Storage.prototype.setItem;
+    Storage.prototype.setItem = function (key, value) {
+      if (key === studyKey) throw new DOMException('blocked', 'QuotaExceededError');
+      return original.call(this, key, value);
+    };
+  }, STORAGE_KEY);
+  await page.goto('/');
+  await page.getByRole('button', { name: 'ガイド' }).first().click();
+  const first = page.locator('.guide-section').first();
+  await first.locator('summary').press('Enter');
+  await first.getByRole('button', { name: 'このセクションを開始' }).click();
+
+  // #then — the failure is something to act on, so moving to another view keeps it
+  const failure = '進捗を保存できませんでした。ブラウザのサイトデータ設定または空き容量を確認してください。';
+  const notice = page.locator('.notice');
+  await expect(notice).toHaveText(failure);
+  await page.getByRole('button', { name: '練習' }).first().click();
+  await expect(notice).toHaveText(failure);
+
+  // #and — a newer transient notice still replaces it, and then goes with the view
+  // (the confirmation-clears-on-navigation rule itself is pinned in guide.spec.ts)
+  await page.getByRole('button', { name: 'セッションを開始' }).click();
+  page.once('dialog', (dialog) => void dialog.accept());
+  await page.getByRole('button', { name: 'セッションを中断' }).click();
+  await expect(notice).toHaveText('セッションを中断しました。ここまでの評価は保存済みです。');
+  await page.getByRole('button', { name: '今日' }).first().click();
+  await expect(notice).toHaveText('');
+});

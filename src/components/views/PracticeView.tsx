@@ -3,6 +3,9 @@ import { dateLocale } from '../app/format';
 import { CardAnswer } from '../practice/CardAnswer';
 import { PracticeSession } from '../practice/PracticeSession';
 import { CopyLinkButton } from '../app/CopyLinkButton';
+import { Button } from '../app/Button';
+import { Note } from '../app/Note';
+import type { GuideOrigin } from '../app/types';
 import { cards } from '../../content/cards';
 import { domains } from '../../content/domains';
 import type { Locale } from '../../i18n/locales';
@@ -18,7 +21,7 @@ export function PracticeView({
   query, onQueryChange, domainFilter, onDomainFilterChange, stateFilter, onStateFilterChange,
   revealed, onToggleRevealed,
   sessionCards, onStartSession, onExitSession, onRateInList, onRateInSession,
-  targetCardId, onTargetOpened,
+  targetCardId, onTargetOpened, guideOrigin, onBackToGuideSection,
 }: {
   locale: Locale;
   copy: UiCopy;
@@ -40,6 +43,10 @@ export function PracticeView({
   onRateInSession: (cardId: string, rating: Rating) => boolean;
   targetCardId: string | null;
   onTargetOpened: () => void;
+  // Set when this view was opened from a Study Guide section; the excursion then
+  // shows the way back instead of leaving the learner to re-find the section.
+  guideOrigin: GuideOrigin | null;
+  onBackToGuideSection: () => void;
 }) {
   const [activeTargetCardId, setActiveTargetCardId] = useState<string | null>(null);
   const targetNoticeRef = useRef<HTMLParagraphElement>(null);
@@ -67,6 +74,9 @@ export function PracticeView({
   return (
     <section class="practice-view" aria-labelledby="practice-title">
       <header class="panel--hero"><p class="eyebrow">{copy.practice.eyebrow}</p><h2 id="practice-title" class="page-title">{copy.practice.title}</h2><p class="hero-lede">{copy.practice.introduction}</p></header>
+      {guideOrigin && !sessionCards && <Note kind="info" class="practice-origin">
+        <Button variant="text" onClick={onBackToGuideSection}><span aria-hidden="true">←</span> {copy.guide.backToSection(guideOrigin.title)}</Button>
+      </Note>}
       {activeTargetCardId && (() => {
         const target = cards.find((card) => card.id === activeTargetCardId);
         return target ? <div class="note note--info practice-target"><p tabIndex={-1} role="status" aria-live="polite" ref={targetNoticeRef}>{copy.practice.targetAnnouncement(localize(target.prompt, locale))}</p><button type="button" class="btn--text" onClick={() => { setActiveTargetCardId(null); requestAnimationFrame(() => searchInputRef.current?.focus()); }}>{copy.practice.showAll}</button></div> : null;
