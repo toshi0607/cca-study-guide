@@ -16,6 +16,7 @@ import type { StudyGuideProgress } from '../../lib/storage';
 import { SourceLinks } from '../app/SourceLinks';
 import { CopyLinkButton } from '../app/CopyLinkButton';
 import type { Locale } from '../../i18n/locales';
+import type { GuideOrigin } from '../app/types';
 
 // View-bound stage targets (in-page anchors are handled locally, never delegated).
 export type LearningStageViewTarget = Exclude<LearningStageTarget, 'guide-diagnosis' | 'guide-sections'>;
@@ -27,9 +28,9 @@ type Props = {
   hasMockExamAttempts: boolean;
   examDate: string | null;
   onProgressAction: (sectionId: string, revision: number, action: 'start' | 'complete' | 'reconfirm') => boolean;
-  onOpenCard: (cardId: string) => void;
-  onOpenQuestion: (questionId: string) => void;
-  onOpenScenario: (scenarioId: string) => void;
+  onOpenCard: (cardId: string, origin: GuideOrigin) => void;
+  onOpenQuestion: (questionId: string, origin: GuideOrigin) => void;
+  onOpenScenario: (scenarioId: string, origin: GuideOrigin) => void;
   onOpenStage: (target: LearningStageViewTarget) => void;
   onOpenOfficialScenarios: () => void;
   targetSectionId: string | null;
@@ -174,6 +175,10 @@ export function GuideView({ locale, copy, records, hasMockExamAttempts, examDate
           const record = records[section.id];
           const status = getStudyGuideSectionStatus(record, section.revision);
           const title = localize(section.title, locale);
+          // Carrying the localized title (not just the id) is what lets Practice
+          // and Quiz name this section in their back link without importing the
+          // Study Guide content.
+          const origin: GuideOrigin = { sectionId: section.id, title };
           return <details class="guide-section" id={`guide-section-${section.id}`} key={section.id}>
             <summary><span><code>{section.recommendedOrder}</code> {title}</span><span class={`status status-${status}`}>{copy.guide.status[status]}</span></summary>
             <div class="guide-section-body">
@@ -187,15 +192,15 @@ export function GuideView({ locale, copy, records, hasMockExamAttempts, examDate
               <h4 class="sub-title">{copy.guide.keyPoints}</h4><ul>{localize(section.keyPoints, locale).map((item) => <li key={item}>{item}</li>)}</ul>
               <h4 class="sub-title">{copy.guide.relatedCards}</h4><div class="target-list">{section.relatedCardIds.map((id) => {
                 const card = cards.find((candidate) => candidate.id === id);
-                return card ? <button type="button" class="btn btn--secondary" key={id} onClick={() => onOpenCard(id)}>{localize(card.prompt, locale)} <code>{id}</code></button> : null;
+                return card ? <button type="button" class="btn btn--secondary" key={id} onClick={() => onOpenCard(id, origin)}>{localize(card.prompt, locale)} <code>{id}</code></button> : null;
               })}</div>
               {section.relatedQuestionIds.length > 0 && <><h4 class="sub-title">{copy.guide.relatedQuestions}</h4><div class="target-list">{section.relatedQuestionIds.map((id) => {
                 const question = questions.find((candidate) => candidate.id === id);
-                return question ? <button type="button" class="btn btn--secondary" key={id} onClick={() => onOpenQuestion(id)}>{localize(question.stem, locale)} <code>{id}</code></button> : null;
+                return question ? <button type="button" class="btn btn--secondary" key={id} onClick={() => onOpenQuestion(id, origin)}>{localize(question.stem, locale)} <code>{id}</code></button> : null;
               })}</div></>}
               {section.relatedScenarioIds.length > 0 && <><h4 class="sub-title">{copy.guide.relatedScenarios}</h4><div class="target-list">{section.relatedScenarioIds.map((id) => {
                 const scenario = scenarios.find((candidate) => candidate.id === id);
-                return scenario ? <button type="button" class="btn btn--secondary" key={id} onClick={() => onOpenScenario(id)}>{localize(scenario.title, locale)} <code>{id}</code></button> : null;
+                return scenario ? <button type="button" class="btn btn--secondary" key={id} onClick={() => onOpenScenario(id, origin)}>{localize(scenario.title, locale)} <code>{id}</code></button> : null;
               })}</div></>}
               <h4 class="sub-title">{copy.guide.officialSources}</h4><SourceLinks ids={section.sourceIds} copy={copy}/>
               <div class="guide-actions">

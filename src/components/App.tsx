@@ -13,7 +13,7 @@ import type { DeepLink } from '../lib/deep-link';
 import { AppBottomNav, AppHeader } from './app/AppNavigation';
 import { formatDate } from './app/format';
 import { ImportChoiceDialog } from './app/ImportChoiceDialog';
-import type { View, ViewTarget } from './app/types';
+import type { GuideOrigin, View, ViewTarget } from './app/types';
 import { useDeepLinkRouting } from './app/useDeepLinkRouting';
 import { useExamDate } from './app/useExamDate';
 import { useStudyImport } from './app/useStudyImport';
@@ -29,6 +29,11 @@ import { ProgressView } from './views/ProgressView';
 import { QuizEntry } from './QuizEntry';
 import type { ConfidenceOutcome } from './quiz/types';
 import { TodayView } from './views/TodayView';
+
+// How long a confirmation notice stays before clearing itself. Long enough to
+// read after the eye travels there, short enough that it never becomes a stale
+// caption on an unrelated screen. Failure notices ignore it (see `sticky`).
+const NOTICE_DISMISS_MS = 8000;
 
 function detectStorageAvailable(): boolean {
   try {
@@ -81,9 +86,15 @@ function App({ locale }: { locale: Locale }) {
   const [stateFilter, setStateFilter] = useState<StateFilter>('due');
   const [revealed, setRevealed] = useState<Record<string, boolean>>({});
   const [sessionCards, setSessionCards] = useState<string[] | null>(null);
-  const [notice, setNotice] = useState('');
+  // `seq` exists so re-announcing the same message restarts the dismissal timer;
+  // `sticky` keeps failure notices on screen, because a message the learner is
+  // meant to act on must not disappear while they are reading it.
+  const [notice, setNoticeState] = useState<{ text: string; seq: number; sticky: boolean }>({ text: '', seq: 0, sticky: false });
   // At most one pending target at a time; the destination view clears it on arrival.
   const [target, setTarget] = useState<ViewTarget | null>(null);
+  // Where a target-bearing navigation started, when it started somewhere that can
+  // be returned to. Rides `navigate` for the same reason `target` does.
+  const [origin, setOrigin] = useState<GuideOrigin | null>(null);
   const [storageAvailable, setStorageAvailable] = useState(true);
   const [dataUnreadable, setDataUnreadable] = useState(false);
   // Which Mock Exam screen to land on when the view opens: the start screen, or
@@ -92,7 +103,17 @@ function App({ locale }: { locale: Locale }) {
   const noticeRef = useRef<HTMLParagraphElement>(null);
 
   const focusNotice = () => requestAnimationFrame(() => noticeRef.current?.focus());
-  const notify = (message: string) => { setNotice(message); focusNotice(); };
+  const setNotice = (text: string, sticky = false) => setNoticeState((current) => ({ text, seq: current.seq + 1, sticky }));
+  const notify = (message: string, sticky = false) => { setNotice(message, sticky); focusNotice(); };
+
+  // Confirmations clear themselves: the live region stays mounted (screen readers
+  // need it to be), only its text goes. Clearing text re-runs this effect, which
+  // then does nothing — no second timer, no loop.
+  useEffect(() => {
+    if (!notice.text || notice.sticky) return undefined;
+    const timer = window.setTimeout(() => setNoticeState((current) => ({ ...current, text: '' })), NOTICE_DISMISS_MS);
+    return () => window.clearTimeout(timer);
+  }, [notice.text, notice.seq, notice.sticky]);
 
   const { examDate, saveExamDate, clearExamDate, clearExamDateSilently } = useExamDate({ storage: examDateStore, copy, notify });
   const { pendingImport, importError, importFile, finishImport, cancelImport } = useStudyImport({
@@ -149,7 +170,7 @@ function App({ locale }: { locale: Locale }) {
     const next = change(studyStore.load());
     if (!next) return false;
     if (!studyStore.save(next)) {
-      notify(copy.notices.saveFailed);
+      notify(copy.notices.saveFailed, true);
       return false;
     }
     setData(next);
@@ -243,12 +264,12 @@ function App({ locale }: { locale: Locale }) {
   const copySummary = () => {
     if (dataUnreadable) return;
     if (!summaryText || !navigator.clipboard) {
-      notify(copy.notices.summaryCopyFailed);
+      notify(copy.notices.summaryCopyFailed, true);
       return;
     }
     void navigator.clipboard.writeText(summaryText).then(
       () => notify(copy.notices.summaryCopied),
-      () => notify(copy.notices.summaryCopyFailed),
+      () => notify(copy.notices.summaryCopyFailed, true),
     );
   };
 
@@ -256,7 +277,7 @@ function App({ locale }: { locale: Locale }) {
     if (dataUnreadable) return;
     if (!window.confirm(copy.notices.resetConfirm)) return;
     if (!studyStore.reset()) {
-      notify(copy.notices.resetFailed);
+      notify(copy.notices.resetFailed, true);
       return;
     }
     // The exam date lives under its own key, and the confirm text promises to
@@ -267,7 +288,7 @@ function App({ locale }: { locale: Locale }) {
     setData(empty);
     setRevealed({});
     setDataUnreadable(false);
-    setNotice(examDateCleared ? copy.notices.resetDone : copy.notices.resetDonePartial);
+    setNotice(examDateCleared ? copy.notices.resetDone : copy.notices.resetDonePartial, !examDateCleared);
   };
 
   // View and target are updated atomically here so a lazily-loaded view can
@@ -275,19 +296,26 @@ function App({ locale }: { locale: Locale }) {
   // target-less navigate always clears it, and a target-bearing one (deep link
   // or an open* helper) hands it in as `nextTarget` rather than calling
   // `setTarget` beforehand.
-  const navigate = (next: View, nextTarget: ViewTarget | null = null, scroll = true) => {
+  const navigate = (next: View, nextTarget: ViewTarget | null = null, scroll = true, nextOrigin: GuideOrigin | null = null) => {
     // Leaving the practice view ends a running session; its ratings are already persisted.
     if (next !== 'practice') setSessionCards(null);
     setTarget(nextTarget);
+    setOrigin(nextOrigin);
+    // A notice describes what just happened on the view being left, so it does
+    // not follow the learner to the next one.
+    setNotice('');
     setView(next);
     if (scroll) window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const openGuideCard = (cardId: string) => {
-    setQuery(''); setDomainFilter('all'); setStateFilter('all'); navigate('practice', { kind: 'practice-card', cardId });
+  // `origin` is supplied by call sites that can be returned to (a Study Guide
+  // section); the same helpers serve Hands-on and Official scenarios, which pass
+  // none and so open the target without a back link.
+  const openGuideCard = (cardId: string, cardOrigin: GuideOrigin | null = null) => {
+    setQuery(''); setDomainFilter('all'); setStateFilter('all'); navigate('practice', { kind: 'practice-card', cardId }, true, cardOrigin);
   };
-  const openGuideQuestion = (questionId: string) => navigate('quiz', { kind: 'quiz-question', questionId });
-  const openPracticeScenario = (scenarioId: string) => navigate('quiz', { kind: 'quiz-scenario', scenarioId });
+  const openGuideQuestion = (questionId: string, questionOrigin: GuideOrigin | null = null) => navigate('quiz', { kind: 'quiz-question', questionId }, true, questionOrigin);
+  const openPracticeScenario = (scenarioId: string, scenarioOrigin: GuideOrigin | null = null) => navigate('quiz', { kind: 'quiz-scenario', scenarioId }, true, scenarioOrigin);
   const openHandsOnGuide = (guideId: string) => navigate('hands-on', { kind: 'hands-on', guideId });
   const saveGuideProgress = (sectionId: string, revision: number, action: 'start' | 'complete' | 'reconfirm') => {
     const saved = commitData((current) => {
@@ -349,7 +377,7 @@ function App({ locale }: { locale: Locale }) {
   const readMockExamData = (): StudyData => studyStore.load();
   const writeMockExamData = (next: StudyData): boolean => {
     if (!studyStore.save(next)) {
-      notify(copy.notices.saveFailed);
+      notify(copy.notices.saveFailed, true);
       return false;
     }
     setData(next);
@@ -399,6 +427,11 @@ function App({ locale }: { locale: Locale }) {
   // on that object, so the identity has to stay stable across renders.
   const clearTarget = () => setTarget(null);
   const handsOnTarget = target?.kind === 'hands-on' ? target : null;
+  // Returning is an ordinary section-targeted navigation, so it reopens the
+  // section exactly as a deep link would — and clears the origin with it.
+  const backToGuideSection = () => {
+    if (origin) navigate('guide', { kind: 'guide-section', sectionId: origin.sectionId });
+  };
 
   return (
     <div class="app-shell">
@@ -406,7 +439,7 @@ function App({ locale }: { locale: Locale }) {
 
       <main id="main-content">
         <h1 class="sr-only">{copy.pageTitle}</h1>
-        <p ref={noticeRef} class="notice" tabIndex={-1} aria-live="polite">{notice}</p>
+        <p ref={noticeRef} class="notice" tabIndex={-1} aria-live="polite">{notice.text}</p>
         {pendingImport && <ImportChoiceDialog
           copy={copy}
           reviewedTotal={Object.keys(pendingImport.data.reviews).length}
@@ -433,12 +466,13 @@ function App({ locale }: { locale: Locale }) {
           domainFilter={domainFilter} onDomainFilterChange={setDomainFilter}
           stateFilter={stateFilter} onStateFilterChange={setStateFilter}
           targetCardId={target?.kind === 'practice-card' ? target.cardId : null} onTargetOpened={clearTarget}
+          guideOrigin={origin} onBackToGuideSection={backToGuideSection}
           revealed={revealed} onToggleRevealed={(cardId) => setRevealed((value) => ({ ...value, [cardId]: !value[cardId] }))}
           sessionCards={sessionCards} onStartSession={setSessionCards} onExitSession={endSession}
           onRateInList={saveRating} onRateInSession={persistRating}
         />}
 
-        {view === 'quiz' && <QuizEntry locale={locale} copy={copy} quizStats={data.quizStats} onAnswer={recordQuizAnswer} onConfidence={recordQuizConfidence} targetQuestionId={target?.kind === 'quiz-question' ? target.questionId : null} onTargetOpened={clearTarget} targetScenarioId={target?.kind === 'quiz-scenario' ? target.scenarioId : null} onTargetScenarioOpened={clearTarget}/>}
+        {view === 'quiz' && <QuizEntry locale={locale} copy={copy} quizStats={data.quizStats} onAnswer={recordQuizAnswer} onConfidence={recordQuizConfidence} targetQuestionId={target?.kind === 'quiz-question' ? target.questionId : null} onTargetOpened={clearTarget} targetScenarioId={target?.kind === 'quiz-scenario' ? target.scenarioId : null} onTargetScenarioOpened={clearTarget} guideOrigin={origin} onBackToGuideSection={backToGuideSection}/>}
 
         {view === 'progress' && <ProgressView
           locale={locale} copy={copy}
