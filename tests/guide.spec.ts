@@ -66,6 +66,49 @@ test('uses the keyboard diagnosis, saves only explicit guide progress, and opens
   await expect(page.locator('.guide-section').first().locator('summary')).toBeFocused();
 });
 
+test('opens every related card of a cross-domain section at once, in guide order', async ({ page }) => {
+  // #given a section whose related cards span more than one domain, so a
+  // domain-filter-based shortcut could never show them all together
+  const section = studyGuideSections.find((candidate) => {
+    const domainIds = new Set(candidate.relatedCardIds.map((id) => cards.find((card) => card.id === id)?.domainId));
+    return domainIds.size > 1;
+  });
+  if (!section) throw new Error('content no longer has a section with cross-domain related cards; pick another section for this test');
+  await page.getByRole('button', { name: 'ガイド' }).first().click();
+  const details = page.locator(`#guide-section-${section.id}`);
+  await details.locator('summary').click();
+
+  // #when the bulk open-all button is pressed
+  await details.locator('.guide-related-open-all').click();
+
+  // #then Practice shows exactly the section's cards, in the section's order,
+  // including cards from different domains
+  await expect(page.locator('.practice-target p')).toBeFocused();
+  await expect(page.locator('.practice-card')).toHaveCount(section.relatedCardIds.length);
+  const prompts = page.locator('.practice-card .card-prompt h3');
+  for (const [index, cardId] of section.relatedCardIds.entries()) {
+    const card = cards.find((candidate) => candidate.id === cardId)!;
+    await expect(prompts.nth(index)).toHaveText(card.prompt.ja);
+  }
+  const badgeTexts = await page.locator('.practice-card .badge').allInnerTexts();
+  expect(new Set(badgeTexts).size).toBeGreaterThan(1);
+
+  // #then the way back names the originating section
+  const backToOrigin = page.getByRole('button', { name: `セクション「${section.title.ja}」に戻る` });
+  await expect(backToOrigin).toBeVisible();
+
+  // #then the escape hatch drops only the card narrowing — the origin survives
+  await page.getByRole('button', { name: 'カード一覧に戻る' }).click();
+  await expect(page.locator('.practice-card')).toHaveCount(cards.length);
+  await expect(backToOrigin).toBeVisible();
+
+  // #then returning reopens the section and focuses its summary
+  await backToOrigin.click();
+  const returned = page.locator(`#guide-section-${section.id}`);
+  await expect(returned.locator('summary')).toBeFocused();
+  await expect(returned).toHaveAttribute('open', '');
+});
+
 test('drops a synchronous duplicate guide action before it can write twice', async ({ page }) => {
   await page.addInitScript((studyKey) => {
     const original = Storage.prototype.setItem;

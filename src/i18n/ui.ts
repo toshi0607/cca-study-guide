@@ -116,6 +116,9 @@ export type UiCopy = {
     statements: string;
     keyPoints: string;
     relatedCards: string;
+    // Bulk CTA above the per-card buttons: opens Practice narrowed to every
+    // related card of the section at once.
+    relatedCardsOpenAll: (count: number) => string;
     relatedQuestions: string;
     relatedScenarios: string;
     // Shown in Practice/Quiz after a related-item link was followed from a
@@ -284,6 +287,11 @@ export type UiCopy = {
     emptyTitle: string;
     emptyDescription: string;
     targetAnnouncement: (prompt: string) => string;
+    // Announced when a multi-card target (e.g. a guide section's related cards)
+    // narrows the list; the single-card variant above names the prompt instead.
+    // Deliberately count-free: the filters stay usable while it shows, so a
+    // count would drift from the visible result-count.
+    targetAnnouncementMany: string;
     showAll: string;
   };
   session: {
@@ -757,6 +765,7 @@ export const ui = {
       staleNote: (status) => `以前の記録は「${status}」として保持されています。内容を確認した後に再確認を記録できます。`,
       domains: '対象ドメイン', statements: '対象タスクステートメント', keyPoints: '設計で確認すること',
       relatedCards: '関連カードを開く', relatedQuestions: '関連設問を開く',
+      relatedCardsOpenAll: (count) => `関連カード${count}枚をまとめて開く`,
       relatedScenarios: '関連シナリオ演習を開く',
       backToSection: (title) => `セクション「${title}」に戻る`,
       diagnosisLegend: '最初に取り組む場所を選ぶ', diagnosisQuestion: '今いちばん必要な学習を1つ選んでください。',
@@ -913,6 +922,7 @@ export const ui = {
       emptyTitle: '該当するカードはありません。',
       emptyDescription: '検索語またはフィルターを変えてください。',
       targetAnnouncement: (prompt) => `関連カードを開きました：${prompt}`,
+      targetAnnouncementMany: '関連カードに絞って表示しています。',
       showAll: 'カード一覧に戻る',
     },
     session: {
@@ -1366,6 +1376,7 @@ export const ui = {
       staleNote: (status) => `Your earlier record is retained as “${status}.” You can record a review after checking the updated content.`,
       domains: 'Domains covered', statements: 'Task statements covered', keyPoints: 'Design checks',
       relatedCards: 'Open related cards', relatedQuestions: 'Open related questions',
+      relatedCardsOpenAll: (count) => `Open all ${count} related cards`,
       relatedScenarios: 'Open related scenario practice',
       backToSection: (title) => `Back to section “${title}”`,
       diagnosisLegend: 'Choose where to begin', diagnosisQuestion: 'Choose the one learning need that matters most right now.',
@@ -1522,6 +1533,7 @@ export const ui = {
       emptyTitle: 'No cards match.',
       emptyDescription: 'Try a different search term or filter.',
       targetAnnouncement: (prompt) => `Opened related card: ${prompt}`,
+      targetAnnouncementMany: 'Showing only the related cards.',
       showAll: 'Back to all cards',
     },
     session: {

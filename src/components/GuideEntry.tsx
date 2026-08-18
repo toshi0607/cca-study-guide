@@ -18,6 +18,7 @@ export function GuideEntry(props: {
   // The origin is the section the link was followed from, so the target view can
   // offer a way back to it.
   onOpenCard: (cardId: string, origin: GuideOrigin) => void;
+  onOpenCards: (cardIds: string[], origin: GuideOrigin) => void;
   onOpenQuestion: (questionId: string, origin: GuideOrigin) => void;
   onOpenScenario: (scenarioId: string, origin: GuideOrigin) => void;
   onOpenStage: (target: LearningStageViewTarget) => void;
