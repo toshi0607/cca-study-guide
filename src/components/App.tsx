@@ -102,16 +102,36 @@ function App({ locale }: { locale: Locale }) {
   const [mockExamIntent, setMockExamIntent] = useState<'landing' | 'analysis'>('landing');
   const noticeRef = useRef<HTMLParagraphElement>(null);
 
+  // Counts navigations, so async work can tell whether the learner is still on
+  // the view that started it. A view comparison would not do: leaving Progress
+  // and coming back is a different navigation with the same view name.
+  const navigationCount = useRef(0);
+
   const focusNotice = () => requestAnimationFrame(() => noticeRef.current?.focus());
   const setNotice = (text: string, sticky = false) => setNoticeState((current) => ({ text, seq: current.seq + 1, sticky }));
   const notify = (message: string, sticky = false) => { setNotice(message, sticky); focusNotice(); };
+  // Drops a notice that only described the view being left. A sticky one is not
+  // a description of the view — it is something the learner has to act on — so
+  // it survives; replacing it with a newer notice still works normally.
+  const dismissTransientNotice = () => setNoticeState((current) => (current.sticky || !current.text ? current : { ...current, text: '' }));
+
+  // The result of work started before a navigation belongs to the view that
+  // started it, so it is announced only if no navigation happened in between —
+  // otherwise a clipboard write resolving late captions the new screen. This is
+  // about *when* the work started, not about whether the notice is sticky.
+  const announceIfStillHere = () => {
+    const startedAt = navigationCount.current;
+    return (message: string, sticky = false) => {
+      if (navigationCount.current === startedAt) notify(message, sticky);
+    };
+  };
 
   // Confirmations clear themselves: the live region stays mounted (screen readers
   // need it to be), only its text goes. Clearing text re-runs this effect, which
   // then does nothing — no second timer, no loop.
   useEffect(() => {
     if (!notice.text || notice.sticky) return undefined;
-    const timer = window.setTimeout(() => setNoticeState((current) => ({ ...current, text: '' })), NOTICE_DISMISS_MS);
+    const timer = window.setTimeout(dismissTransientNotice, NOTICE_DISMISS_MS);
     return () => window.clearTimeout(timer);
   }, [notice.text, notice.seq, notice.sticky]);
 
@@ -267,9 +287,10 @@ function App({ locale }: { locale: Locale }) {
       notify(copy.notices.summaryCopyFailed, true);
       return;
     }
+    const announce = announceIfStillHere();
     void navigator.clipboard.writeText(summaryText).then(
-      () => notify(copy.notices.summaryCopied),
-      () => notify(copy.notices.summaryCopyFailed, true),
+      () => announce(copy.notices.summaryCopied),
+      () => announce(copy.notices.summaryCopyFailed, true),
     );
   };
 
@@ -301,9 +322,11 @@ function App({ locale }: { locale: Locale }) {
     if (next !== 'practice') setSessionCards(null);
     setTarget(nextTarget);
     setOrigin(nextOrigin);
+    navigationCount.current += 1;
     // A notice describes what just happened on the view being left, so it does
-    // not follow the learner to the next one.
-    setNotice('');
+    // not follow the learner to the next one — unless it is one the learner
+    // still has to act on.
+    dismissTransientNotice();
     setView(next);
     if (scroll) window.scrollTo({ top: 0, behavior: 'smooth' });
   };
