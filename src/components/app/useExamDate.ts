@@ -17,7 +17,7 @@ export type ExamDateController = {
 export function useExamDate({ storage, copy, notify }: {
   storage: ExamDateStorage;
   copy: UiCopy;
-  notify: (message: string) => void;
+  notify: (message: string, sticky?: boolean) => void;
 }): ExamDateController {
   const [examDate, setExamDate] = useState<string | null>(null);
 
@@ -40,7 +40,7 @@ export function useExamDate({ storage, copy, notify }: {
       // mid-edit; only the explicit clear button may do that.
       if (!value) return;
       if (!storage.save(value)) {
-        notify(copy.notices.examDateSaveFailed);
+        notify(copy.notices.examDateSaveFailed, true);
         return;
       }
       // No notice/focus on success: the visible input value and the updated
@@ -51,7 +51,7 @@ export function useExamDate({ storage, copy, notify }: {
     },
     clearExamDate: (): void => {
       if (!clearExamDateSilently()) {
-        notify(copy.notices.examDateSaveFailed);
+        notify(copy.notices.examDateSaveFailed, true);
         return;
       }
       notify(copy.notices.examDateCleared);

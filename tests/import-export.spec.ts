@@ -1,5 +1,6 @@
 import { writeFile } from 'node:fs/promises';
 import { cards } from '../src/content/cards';
+import type { Page } from '@playwright/test';
 import { expect, test } from './fixtures/app';
 import { readStudyData, seedStorage, STORAGE_KEY } from './fixtures/storage';
 
@@ -177,4 +178,57 @@ test('keeps the import dialog open with an in-dialog error when the merge save f
   const data = await readStudyData(page, STORAGE_KEY);
   if (!data) throw new Error('expected merged study data to be stored');
   expect(Object.keys(data.reviews as Record<string, unknown>).sort()).toEqual(['d1-loop-stop', 'd2-tool-contract']);
+});
+
+// The clipboard write is the app's only user-visible promise that can outlive
+// the view that started it, so it is where the "a notice belongs to the view it
+// was raised on" rule is actually testable.
+type ClipboardControl = { settle?: (ok: boolean) => void };
+
+async function stubPendingClipboard(page: Page): Promise<void> {
+  await page.addInitScript(() => {
+    const control: ClipboardControl = {};
+    (window as unknown as { clipboardControl: ClipboardControl }).clipboardControl = control;
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: {
+        writeText: () => new Promise<void>((resolve, reject) => {
+          control.settle = (ok: boolean) => (ok ? resolve() : reject(new Error('denied')));
+        }),
+      },
+    });
+  });
+  await page.reload();
+}
+
+const settleClipboard = (page: Page, ok: boolean) =>
+  page.evaluate((succeeded) => (window as unknown as { clipboardControl: ClipboardControl }).clipboardControl.settle?.(succeeded), ok);
+
+for (const outcome of [true, false]) {
+  test(`does not announce a ${outcome ? 'copied' : 'failed'} clipboard write on the view the learner moved to`, async ({ page }) => {
+    // #given — a clipboard write that stays pending until the test settles it
+    await stubPendingClipboard(page);
+    await page.getByRole('button', { name: '進捗' }).first().click();
+    await page.getByRole('button', { name: '学習状況を要約してコピー' }).click();
+
+    // #when — the learner leaves before it settles
+    await page.getByRole('button', { name: '今日' }).first().click();
+    await settleClipboard(page, outcome);
+
+    // #then — the result belongs to the view that started it, so nothing is announced here
+    await expect(page.locator('.notice')).toHaveText('');
+  });
+}
+
+test('announces the clipboard result to the learner who stayed on the view', async ({ page }) => {
+  await stubPendingClipboard(page);
+  await page.getByRole('button', { name: '進捗' }).first().click();
+  await page.getByRole('button', { name: '学習状況を要約してコピー' }).click();
+  await settleClipboard(page, true);
+  await expect(page.locator('.notice')).toHaveText('学習状況の要約をクリップボードへコピーしました。');
+
+  // #and — the failure of a second attempt is announced too, and stays put
+  await page.getByRole('button', { name: '学習状況を要約してコピー' }).click();
+  await settleClipboard(page, false);
+  await expect(page.locator('.notice')).toHaveText('クリップボードへコピーできませんでした。JSONエクスポートをお使いください。');
 });

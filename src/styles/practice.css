@@ -8,7 +8,7 @@
 
 .card-sources small { color: var(--ink-soft); font: var(--fs-micro) var(--mono); }
 
-.practice-target, .quiz-target { margin: var(--space-5) 0; }
+.practice-target, .quiz-target, .practice-origin, .quiz-origin { margin: var(--space-5) 0; }
 .practice-target { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3); justify-content: space-between; }
 .practice-target p, .quiz-target { margin: 0; }
 

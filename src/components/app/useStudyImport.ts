@@ -21,7 +21,7 @@ export type StudyImportController = {
 export function useStudyImport({ storage, copy, notify, onImported }: {
   storage: StudyStorage;
   copy: UiCopy;
-  notify: (message: string) => void;
+  notify: (message: string, sticky?: boolean) => void;
   onImported: (data: StudyData) => void;
 }): StudyImportController {
   const [pendingImport, setPendingImport] = useState<ImportedStudyData | null>(null);
@@ -32,7 +32,7 @@ export function useStudyImport({ storage, copy, notify, onImported }: {
 
   const applyImport = (imported: ImportedStudyData | null): void => {
     if (!imported) {
-      notify(copy.notices.importInvalid);
+      notify(copy.notices.importInvalid, true);
       return;
     }
     setImportError(false);
@@ -51,7 +51,7 @@ export function useStudyImport({ storage, copy, notify, onImported }: {
       // or handing it to JSON.parse — parseStudyDataImport repeats this check on the
       // decoded text, but that check should never fire when this one already ran.
       if (!isImportSizeAllowed(file.size)) {
-        notify(copy.notices.importTooLarge(MAX_IMPORT_TEXT_LENGTH / (1024 * 1024)));
+        notify(copy.notices.importTooLarge(MAX_IMPORT_TEXT_LENGTH / (1024 * 1024)), true);
         return;
       }
       importBusyRef.current = true;
