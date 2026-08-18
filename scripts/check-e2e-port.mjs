@@ -39,30 +39,56 @@ export function isSameWorktree(cwd, root) {
   return remainder !== worktreesDir && !remainder.startsWith(worktreesDir + sep);
 }
 
-function lsof(args) {
+// `-w` silences filesystem warnings so that a stderr message reliably signals a
+// real failure rather than benign noise.
+const LSOF_BASE_ARGS = ['-w', '-nP'];
+
+export function runLsof(args, exec) {
   try {
-    return execFileSync('lsof', args, { encoding: 'utf8' });
+    return { status: 'ok', stdout: exec('lsof', args, { encoding: 'utf8' }) };
   } catch (error) {
     if (error.code === 'ENOENT') {
-      return null;
+      return { status: 'missing', stdout: '' };
     }
-    // lsof exits 1 when nothing matches; that is the normal "port free" path.
-    return typeof error.stdout === 'string' ? error.stdout : '';
+    const stderr = typeof error.stderr === 'string' ? error.stderr.trim() : '';
+    // lsof exits 1 with no diagnostics when nothing matches the query. That is
+    // the normal path for a free port, and for a PID that exited between the
+    // listener lookup and its cwd lookup. Every other failure (bad options,
+    // permission trouble, a broken lsof) must fail the check rather than be
+    // mistaken for "no listener" — this check exists to fail closed.
+    if (error.status === 1 && stderr === '') {
+      return { status: 'nomatch', stdout: '' };
+    }
+    throw new Error(
+      `The stale preview server check could not run: \`lsof ${args.join(' ')}\` exited with ` +
+        `${error.status === undefined ? `signal ${error.signal ?? 'unknown'}` : `code ${error.status}`}.` +
+        (stderr ? `\nlsof reported:\n${stderr}` : '') +
+        `\nNext step — run that lsof command yourself to see why it fails. Until it works, verify by hand ` +
+        `that no preview server from another worktree holds port ${PORT} before running the E2E suite.`,
+    );
   }
 }
 
-export function checkE2ePort() {
-  const listenerOutput = lsof(['-nP', `-iTCP:${PORT}`, '-sTCP:LISTEN', '-Fp']);
-  if (listenerOutput === null) {
+export function checkE2ePort({ exec = execFileSync } = {}) {
+  const listenerArgs = [...LSOF_BASE_ARGS, `-iTCP:${PORT}`, '-sTCP:LISTEN', '-Fp'];
+  const listeners = runLsof(listenerArgs, exec);
+  if (listeners.status === 'missing') {
     console.warn('check-e2e-port: lsof not found; skipping the stale preview server check.');
     return;
   }
 
   const root = realpathSync(process.cwd());
   const foreign = [];
-  for (const pid of parseListenerPids(listenerOutput)) {
-    const cwdOutput = lsof(['-a', '-p', String(pid), '-d', 'cwd', '-Fn']);
-    const cwd = cwdOutput === null ? null : parseCwd(cwdOutput);
+  for (const pid of parseListenerPids(listeners.stdout)) {
+    const cwdArgs = [...LSOF_BASE_ARGS, '-a', '-p', String(pid), '-d', 'cwd', '-Fn'];
+    const cwdResult = runLsof(cwdArgs, exec);
+    if (cwdResult.status !== 'ok') {
+      // The process exited between the two queries, so it no longer holds the
+      // port. A missing lsof cannot occur here (the first call succeeded).
+      continue;
+    }
+
+    const cwd = parseCwd(cwdResult.stdout);
     let resolvedCwd = cwd;
     try {
       resolvedCwd = cwd === null ? null : realpathSync(cwd);
