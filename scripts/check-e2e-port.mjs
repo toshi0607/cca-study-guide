@@ -28,8 +28,15 @@ export function parseCwd(lsofOutput) {
   return pathLine?.startsWith('n') ? pathLine.slice(1) : null;
 }
 
-export function isInsideRoot(cwd, root) {
-  return cwd === root || cwd.startsWith(root + sep);
+export function isSameWorktree(cwd, root) {
+  if (cwd !== root && !cwd.startsWith(root + sep)) {
+    return false;
+  }
+  // Linked worktrees live under <main checkout>/.claude/worktrees/<session>, so
+  // a path inside the main checkout can still belong to a different checkout.
+  const remainder = cwd.slice(root.length + 1);
+  const worktreesDir = `.claude${sep}worktrees`;
+  return remainder !== worktreesDir && !remainder.startsWith(worktreesDir + sep);
 }
 
 function lsof(args) {
@@ -62,7 +69,7 @@ export function checkE2ePort() {
     } catch {
       // The reported cwd may have been deleted; judge it by the raw path.
     }
-    if (resolvedCwd === null || !isInsideRoot(resolvedCwd, root)) {
+    if (resolvedCwd === null || !isSameWorktree(resolvedCwd, root)) {
       foreign.push({ pid, cwd: resolvedCwd ?? '(unknown)' });
     }
   }

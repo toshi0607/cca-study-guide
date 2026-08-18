@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isInsideRoot, parseCwd, parseListenerPids } from './check-e2e-port.mjs';
+import { isSameWorktree, parseCwd, parseListenerPids } from './check-e2e-port.mjs';
 
 describe('stale preview server detection', () => {
   it('dedupes the IPv4 and IPv6 lines of a dual-stack listener', () => {
@@ -23,12 +23,28 @@ describe('stale preview server detection', () => {
   });
 
   it('accepts the root itself and paths inside it', () => {
-    expect(isInsideRoot('/Users/x/repo', '/Users/x/repo')).toBe(true);
-    expect(isInsideRoot('/Users/x/repo/.claude/worktrees/w1', '/Users/x/repo')).toBe(true);
+    expect(isSameWorktree('/Users/x/repo', '/Users/x/repo')).toBe(true);
+    expect(isSameWorktree('/Users/x/repo/dist', '/Users/x/repo')).toBe(true);
   });
 
   it('rejects sibling directories sharing the root as a prefix', () => {
-    expect(isInsideRoot('/Users/x/repo-other', '/Users/x/repo')).toBe(false);
-    expect(isInsideRoot('/Users/x/other', '/Users/x/repo')).toBe(false);
+    expect(isSameWorktree('/Users/x/repo-other', '/Users/x/repo')).toBe(false);
+    expect(isSameWorktree('/Users/x/other', '/Users/x/repo')).toBe(false);
+  });
+
+  it('rejects a linked-worktree listener when running from the main checkout', () => {
+    expect(isSameWorktree('/Users/x/repo/.claude/worktrees/w1', '/Users/x/repo')).toBe(false);
+    expect(isSameWorktree('/Users/x/repo/.claude/worktrees/w1/dist', '/Users/x/repo')).toBe(false);
+    expect(isSameWorktree('/Users/x/repo/.claude/worktrees', '/Users/x/repo')).toBe(false);
+  });
+
+  it('accepts a listener started from the current linked worktree', () => {
+    const worktree = '/Users/x/repo/.claude/worktrees/w1';
+    expect(isSameWorktree(worktree, worktree)).toBe(true);
+    expect(isSameWorktree(`${worktree}/dist`, worktree)).toBe(true);
+  });
+
+  it('rejects a listener from a different linked worktree', () => {
+    expect(isSameWorktree('/Users/x/repo/.claude/worktrees/w2', '/Users/x/repo/.claude/worktrees/w1')).toBe(false);
   });
 });
