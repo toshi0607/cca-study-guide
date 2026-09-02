@@ -1,4 +1,4 @@
-# WebMCP 対応 — 設計（2026-09-02・実装前）
+# WebMCP 対応 — 設計と Phase 1 実装（2026-09-02・PR #88）
 
 ページ内でエージェント向けツールを公開する WebMCP（`document.modelContext`）対応の設計。
 実装時は本計画を Phase ごとに消化し、仕様確定後に `DESIGN.md` を同じ PR で更新する。
@@ -144,6 +144,10 @@
 | 対応せず | `describeMissingId` の存在確認がビュー側の寛容な解決と非対称 | エージェントには明確なエラー、URL は寛容に、という意図的な非対称。設計に記録済み |
 | 対応せず | 入力検証の `readX` + `isInvalid` ボイラープレート | 例外を制御フローに使わない現行スタイルを維持 |
 | 対応せず | プライバシー説明の3箇所重複（DESIGN / ASSETS / site.ts） | 既存パターンの延長。正典は ASSETS_AND_ANALYTICS.md（AGENTS.md の表どおり） |
+
+### PR #88 CI（2026-09-02）
+
+`lighthouse`（バンドル・Lighthouse・トークン予算）pass 1m38s / `playwright` pass 4m22s / Vercel preview deploy pass。`mergeable: MERGEABLE`、`mergeStateStatus: CLEAN`。
 
 ## Open items
 
