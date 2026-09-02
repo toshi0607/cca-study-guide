@@ -26,6 +26,7 @@
 - Study progress is stored only in the browser's localStorage. It is not synchronized to a server or sent to another service.
 - The footer on both application locales always links to `/privacy/` (or `/en/privacy/`), where this behavior is explained to learners.
 - Legacy `PUBLIC_GA_MEASUREMENT_ID` values are not read by the application and therefore cannot re-enable analytics.
+- WebMCP: the app registers read-only tools (plus one navigation tool) on `document.modelContext` for AI agents running in the learner's own browser (see `DESIGN.md` §Study companion affordances). A tool runs inside the page and issues no request; progress reaches an agent only when that agent calls a tool, on the learner's device — the same relationship the clipboard summary has with whatever the learner pastes it into. The bundled bridge's transport is this window's own `postMessage`, accepting messages from this origin only (so anything the page itself runs shares the channel — the same boundary `document.modelContext` has); the page is never framed, and `tests/webmcp.spec.ts` asserts that no request leaves the origin while the tools load, register, and run.
 
 Third-party analytics were removed on 2026-08-11: an analytics script executing on the same origin as learner localStorage cannot be meaningfully isolated by this static app's CSP.
 

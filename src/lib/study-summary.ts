@@ -26,11 +26,17 @@ export type StudySummaryInput = {
   readonly handsOnTotal: number;
   readonly handsOnCompleted: number;
   readonly now: Date;
+  // How many ids each list shows before "(+N more)"; defaults to SUMMARY_ID_LIMIT.
+  readonly idLimit?: number;
 };
 
 // Long enough to be actionable, short enough to paste. Beyond this the list is
 // truncated and says so, rather than silently dropping the tail.
 export const SUMMARY_ID_LIMIT = 20;
+
+// Stated wherever counts leave the app for a companion (this digest, the WebMCP
+// tools), so every such surface carries the same sentence.
+export const NO_SCORE_NOTE = 'Counts only. No score, pass/fail, or readiness is derived here or anywhere in this app.';
 
 // A question counts as "low accuracy" only once it has been attempted more than
 // once: a single wrong answer is not yet a pattern, and listing it would bury the
@@ -46,14 +52,15 @@ function isLowAccuracy(stat: QuizStat): boolean {
   return stat.attempts >= LOW_ACCURACY_MIN_ATTEMPTS && stat.correct / stat.attempts < LOW_ACCURACY_THRESHOLD;
 }
 
-function formatIdList(ids: readonly string[]): string {
+function formatIdList(ids: readonly string[], limit: number): string {
   if (!ids.length) return 'none';
-  const shown = ids.slice(0, SUMMARY_ID_LIMIT).join(', ');
-  return ids.length > SUMMARY_ID_LIMIT ? `${shown} (+${ids.length - SUMMARY_ID_LIMIT} more)` : shown;
+  const shown = ids.slice(0, limit).join(', ');
+  return ids.length > limit ? `${shown} (+${ids.length - limit} more)` : shown;
 }
 
 export function buildStudySummary(input: StudySummaryInput): string {
   const { data, cards, questions, domains, now } = input;
+  const idLimit = input.idLimit ?? SUMMARY_ID_LIMIT;
   const reviews = data.reviews;
 
   const reviewed = cards.filter((card) => reviews[card.id]);
@@ -100,7 +107,7 @@ export function buildStudySummary(input: StudySummaryInput): string {
 
   const lines = [
     `CCA Field Notes study summary (generated ${now.toISOString().slice(0, 10)})`,
-    'Counts only. No score, pass/fail, or readiness is derived here or anywhere in this app.',
+    NO_SCORE_NOTE,
     '',
     `Practice cards: reviewed ${reviewed.length}/${cards.length}, weak ${weakCards.length}, due now ${dueCards.length}`,
     `Quiz: answered ${quizAnswered}/${questions.length} questions, attempts ${quizAttempts}, correct ${quizCorrect}`,
@@ -114,14 +121,14 @@ export function buildStudySummary(input: StudySummaryInput): string {
     ...perDomain.map((domain) =>
       `- ${domain.label}: cards ${domain.reviewed}/${domain.total}, weak ${domain.weak}, quiz ${domain.quizAnswered}/${domain.quizTotal}, correct ${domain.quizCorrect}/${domain.quizAttempts}`),
     '',
-    `Weak card ids: ${formatIdList(weakCards.map((card) => card.id))}`,
-    `Question ids answered correctly under half the time (${LOW_ACCURACY_MIN_ATTEMPTS}+ attempts): ${formatIdList(lowAccuracyQuestionIds)}`,
+    `Weak card ids: ${formatIdList(weakCards.map((card) => card.id), idLimit)}`,
+    `Question ids answered correctly under half the time (${LOW_ACCURACY_MIN_ATTEMPTS}+ attempts): ${formatIdList(lowAccuracyQuestionIds, idLimit)}`,
     // The three buckets the plain right/wrong tally cannot express. They only
     // appear once the learner has actually produced such an answer, so a record
     // written before these fields existed prints nothing extra.
-    `Question ids answered partially but never fully (close): ${formatIdList(insight.close)}`,
-    `Question ids never answered correctly or partially: ${formatIdList(insight.notUnderstood)}`,
-    `Question ids the learner marked as a lucky guess: ${formatIdList(insight.guessedRight)}`,
+    `Question ids answered partially but never fully (close): ${formatIdList(insight.close, idLimit)}`,
+    `Question ids never answered correctly or partially: ${formatIdList(insight.notUnderstood, idLimit)}`,
+    `Question ids the learner marked as a lucky guess: ${formatIdList(insight.guessedRight, idLimit)}`,
   ];
 
   return lines.join('\n');

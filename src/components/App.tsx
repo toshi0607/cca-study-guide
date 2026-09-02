@@ -18,6 +18,7 @@ import { useDeepLinkRouting } from './app/useDeepLinkRouting';
 import { useExamDate } from './app/useExamDate';
 import { useStudyImport } from './app/useStudyImport';
 import { useStudySummary } from './app/useStudySummary';
+import { useWebMcp } from './app/useWebMcp';
 import { GuideEntry } from './GuideEntry';
 import type { LearningStageViewTarget } from './views/GuideView';
 import { HandsOnEntry } from './HandsOnEntry';
@@ -180,6 +181,7 @@ function App({ locale }: { locale: Locale }) {
   }, []);
 
   useDeepLinkRouting({ view, onApplyLink: applyDeepLink });
+  useWebMcp({ ready, locale, data, now, dataUnreadable, practiceSessionActive: sessionCards !== null, applyDeepLink });
 
   const dueCardIds = now ? cardIndex.filter((card) => isDue(data.reviews[card.id], card.revision, now)).map((card) => card.id) : [];
 
