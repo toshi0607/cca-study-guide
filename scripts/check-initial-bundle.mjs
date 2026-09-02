@@ -25,7 +25,14 @@ const FORBIDDEN = [
   'GuideView',
   'HandsOnView',
   'QuestionMetadata',
+  'webmcp-register',
 ];
+
+// Strings that occur only in the WebMCP registration module and in the MCP
+// bridge it loads (@mcp-b/global, ~73KB gzip). A vendor chunk's basename is
+// whatever the bundler derives from the package layout (today `dist.*.js`), so
+// the eager graph is searched for these markers rather than for a name.
+const FORBIDDEN_MARKERS = ['get_study_summary', '[WebModelContext]'];
 
 const baseName = (file) => file.replace(/\.[A-Za-z0-9_-]+\.js$/, '');
 
@@ -48,6 +55,7 @@ if (!entry) {
 
 // Transitive closure of static imports starting from the App island entry.
 const eager = new Set();
+const markerOffenders = [];
 const queue = [entry];
 while (queue.length) {
   const file = queue.pop();
@@ -59,13 +67,14 @@ while (queue.length) {
   } catch {
     continue;
   }
+  for (const marker of FORBIDDEN_MARKERS) if (code.includes(marker)) markerOffenders.push(`${file} (contains ${marker})`);
   for (const dep of staticImports(code)) if (!eager.has(dep)) queue.push(dep);
 }
 
-const offenders = [...eager].filter((file) => FORBIDDEN.includes(baseName(file)));
+const offenders = [...[...eager].filter((file) => FORBIDDEN.includes(baseName(file))), ...markerOffenders];
 if (offenders.length) {
   console.error(`check-initial-bundle: forbidden chunk(s) in App.js static import graph:\n  ${offenders.join('\n  ')}`);
-  console.error('These must be lazily imported (via an Entry wrapper) so they stay out of the initial bundle.');
+  console.error('These must be lazily imported (via an Entry wrapper or a dynamic import) so they stay out of the initial bundle.');
   process.exit(1);
 }
 

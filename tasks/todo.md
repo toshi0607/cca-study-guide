@@ -1,3 +1,157 @@
+# WebMCP 対応 — 設計（2026-09-02・実装前）
+
+ページ内でエージェント向けツールを公開する WebMCP（`document.modelContext`）対応の設計。
+実装時は本計画を Phase ごとに消化し、仕様確定後に `DESIGN.md` を同じ PR で更新する。
+
+## 決定事項（2026-09-02 トシ回答）
+
+1. **ツール範囲**: 読み取り + 画面遷移を Phase 1。書き込み（復習評価の記録等）は Phase 2 として設計のみ。模試（mock exam）操作ツールは恒久除外。
+2. **チャネル**: native `document.modelContext` 優先 + `@mcp-b/global` polyfill 同梱（自己ホスト・遅延ロード）。Claude 拡張/ローカルリレー経由で今すぐ使えるようにする。依存追加はトシ承認済み。
+3. **有効化**: 常時登録（ページを開けば登録。データが流れるのはユーザー自身のエージェントがツールを呼んだ時だけ、という整理）。
+
+## Cloudflare 調査結論（採用しない）
+
+- Cloudflare の WebMCP 機能（`agents/experimental/webmcp` の `registerWebMcp()` / ゼロコード注入）は「**既存リモート MCP サーバー**のツールをページの `modelContext` に映すブリッジ」。実行はリモート側。
+- このサイトは (a) 配信が Vercel（Cloudflare は DNS のみ、`DESIGN.md:182`）、(b) サーバーなしが設計原則、(c) 価値の中心が localStorage の進捗＝リモート実行では見えない、の3点で適用外。
+- Cloudflare 自身の配置指針も「ローカル UI 状態・localStorage → ページ内で直接登録」としており、第一者実装が正攻法。将来 Workers Static Assets へ移しても MCP サーバーを持たない限り不要。
+
+## API 前提（spec commit 41d12f0・W3C CG-DRAFT）
+
+- 正式エントリポイントは `document.modelContext`（`navigator.modelContext` は旧名）。
+- `registerTool({name, description, inputSchema, execute, annotations}, {signal})`。`inputSchema` は JSON Schema。`execute` の戻り値は任意の JSON 直列化可能値。
+- **unregister は存在しない**。解除は `AbortSignal` の abort のみ。同名再登録は `InvalidStateError`。
+- 文字数予算（Chrome 指針）: name ≤30 / description ≤500 / param description ≤150 / 出力 ≤1.5K 文字。
+- 仕様は CG ドラフトで破壊的変更あり得る前提。アダプタ層を薄く1ファイルに閉じ込め、ツール本体（純関数）を仕様から独立させる。
+
+## アーキテクチャ
+
+- **新モジュール `src/lib/webmcp/`**:
+  - `tools.ts` — ツール定義本体。`(input, ctx) => result` の純関数群。`ctx` は `{ getData(): StudyData, locale, navigate }` を注入（テスト容易性のため DOM 非依存）
+  - `register.ts` — `document.modelContext` への登録アダプタ。`@mcp-b/global` は **native の有無によらず常に**遅延ロードする（Claude 到達性を担うのは polyfill 部ではなく同梱の MCP bridge のため。polyfill 部は native 存在時には native に譲る設計で共存前提）
+- **登録場所**: `App.tsx`（Preact island）のマウント後。Astro SSR / ビルド時コードは `document.modelContext` に一切触れない。
+- **状態経路（最重要制約）**: ツールは localStorage を直接読み書きしない。読み取りは App の現在 state（ref 経由の最新スナップショット）、Phase 2 の書き込みは UI と同じ update 関数（`scheduleReview` → commit 経路）を必ず通す。並行ライターを作らない。
+- **ライフサイクル**: マウントごとに `AbortController` を1つ生成し unmount で abort。再マウント時の同名 `InvalidStateError` を防ぐ。
+- **ロード戦略**: 初期バンドルに含めない。idle 後（`requestIdleCallback` 相当）に dynamic import。`@mcp-b/global` も同経路でのみロード。
+- **出力形式**: 構造ラベル・キー名は安定英語（`buildStudySummary()` と同じ方針）、コンテンツ文字列はページ locale。ID（cardId / questionId / sectionId）を常に併記し deep link に使えるようにする。
+
+## ツールカタログ
+
+### Phase 1（読み取り: `annotations.readOnlyHint: true`）
+
+| name | 概要 | 実装の芯 |
+| --- | --- | --- |
+| `get_study_summary` | 進捗サマリ | `buildStudySummary()` を wrap。1.5K 字に切り詰め |
+| `get_due_reviews` | 復習期限が来たカード一覧 | `isDue()` を reviews に適用。id + prompt + domainId、件数上限付き |
+| `get_domain_stats` | 領域別の生の正答統計 | `quizStats` を domain 集計。**生カウントのみ、導出指標なし** |
+| `search_content` | カード/設問の検索 | keyword + domain/objective フィルタ。id + タイトル + deep link hash を返す |
+
+### Phase 1（遷移: readOnlyHint なし・非破壊）
+
+| name | 概要 | 実装の芯 |
+| --- | --- | --- |
+| `open_view` | 指定ビュー/コンテンツへ遷移 | 既存 `navigate(view, target)` + `deep-link.ts` の ViewTarget を再利用。入力検証は deep link と同一 |
+
+### Phase 2（書き込み・設計のみ、実装は別 PR）
+
+- `record_review_rating(cardId, rating)` — `scheduleReview` → UI と同一の commit 経路。実行前にページ内で確認 notice を出す（仕様は confirmation を強制しないためサイト側責務）
+- `complete_guide_section(sectionId)` — `completeStudyGuideSection` 経由
+- 書き込み系は revision 不一致・保存失敗を結果値で返し、黙って握りつぶさない
+
+### 恒久除外（実装しない）
+
+- 模試の開始・回答・提出（エージェントが解いたら模試の意味がない）
+- 合否・点数・準備完了度を算出/示唆する出力（AGENTS.md 絶対的制約）
+- 進捗の reset / import / export / 受験日変更（破壊的・既存 UI に明示的導線あり）
+
+## Constraints（制約台帳）
+
+| Constraint | Source | Verify by |
+| --- | --- | --- |
+| 合否・準備完了度を算出・示唆しない | AGENTS.md 絶対的制約 | ツール出力型に導出指標が無いこと + unit test で出力キーを固定 |
+| 進捗を外部送信しない | AGENTS.md 絶対的制約 | `src/lib/webmcp/` に fetch/XHR/beacon なし。`pnpm test:no-analytics` |
+| ストレージスキーマ互換（Phase 1 は書き込みゼロ） | AGENTS.md | `save()` 呼び出しが diff に無いこと |
+| 依存追加は必要最小 | AGENTS.md（トシ承認済み） | 追加は `@mcp-b/global`（runtime）の1つのみ（`webmcp-types` は型衝突で撤回） |
+| ツールが推移的にも書き込まない（ビューのマウント副作用を含む） | AGENTS.md + Phase 1 決定 | `tests/webmcp.spec.ts`: 全ルートを `open_view` で開いた後に localStorage の文書がバイト同一 |
+| 初期バンドル予算 | AGENTS.md | `pnpm test:bundle`（webmcp モジュールと polyfill は遅延 import） |
+| CSP 変更なし | vercel.json | inline script を足さない。`pnpm test:csp`（ハッシュ不変） |
+| Permissions-Policy が `tools` を塞がない | vercel.json（現状 `tools` 記載なし = default self で許可） | vercel.json diff なし |
+| UI 文言は i18n、ツール記述は安定英語 | src/AGENTS.md + buildStudySummary 前例 | 追加 JSX に文字列リテラル無し／tool description は英語固定 |
+| SSR で `document.modelContext` に触れない | Astro 静的ビルド | `pnpm build` が Node 環境で成功 |
+| 模試操作ツールを作らない | トシ決定（2026-09-02） | ツールカタログ diff レビュー |
+
+## Assumptions（前提台帳）
+
+| Assumption | Status | Evidence |
+| --- | --- | --- |
+| `document.modelContext` が正式名・AbortSignal で解除 | VERIFIED | spec `webmachinelearning/webmcp` index.bs @41d12f0 |
+| Permissions-Policy 未指定なら `tools` は default `self` で許可 | VERIFIED | spec + vercel.json（`tools` 記載なし） |
+| `@mcp-b/global` は外部 CDN/ネットワーク読み込みなしで self-bundle 可能 | VERIFIED（調査時点） | npm v5.1.0 2026-08-31、実装時に bundle 内容を再確認 |
+| `@mcp-b/global` のサイズが遅延チャンクとして許容範囲 | VERIFIED（spike ビルド 2026-09-02） | 出力チャンク `dist.<hash>.js` = 284,189 bytes / gzip 73,460 bytes。App 初期チャンクは gzip 13,356 bytes のまま、`pnpm test:bundle` OK（14 eager chunks, none forbidden）。idle 後ロードなので LCP に乗らない。サイト最大チャンクである事実は記事メモに記録 |
+| `webmcp-types`（spec 公式型）を dev 依存に追加できる | 撤回（2026-09-02） | `@mcp-b/global` の d.ts が `@mcp-b/webmcp-types` を参照し、両方が `Document.modelContext` を宣言して TS2717 になる。`webmcp-types` は削除し、型は `@mcp-b/global` 経由に一本化。追加依存は `@mcp-b/global` の1つのみ |
+| Chrome OT 登録なしでも polyfill 経路で Claude から利用可能 | VERIFIED（調査時点） | @mcp-b 拡張/ローカルリレーのドキュメント。実装時に E2E 相当の手動確認 |
+| native 登録したツールを @mcp-b bridge が外部ホストへ露出できる（global 経由登録が必須ではない） | VERIFIED | docs.mcp-b.ai/packages/global/reference: 初期化時に既存 `document.modelContext` を capture して wrap し（"replaces document.modelContext"）、"mirrors registrations down to the underlying native or polyfill context" — 双方向に同期する統合設計。ただし**登録は global の初期化後に行う**こと（`register.ts` は global の dynamic import 完了を待ってから `registerTool` する順序で実装）。実機での round-trip 確認は実装フェーズの手動確認項目として維持 |
+
+## テスト戦略
+
+- **vitest**: `tools.ts` を StudyData フィクスチャで直接テスト（scheduler/quiz と同型）。出力キー固定・文字数上限・導出指標なしを assert
+- **Playwright**: `addInitScript` で `document.modelContext` をスタブ → 登録されたツール一覧と `execute` の round-trip を assert（Chrome フラグ・polyfill の有無に依存しない）
+- 既存ゲート: `pnpm test` / `build` / `test:e2e:fast` / `test:styles` / `test:bundle` / `test:no-analytics` / `test:csp` すべて green
+
+## 実装フェーズ（Phase 1 の todo・実装セッションで消化）
+
+- [x] `@mcp-b/global@5.1.0` を追加（`webmcp-types` は型衝突のため撤回）。遅延チャンク `dist.*.js` gzip 73,460B、`pnpm test:bundle` OK（15 eager chunks, none forbidden）
+- [x] `scripts/check-initial-bundle.mjs` の FORBIDDEN に `webmcp-register` / `webmcp-tools` / `dist` を追加（`@mcp-b` は chunk 名に現れないため実チャンク名で指定）
+- [x] `src/lib/webmcp/webmcp-tools.ts` + `webmcp-tools.test.ts`（20 tests）。`pnpm test` 672 passed（32 files）
+- [x] `src/lib/webmcp/webmcp-register.ts` + `src/components/app/useWebMcp.ts` + `App.tsx` 1行（AbortController / requestIdleCallback 後 dynamic import / bridge 初期化後に登録）
+- [x] `tests/webmcp.spec.ts` 3本（native 形スタブ + 外部リクエスト/WebSocket ゼロ / 実 bridge 経路の JSON round-trip + 外部通信ゼロ / 全ルート `open_view` 後の localStorage バイト同一）。`pnpm test:e2e:fast` 105 passed
+- [x] 全ゲート（レビュー対応後・2026-09-02）: `pnpm test` 672 passed / `pnpm build` 0 errors / `test:bundle` OK（16 eager chunks, none forbidden）/ `test:styles` OK / `test:no-analytics` OK / `test:csp` 2 hashes 一致 / `test:e2e:fast` 105 passed。`pnpm test:e2e`（full）は未実行 — PR CI のマージゲートで実行
+- [x] `DESIGN.md` §Study companion affordances に「WebMCP tools」段落 + §Technical architecture に1行
+- [x] `ASSETS_AND_ANALYTICS.md` §Privacy に WebMCP のデータフロー1項目。privacy ページ（`src/i18n/site.ts`）に `agentTools` 段落を ja/en 追加、最終更新日 2026-09-02。`test:no-analytics` のルート固有チェックと干渉なし
+- [x] native 経路: Playwright の Chromium 151 に `--enable-experimental-web-platform-features` を渡すと native `document.modelContext`（`typeof ModelContext === 'function'`）と `navigator.modelContextTesting` が出る。`tests/webmcp-native.spec.ts` で登録と `executeTool` を固定（手動の chrome://flags 確認を機構に置換）
+- [x] 拡張経路のワイヤ: `tests/webmcp.spec.ts` がページ内から `TabClientTransport` と同じ postMessage エンベロープで MCP `initialize` → `tools/list` → `tools/call` を流し、`allowedOrigins: [location.origin]` が page origin の送信者を通すことを固定
+- [x] `@mcp-b/webmcp-local-relay` は不採用: CDN script + 隠し iframe + `ws://127.0.0.1:9333` を要求し、CSP（`script-src 'self'` / `frame-src 'none'` / `connect-src 'self'`）と両立しない
+- [x] `pnpm test:e2e`（full）157 passed（2026-09-02）
+- [ ] 任意（トシ環境）: WebMCP ブラウザ拡張を入れた Chrome で実際の Claude から round-trip。サイト側の責任範囲は上の E2E で検証済み
+
+## Notes（作業上の判断・DESIGN.md から復元できないもの）
+
+- **ツールは 5 → 6 に増えた**: `search_content` の結果に本文を含めると出力 1.5K を超えるため、ヒット一覧と `get_content_item`（詳細）に分割。実コンテンツに対する既定 limit の出力サイズを vitest で固定
+- **`webmcp-types` は追加しなかった**: `@mcp-b/global` の d.ts が参照する `@mcp-b/webmcp-types` と `Document.modelContext` の宣言が衝突（TS2717）。型は後者に一本化
+- **E2E の hash 期待を修正**: `open_view` 後に `location.hash` が付かないのは既存契約（hash なしセッションは hash を作らない）。戻り値のキーを `hash` → `deepLink` に改名し、テストは UI 効果（section open + summary focus）を見る
+- **Vite のチャンク分割**: `webmcp-register` と App が `deep-link` / `scheduler` / `study-summary` 等を共有するため小さな共有チャンクに分かれ eager chunk 数が 14 → 15。合計バイトはほぼ同じ。Lighthouse 予算は CI で確認する
+- **`installTestingShim` は最終的に false**: 当初は true を明示していたが、`navigator.modelContextTesting` は Chromium から削除済みのプレビュー API（polyfill docs 明記）で、bridge の transport とは独立。spec 面（`document.modelContext`）だけを公開する
+- **模試ビューはツールから開けない**: `MockExamView` のマウント effect が期限切れセッションを `finalize('expire')` → `save()` するため、`open_view` の `mock-exam` は推移的な書き込み経路だった（reviewer の High 指摘）。ルートから除外し、「全ルートを開いても localStorage がバイト同一」の E2E で機構化
+
+## Review
+
+### 1巡目: `/code-review high`（finder 8観点）+ `reviewer` エージェント（opus・設計適合）
+
+| 重大度 | 指摘 | 対応 |
+| --- | --- | --- |
+| High | `open_view` で `mock-exam` を開くと `MockExamView` のマウント effect が期限切れセッションを採点・保存する（Phase 1「書き込みゼロ」の推移的な破れ） | `mock-exam` をルートから除外。全ルート遷移後の localStorage バイト同一を E2E で固定。DESIGN.md に理由を追記 |
+| Medium | `limit` 最大値で出力が 1.5K を超える（`get_due_reviews {limit:20}` 2,644 字、`search_content {limit:10}` 4,013 字）— 3観点が独立に指摘 | `fitToBudget()` で直列化サイズが収まるまで項目を削り `truncated` を返す。`search_content` は `hits` 1本に統合。実コンテンツ×最大 limit のテストを追加 |
+| Medium | 外部通信ゼロの E2E が bridge 稼働時（テスト2）には無く、WebSocket も見ていない | テスト2にも `request` + `websocket` 監視を追加 |
+| Medium | 初期バンドル検査の `'dist'` は bundler の命名の偶然に依存 | チャンク内容マーカー（`get_study_summary` / `[WebModelContext]`）で検査 |
+| Medium | 練習セッション中にエージェントが `open_view` で離脱させるとセッションが無通知で消える | `isPracticeSessionActive()` を bridge に追加、セッション中は practice 以外への遷移を拒否 |
+| Medium | `open_view` が対象なしビューへの `id` を黙って捨てつつ echo する | `ITEM_ROUTES` で拒否。戻り値は `formatDeepLink(link)` |
+| Low | `get_study_summary` が飽和した学習記録で id リストごと切れる | `idLimit` を 20→10→5→3→1 と段階的に下げて収める（`buildStudySummary` に任意の `idLimit` を追加）。飽和記録のテストを追加 |
+| Low | unmount 時に `cleanupWebModelContext()` 未呼び出し | abort シグナルに紐付け |
+| Low | `requestIdleCallback` に timeout なし | `{ timeout: 2000 }` |
+| Low | `clip()` がサロゲートペアを分断し得る | コードポイント単位に変更 + emoji テスト |
+| Low | `localize()` ヘルパー未使用 / `NO_SCORE_NOTE` の重複定義 | `localize` を使用。`NO_SCORE_NOTE` を `study-summary.ts` から export して共有 |
+| Low | `webmcp-types` の残骸（台帳の制約行）・`DESIGN.md` の Last reviewed 未更新・未使用の `title` Pick・E2E の重複キャスト・戻り値型の未使用 | すべて修正 |
+| Low | `allowedOrigins` は受信側のみの制限。docs の「このオリジンに制限」は不正確 | docs と register のコメントを「このオリジンからの受信のみ受け付ける」に修正 |
+| 対応せず | `describeMissingId` の存在確認がビュー側の寛容な解決と非対称 | エージェントには明確なエラー、URL は寛容に、という意図的な非対称。設計に記録済み |
+| 対応せず | 入力検証の `readX` + `isInvalid` ボイラープレート | 例外を制御フローに使わない現行スタイルを維持 |
+| 対応せず | プライバシー説明の3箇所重複（DESIGN / ASSETS / site.ts） | 既存パターンの延長。正典は ASSETS_AND_ANALYTICS.md（AGENTS.md の表どおり） |
+
+## Open items
+
+- Chrome origin trial 登録（外部アカウント作業・`<meta http-equiv="origin-trial">` を LocalizedLayout に追加するだけで CSP 影響なし）: polyfill で当面カバーできるため保留。native 安定版が近づいたら判断
+- Phase 2 書き込みツールの確認 UI 仕様（notice か dialog か）
+
+---
+
 # PR #73 レビュー指摘対応
 
 2026-08-13 のレビュー指摘2件を、既存のsecurity boundaryを変えずに修正する。

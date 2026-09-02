@@ -26,6 +26,7 @@ type SiteCopy = {
     studyData: string;
     localOnlyHeading: string;
     localOnly: string;
+    agentTools: string;
     contactHeading: string;
     contactPrefix: string;
     contactSuffix: string;
@@ -63,11 +64,12 @@ export const siteCopy = {
       studyData: 'カードの評価と復習予定、ガイドとハンズオンの進捗、演習の回答統計、模擬試験の進行状況と履歴を、このブラウザのlocalStorageに保存します。検索語やフィルターは保存しません。選択中の言語はURLのパス（日本語は /、英語は /en/）で表し、別の設定としてブラウザに保存しません。学習データのサーバーへの同期やアカウントとの紐付けは行いません。',
       localOnlyHeading: '外部送信と第三者解析',
       localOnly: 'このサイトは第三者のアクセス解析、広告タグ、行動追跡を読み込みません。学習内容や進捗を外部へ送信する機能もありません。',
+      agentTools: 'あなたのブラウザ内で動くAIエージェント向けに、このアプリは標準化中のWebMCP API（document.modelContext）で読み取り専用のツール（と画面を切り替えるツール1つ）を公開しています。ツールはこのタブの中だけで動き、通信は行いません。進捗がエージェントに渡るのは、あなたのブラウザで動くエージェント（拡張機能を含む）がツールを呼び出したときだけで、渡った後の扱いはそのエージェント側の設定に従います。',
       contactHeading: 'お問い合わせ',
       contactPrefix: '記載内容への質問や修正依頼は、',
       contactSuffix: 'へお寄せください。',
       newTab: '（新しいタブで開く）',
-      updated: '最終更新: 2026-08-11',
+      updated: '最終更新: 2026-09-02',
     },
   },
   en: {
@@ -98,11 +100,12 @@ export const siteCopy = {
       studyData: 'Card ratings and review schedules, guide and hands-on progress, practice-answer statistics, and mock-exam state and history are saved in this browser’s localStorage. Search terms and filters are not saved. Your selected language is represented by the URL path (Japanese at / and English at /en/) and is not stored as a separate browser preference. Study data is neither synchronized to a server nor linked to an account.',
       localOnlyHeading: 'No third-party analytics or tracking',
       localOnly: 'This site does not load third-party analytics, advertising tags, or behavioral tracking. It also has no feature that sends your study content or progress elsewhere.',
+      agentTools: 'For AI agents running in your browser, this app exposes read-only tools (plus one that changes the visible screen) through the draft WebMCP API (document.modelContext). The tools run inside this tab only and make no network requests. Your progress reaches an agent only when an agent running in your browser (including a browser extension) calls a tool, and what happens to it afterwards is governed by that agent, not by this site.',
       contactHeading: 'Contact',
       contactPrefix: 'For questions or correction requests, please open an issue in ',
       contactSuffix: '.',
       newTab: '(opens in a new tab)',
-      updated: 'Last updated: August 11, 2026',
+      updated: 'Last updated: September 2, 2026',
     },
   },
 } as const satisfies Record<Locale, SiteCopy>;
