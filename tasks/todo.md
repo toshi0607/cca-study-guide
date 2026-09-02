@@ -145,6 +145,17 @@
 | 対応せず | 入力検証の `readX` + `isInvalid` ボイラープレート | 例外を制御フローに使わない現行スタイルを維持 |
 | 対応せず | プライバシー説明の3箇所重複（DESIGN / ASSETS / site.ts） | 既存パターンの延長。正典は ASSETS_AND_ANALYTICS.md（AGENTS.md の表どおり） |
 
+### 2巡目: PR #88 への外部レビュー（出力予算）
+
+| 指摘 | 対応 |
+| --- | --- |
+| `get_study_summary` は `summary.length` しか見ておらず、ラッパー + JSON エスケープで 1.5K を超え得る | `fitText` でラッパー込みの直列化サイズを測って収める。テストも `JSON.stringify(result)` で検査 |
+| `search_content` が `query` を無制限に echo し、長大 query + ヒット0件で超過 | `QUERY_MAX_LENGTH = 120` を schema `maxLength` と実行時検証の両方に追加。超過は echo せずに拒否 |
+| `get_content_item` / `open_view` が未知の長大 id をエラー文に埋める | deep link と同じ `isContentId`（kebab-case・≤64）で入力検証。不正な id は形を説明して echo しない |
+| 全ツールに共通の最終ガードが無い | 全 `execute` を `guardOutput` で包み、直列化サイズが予算を超えれば error に置換（到達しないことが前提。テストで意図的に到達させて確認） |
+
+追加テスト: 2000 文字 query / 2000 文字 id（3ツール）/ 40択×150 字の設問でガード発動 / 全6ツールの成功・代表エラー結果のサイズ / 実コンテンツで max 長 query と not-found。`pnpm test` 676 passed、WebMCP E2E 5 passed。
+
 ### PR #88 CI（2026-09-02）
 
 `lighthouse`（バンドル・Lighthouse・トークン予算）pass 1m38s / `playwright` pass 4m22s / Vercel preview deploy pass。`mergeable: MERGEABLE`、`mergeStateStatus: CLEAN`。

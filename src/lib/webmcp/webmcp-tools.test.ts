@@ -5,7 +5,7 @@ import type { DeepLink } from '../deep-link';
 import type { ReviewState } from '../scheduler';
 import { createEmptyStudyData, type QuizStat, type StudyData } from '../storage-schema';
 import { NO_SCORE_NOTE } from '../study-summary';
-import { createWebMcpContentSource, createWebMcpTools, TOOL_OUTPUT_CHAR_LIMIT, type WebMcpBridge, type WebMcpCard, type WebMcpContentSource, type WebMcpTool } from './webmcp-tools';
+import { createWebMcpContentSource, createWebMcpTools, QUERY_MAX_LENGTH, TOOL_OUTPUT_CHAR_LIMIT, type WebMcpBridge, type WebMcpCard, type WebMcpContentSource, type WebMcpQuestion, type WebMcpTool } from './webmcp-tools';
 
 const NOW = new Date('2026-09-02T00:00:00.000Z');
 
@@ -17,17 +17,19 @@ const fixtureCards: WebMcpCard[] = [
   { id: 'c-scope', domainId: 'd2', revision: 1, prompt: text('MCP スコープ', 'MCP config scope'), answer: text('優先順位', 'precedence'), explanation: text('説明', 'explanation'), pitfall: text('落とし穴', 'pitfall') },
 ];
 
-function fixtureContent(cards: readonly WebMcpCard[] = fixtureCards): WebMcpContentSource {
+const fixtureQuestions: WebMcpQuestion[] = [
+  { id: 'q-stop', domainId: 'd1', format: 'single', stem: text('停止理由はどれ', 'Which stop reason'), choices: [{ id: 'a', text: text('end_turn', 'end_turn') }, { id: 'b', text: text('max_tokens', 'max_tokens') }] },
+  { id: 'q-scope', domainId: 'd2', format: 'multiple', stem: text('スコープの優先順位', 'Scope precedence'), choices: [{ id: 'a', text: text('ローカル', 'local') }, { id: 'b', text: text('プロジェクト', 'project') }] },
+];
+
+function fixtureContent(cards: readonly WebMcpCard[] = fixtureCards, questions: readonly WebMcpQuestion[] = fixtureQuestions): WebMcpContentSource {
   return {
     domains: [
       { id: 'd1', number: 1, weight: 27, title: text('領域1', 'Domain 1') },
       { id: 'd2', number: 2, weight: 18, title: text('領域2', 'Domain 2') },
     ],
     cards: () => Promise.resolve(cards),
-    questions: () => Promise.resolve([
-      { id: 'q-stop', domainId: 'd1', format: 'single', stem: text('停止理由はどれ', 'Which stop reason'), choices: [{ id: 'a', text: text('end_turn', 'end_turn') }, { id: 'b', text: text('max_tokens', 'max_tokens') }] },
-      { id: 'q-scope', domainId: 'd2', format: 'multiple', stem: text('スコープの優先順位', 'Scope precedence'), choices: [{ id: 'a', text: text('ローカル', 'local') }, { id: 'b', text: text('プロジェクト', 'project') }] },
-    ]),
+    questions: () => Promise.resolve(questions),
     sections: () => Promise.resolve([{ id: 'sg-loop', revision: 1 }]),
     guides: () => Promise.resolve([{ id: 'ho-ci', revision: 1, steps: [{ id: 'step-run' }] }]),
     scenarios: () => Promise.resolve([{ id: 'sc-support-agents' }]),
@@ -101,10 +103,77 @@ describe('get_study_summary', () => {
     const { run } = harness();
     // #when
     const result = await run('get_study_summary') as { available: boolean; summary: string };
-    // #then
+    // #then — measured as the serialised result, wrapper and JSON escaping included
     expect(result.available).toBe(true);
     expect(result.summary).toContain(NO_SCORE_NOTE);
-    expect(result.summary.length).toBeLessThanOrEqual(TOOL_OUTPUT_CHAR_LIMIT);
+    expect(size(result)).toBeLessThanOrEqual(TOOL_OUTPUT_CHAR_LIMIT);
+  });
+});
+
+describe('output budget', () => {
+  const longId = 'a'.repeat(2000);
+
+  it('rejects an over-long query without echoing it, inside the budget', async () => {
+    // #given
+    const { run } = harness();
+    // #when
+    const result = await run('search_content', { query: 'x'.repeat(QUERY_MAX_LENGTH + 1) });
+    // #then
+    expect(result).toMatchObject({ ok: false });
+    expect(size(result)).toBeLessThanOrEqual(TOOL_OUTPUT_CHAR_LIMIT);
+    await expect(run('search_content', { query: 'x'.repeat(QUERY_MAX_LENGTH) })).resolves.toMatchObject({ matched: { cards: 0, questions: 0 } });
+  });
+
+  it('rejects an over-long or malformed id without echoing it, on every tool that takes one', async () => {
+    // #given
+    const { run, links } = harness();
+    // #then
+    for (const [name, input] of [
+      ['get_content_item', { id: longId }],
+      ['get_content_item', { id: 'Not An Id' }],
+      ['open_view', { view: 'practice', id: longId }],
+      ['open_view', { view: 'hands-on', id: 'ho-ci', stepId: longId }],
+    ] as const) {
+      const result = await run(name, { ...input });
+      expect(result, name).toMatchObject({ ok: false });
+      expect(size(result), name).toBeLessThanOrEqual(TOOL_OUTPUT_CHAR_LIMIT);
+      expect(JSON.stringify(result)).not.toContain('aaaaaaaa');
+    }
+    expect(links).toEqual([]);
+  });
+
+  it('replaces a result that still would not fit with an error rather than shipping it', async () => {
+    // #given a question whose clipped choices alone exceed the budget
+    const bulky: WebMcpQuestion = {
+      ...fixtureQuestions[0]!, id: 'q-bulky',
+      choices: Array.from({ length: 40 }, (_, index) => ({ id: `c${index}`, text: text('あ'.repeat(150), 'a'.repeat(150)) })),
+    };
+    const { run } = harness({ content: fixtureContent(fixtureCards, [bulky]) });
+    // #when
+    const result = await run('get_content_item', { id: 'q-bulky' });
+    // #then
+    expect(result).toMatchObject({ ok: false, error: expect.stringContaining('budget') });
+    expect(size(result)).toBeLessThanOrEqual(TOOL_OUTPUT_CHAR_LIMIT);
+  });
+
+  it('keeps every tool\'s success and error results inside the budget', async () => {
+    // #given
+    const { run } = harness();
+    // #then
+    for (const [name, input] of [
+      ['get_study_summary', {}],
+      ['get_due_reviews', {}],
+      ['get_due_reviews', { limit: 99 }],
+      ['get_domain_stats', {}],
+      ['search_content', { query: 'スコープ' }],
+      ['search_content', { query: '' }],
+      ['get_content_item', { id: 'c-hooks' }],
+      ['get_content_item', { id: 'c-missing' }],
+      ['open_view', { view: 'guide', id: 'sg-loop' }],
+      ['open_view', { view: 'nowhere' }],
+    ] as const) {
+      expect(size(await run(name, { ...input })), `${name} ${JSON.stringify(input)}`).toBeLessThanOrEqual(TOOL_OUTPUT_CHAR_LIMIT);
+    }
   });
 });
 
@@ -318,6 +387,8 @@ describe('against the real content', () => {
       ['search_content', { query: 'mcp' }],
       ['search_content', { query: 'の', limit: 10 }],
       ['search_content', { query: 'the', limit: 10 }],
+      ['search_content', { query: 'x'.repeat(QUERY_MAX_LENGTH), limit: 10 }],
+      ['get_content_item', { id: 'no-such-item' }],
     ] as const) {
       expect(size(await run(name, { ...input })), `${name} ${JSON.stringify(input)}`).toBeLessThanOrEqual(TOOL_OUTPUT_CHAR_LIMIT);
     }
@@ -336,7 +407,7 @@ describe('against the real content', () => {
     // #when
     const result = await run('get_study_summary') as { summary: string };
     // #then — shortened lists, not a clipped digest: the last label is still whole
-    expect(result.summary.length).toBeLessThanOrEqual(TOOL_OUTPUT_CHAR_LIMIT);
+    expect(size(result)).toBeLessThanOrEqual(TOOL_OUTPUT_CHAR_LIMIT);
     expect(result.summary.endsWith('…')).toBe(false);
     expect(result.summary.split('\n').at(-1)).toMatch(/^Question ids the learner marked as a lucky guess: /);
     expect(result.summary).toContain('more)');

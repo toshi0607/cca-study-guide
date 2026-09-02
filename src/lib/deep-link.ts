@@ -58,6 +58,12 @@ for (const spec of routes) {
 // crafted hash from reaching the views as an arbitrary string.
 const idPattern = /^[a-z0-9][a-z0-9-]{0,63}$/;
 
+// The same guard, for callers that receive an id outside a hash (the WebMCP
+// tools), so every entry point accepts exactly the same shape.
+export function isContentId(value: string): boolean {
+  return idPattern.test(value);
+}
+
 function decodeSegment(segment: string): string | null {
   let decoded: string;
   try {
@@ -65,7 +71,7 @@ function decodeSegment(segment: string): string | null {
   } catch {
     return null;
   }
-  return idPattern.test(decoded) ? decoded : null;
+  return isContentId(decoded) ? decoded : null;
 }
 
 // Returns null for anything this build does not recognise — an unknown route, a

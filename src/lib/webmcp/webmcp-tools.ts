@@ -10,7 +10,7 @@ import { domainIndex } from '../../content/card-index';
 import type { Card, ChoiceQuestion, DomainSpine, HandsOnGuide, LocalizedText, Scenario, StudyGuideSection } from '../../content/types';
 import type { Locale } from '../../i18n/locales';
 import { localize } from '../../i18n/ui';
-import { formatDeepLink, parseDeepLink, type DeepLink } from '../deep-link';
+import { formatDeepLink, isContentId, parseDeepLink, type DeepLink } from '../deep-link';
 import { deriveHandsOnProgress } from '../hands-on-progress';
 import { isDue } from '../scheduler';
 import type { StudyData } from '../storage-schema';
@@ -60,15 +60,19 @@ export type WebMcpTool = {
   execute(input: Record<string, unknown>): Promise<unknown>;
 };
 
-// Chrome's published guidance for tool output. Text is clipped to it with a
-// marker; lists are shortened until they fit (see fitToBudget), so a caller's
-// `limit` can never push a result past it.
+// Chrome's published guidance for tool output, applied to the serialised result
+// of every tool (success or error). Text is clipped with a marker, lists are
+// shortened until they fit (fitToBudget), inputs that are echoed back are
+// bounded, and guardOutput is the last line behind all of that.
 export const TOOL_OUTPUT_CHAR_LIMIT = 1500;
 const FIELD_CHAR_LIMIT = 160;
 const DETAIL_FIELD_CHAR_LIMIT = 300;
 const LIST_DEFAULT_LIMIT = 5;
 const DUE_REVIEWS_MAX_LIMIT = 20;
 const SEARCH_MAX_LIMIT = 10;
+export const QUERY_MAX_LENGTH = 120;
+// Mirrors the deep-link id pattern, which caps ids at 64 characters.
+const ID_MAX_LENGTH = 64;
 // The digest's id lists are its most actionable part, so when the whole digest
 // would not fit they are shortened first, step by step, before any clipping.
 const SUMMARY_ID_LIMITS = [SUMMARY_ID_LIMIT, 10, 5, 3, 1] as const;
@@ -119,20 +123,43 @@ function text(value: LocalizedText, locale: Locale, limit: number): string {
   return clip(localize(value, locale), limit);
 }
 
+const serializedSize = (value: unknown) => JSON.stringify(value).length;
+
 function fitToBudget<T>(items: readonly T[], build: (shown: readonly T[]) => Record<string, unknown>): Record<string, unknown> {
   let shown = items;
   let result = build(shown);
-  while (shown.length > 1 && JSON.stringify(result).length > TOOL_OUTPUT_CHAR_LIMIT) {
+  while (shown.length > 1 && serializedSize(result) > TOOL_OUTPUT_CHAR_LIMIT) {
     shown = shown.slice(0, -1);
     result = build(shown);
   }
   return { ...result, truncated: shown.length < items.length };
 }
 
+// Shortens `text` until `build(text)` serialises within the budget. Measured on
+// the built result, not the text, so the wrapper and JSON escaping (a newline is
+// two characters once serialised) are both accounted for; cuts in code points.
+function fitText(text: string, build: (clipped: string) => Record<string, unknown>): Record<string, unknown> {
+  let points = Array.from(text);
+  let result = build(text);
+  while (points.length > 1 && serializedSize(result) > TOOL_OUTPUT_CHAR_LIMIT) {
+    const excess = serializedSize(result) - TOOL_OUTPUT_CHAR_LIMIT;
+    points = points.slice(0, Math.max(1, points.length - excess - 1));
+    result = build(`${points.join('')}…`);
+  }
+  return result;
+}
+
 type Invalid = { ok: false; error: string };
 
 function invalid(error: string): Invalid {
   return { ok: false, error };
+}
+
+// The last line of defence: a result that still would not fit is replaced by an
+// error rather than shipped over budget. Everything above is meant to make this
+// unreachable; the tests drive it on purpose.
+function guardOutput(result: unknown): unknown {
+  return serializedSize(result) <= TOOL_OUTPUT_CHAR_LIMIT ? result : invalid('result exceeded the output budget; narrow the request');
 }
 
 function isInvalid(value: unknown): value is Invalid {
@@ -164,6 +191,26 @@ function readOptionalString(input: Record<string, unknown>, key: string): string
   if (raw === undefined) return undefined;
   if (typeof raw !== 'string') return invalid(`${key} must be a string`);
   return raw;
+}
+
+// Ids are validated before anything else looks at them, and an invalid one is
+// never echoed back: the error describes the shape, so a long or crafted input
+// cannot inflate the result.
+function readContentId(input: Record<string, unknown>, key: string): string | Invalid {
+  const raw = input[key];
+  if (typeof raw !== 'string' || !isContentId(raw)) return invalid(`${key} must be a content id: lowercase letters, digits and hyphens, at most ${ID_MAX_LENGTH} characters`);
+  return raw;
+}
+
+function readOptionalContentId(input: Record<string, unknown>, key: string): string | undefined | Invalid {
+  return input[key] === undefined ? undefined : readContentId(input, key);
+}
+
+function readQuery(input: Record<string, unknown>): string | Invalid {
+  const query = readRequiredString(input, 'query');
+  if (isInvalid(query)) return query;
+  if (Array.from(query).length > QUERY_MAX_LENGTH) return invalid(`query must be at most ${QUERY_MAX_LENGTH} characters`);
+  return query;
 }
 
 // The domain ids are part of the schema (an agent can pick one without a round
@@ -205,12 +252,13 @@ export function createWebMcpTools(bridge: WebMcpBridge, content: WebMcpContentSo
         handsOnCompleted: handsOn.completed,
         now: bridge.getNow(),
       };
-      let summary = '';
+      const wrap = (summary: string) => ({ available: true, summary });
+      let result = wrap('');
       for (const idLimit of SUMMARY_ID_LIMITS) {
-        summary = buildStudySummary({ ...input, idLimit });
-        if (summary.length <= TOOL_OUTPUT_CHAR_LIMIT) break;
+        result = wrap(buildStudySummary({ ...input, idLimit }));
+        if (serializedSize(result) <= TOOL_OUTPUT_CHAR_LIMIT) break;
       }
-      return { available: true, summary: clip(summary, TOOL_OUTPUT_CHAR_LIMIT) };
+      return fitText(result.summary, wrap);
     },
   };
 
@@ -283,7 +331,7 @@ export function createWebMcpTools(bridge: WebMcpBridge, content: WebMcpContentSo
     inputSchema: {
       type: 'object',
       properties: {
-        query: { type: 'string', minLength: 1, description: 'Keywords, e.g. "hook exit code" or "MCP スコープ".' },
+        query: { type: 'string', minLength: 1, maxLength: QUERY_MAX_LENGTH, description: 'Keywords, e.g. "hook exit code" or "MCP スコープ".' },
         kind: { type: 'string', enum: ['card', 'question', 'all'], default: 'all' },
         domainId: domainIdSchema,
         limit: limitSchema(SEARCH_MAX_LIMIT),
@@ -293,7 +341,7 @@ export function createWebMcpTools(bridge: WebMcpBridge, content: WebMcpContentSo
     },
     annotations: { readOnlyHint: true },
     async execute(input) {
-      const query = readRequiredString(input, 'query');
+      const query = readQuery(input);
       if (isInvalid(query)) return query;
       const kind = readOptionalString(input, 'kind') ?? 'all';
       if (isInvalid(kind)) return kind;
@@ -326,7 +374,7 @@ export function createWebMcpTools(bridge: WebMcpBridge, content: WebMcpContentSo
     inputSchema: { type: 'object', properties: { id: { type: 'string', description: 'A card or question id from search_content or get_due_reviews.' } }, required: ['id'], additionalProperties: false },
     annotations: { readOnlyHint: true },
     async execute(input) {
-      const id = readRequiredString(input, 'id');
+      const id = readContentId(input, 'id');
       if (isInvalid(id)) return id;
       const card = (await content.cards()).find((item) => item.id === id);
       if (card) {
@@ -376,9 +424,9 @@ export function createWebMcpTools(bridge: WebMcpBridge, content: WebMcpContentSo
       if (isInvalid(view)) return view;
       if (!(OPENABLE_ROUTES as readonly string[]).includes(view)) return invalid(`view must be one of ${OPENABLE_ROUTES.join(', ')}`);
       const route = view as OpenableRoute;
-      const id = readOptionalString(input, 'id');
+      const id = readOptionalContentId(input, 'id');
       if (isInvalid(id)) return id;
-      const stepId = readOptionalString(input, 'stepId');
+      const stepId = readOptionalContentId(input, 'stepId');
       if (isInvalid(stepId)) return stepId;
       if (stepId && !id) return invalid('stepId requires id');
       if (id && !ITEM_ROUTES.includes(route)) return invalid(`${route} has no addressable item; call open_view with view only`);
@@ -403,7 +451,10 @@ export function createWebMcpTools(bridge: WebMcpBridge, content: WebMcpContentSo
     },
   };
 
-  return [getStudySummary, getDueReviews, getDomainStats, searchContent, getContentItem, openView];
+  return [getStudySummary, getDueReviews, getDomainStats, searchContent, getContentItem, openView].map((tool) => ({
+    ...tool,
+    execute: async (input: Record<string, unknown>) => guardOutput(await tool.execute(input)),
+  }));
 }
 
 async function describeMissingId(route: OpenableRoute, id: string, stepId: string | undefined, content: WebMcpContentSource): Promise<string | null> {

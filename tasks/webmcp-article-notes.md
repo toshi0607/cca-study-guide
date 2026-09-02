@@ -122,6 +122,8 @@ CG ドラフト段階で API が動くため、「いつの時点の事実か」
 
 - **拡張経路のワイヤ形式**（`@mcp-b/transports` の `TabClientTransport` / `TabServerTransport` を読んだ事実）: 同一 window の `postMessage` で `{ channel: 'mcp-default', type: 'mcp', direction: 'client-to-server' | 'server-to-client', payload }` を投げ合う。payload は MCP の JSON-RPC メッセージそのもの（`initialize` → `notifications/initialized` → `tools/list` → `tools/call`）か、制御文字列 `mcp-check-ready` / `mcp-server-ready` / `mcp-server-stopped`。サーバは受信時に `event.origin` を `allowedOrigins` と照合し、送信は `'*'` 宛。→ E2E でこのプロトコルをページ内から直接話し、`tools/call` の `content[0].text` に JSON が返ることを固定した。拡張の content script は page origin で postMessage するので、`allowedOrigins: [location.origin]` で通る
 
+- **PR レビュー（2回目）で出た出力予算の穴**: (a) 要約は `summary.length` しか見ておらずラッパー + JSON エスケープ（改行は直列化で2文字）で 1.5K を超え得る、(b) `search_content` は `query` を無制限に echo するので 2000 文字の query + ヒット0件で超える、(c) `get_content_item` は未知 id をエラー文にそのまま埋める。対策: 全ツールの `execute` を `guardOutput`（直列化サイズで最終検査、超過は error に置換）で包む / `query` は schema `maxLength` + 実行時検証で 120 文字 / id は deep link と同じ kebab-case パターン（≤64）で検証し、不正なら**形を説明して echo しない** / 要約は `fitText` でラッパー込みで測る。**一般則: 出力予算は「フィールド単位」ではなく「最終結果の直列化サイズ」で測る。ユーザー入力を echo するフィールドは入力側で上限を切る**
+
 ## ベンチマーク計画（実装後に埋める）
 
 - 比較対象: 同一タスクを (A) WebMCP ツール経由 / (B) DOM・スクリーンショット操作（Claude in Chrome 等）で実行
