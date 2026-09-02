@@ -7,6 +7,13 @@ test('English mobile journey stays within the viewport with operable navigation'
   await page.setViewportSize({ width: 360, height: 800 });
   await page.goto('/en/');
 
+  // Scoped to the bottom nav: a role query by name is a case-insensitive
+  // substring match, and the exam draws its 60 questions in a shuffled order,
+  // so an unscoped `Progress` can land on a choice such as "monitor overall
+  // progress in one place" whenever that question is the one on screen.
+  const nav = page.getByRole('navigation', { name: 'Main navigation' });
+  const openView = (name: string) => nav.getByRole('button', { name, exact: true }).click();
+
   const assertNoOverflow = async (label: string) => {
     const dims = await page.evaluate(() => ({
       viewport: document.documentElement.clientWidth,
@@ -23,17 +30,17 @@ test('English mobile journey stays within the viewport with operable navigation'
   await assertNoOverflow('today');
 
   // Practice
-  await page.getByRole('button', { name: 'Practice' }).first().click();
+  await openView('Practice');
   await expect(page.locator('.practice-view')).toBeVisible();
   await assertNoOverflow('practice');
 
   // Quiz setup
-  await page.getByRole('button', { name: 'Quiz' }).first().click();
+  await openView('Quiz');
   await expect(page.locator('.quiz-view')).toBeVisible();
   await assertNoOverflow('quiz');
 
   // Mock exam landing (launched from Today)
-  await page.getByRole('button', { name: 'Today' }).first().click();
+  await openView('Today');
   await page.locator('.mock-exam-launch-button').click();
   await expect(page.getByRole('heading', { name: 'Take the 60-question mock exam' })).toBeVisible();
   await assertNoOverflow('mock-exam-landing');
@@ -52,7 +59,7 @@ test('English mobile journey stays within the viewport with operable navigation'
   await assertNoOverflow('mock-exam-question-60');
 
   // Progress (bottom nav still operable after the exam flow)
-  await page.getByRole('button', { name: 'Progress' }).first().click();
+  await openView('Progress');
   await expect(page.locator('.progress-view')).toBeVisible();
   await assertNoOverflow('progress');
 });
