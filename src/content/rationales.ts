@@ -435,8 +435,8 @@ export const choiceRationales: ChoiceRationales = {
       'Reporting success makes the agent proceed as if all ten records were registered. The rejected ones remain absent from the shipment database, and the inconsistency persists until the next scheduled sync catches up.',
     ),
     d: localized(
-      '内部実装や認証情報を含まない安全な説明であれば、失敗の性質と再試行可否をエージェントに伝えつつ、配送業者APIの資格情報や内部スタックを会話ログへ漏らさずに済みます。',
-      'A safe explanation that omits internals and credentials still tells the agent the nature of the failure and whether it can retry, without leaking the carrier API’s credentials or internal stack into the conversation log.',
+      '項目ごとの識別子を添えて返せば、エージェントは10件のうちどれが失敗した項目かを取り違えずに特定でき、再送の対象を正確に絞り込めます。識別子がなければ、項目ごとの成否だけを見ても、実際に何を再送すべきかをエージェントが正しく突き合わせられません。',
+      'Returning the per-record identifier lets the agent pinpoint exactly which of the ten records failed without mixing it up with another, and target the resubmission precisely. Without an identifier, knowing each record’s success or failure alone does not let the agent correctly match what to actually resend.',
     ),
   },
   'q-sc-mcp-token': {
@@ -453,8 +453,8 @@ export const choiceRationales: ChoiceRationales = {
       'Sharing the production connection definition at project scope while resolving the credential from each person’s environment, and keeping the personal sandbox server out of the shared scope, separates what needs team-wide sharing from what is meaningful to only one person.',
     ),
     d: localized(
-      '個人のサンドボックスアカウントの認証情報は他のメンバーには意味を持たないため、あらかじめ user scope へ登録しても共有の役には立ちません。個人専用の設定をチーム共有向けの層へ置く必要はありません。',
-      'A personal sandbox account’s credential means nothing to other members, so registering it at user scope ahead of time does not help with sharing. There is no need to place a personal-only setup at a layer meant for team sharing.',
+      '個人のサンドボックスアカウントの認証情報が意味を持つのは本人だけです。それを `.mcp.json` にコミットしてプロジェクトスコープで共有すると、意味のない認証情報が他のメンバー全員に配布されてしまい、本番用の認証情報を各自の環境変数から解決させるという運用とも矛盾します。',
+      'A personal sandbox account’s credential is meaningful only to the person who owns it. Committing it into `.mcp.json` and sharing it at project scope distributes that meaningless credential to everyone on the project, and it also conflicts with resolving the production credential from each person’s own environment.',
     ),
   },
   'q-sc-support-parallel': {
@@ -513,20 +513,20 @@ export const choiceRationales: ChoiceRationales = {
   },
   'q-sc-support-context': {
     a: localized(
-      '長い資料を先に置くと、モデルは資料を読み切った状態で質問に取りかかれます。公式ガイダンスでも、長文の資料は質問・指示より前に置くことで全モデルで性能が上がるとされています。',
-      'Placing long material first lets the model start the question already having read the full document. Official guidance says putting long documents before the query and instructions improves performance across all models.',
+      '顧客にすでに約束した対応と次に取るべき行動を明示しておけば、翌日の担当者は会話を読み返さなくても何をすべきかを正確に把握できます。',
+      'Making explicit what was already promised to the customer and the concrete next step lets the next day’s agent know exactly what to do without re-reading the conversation.',
     ),
     b: localized(
-      '質問文を先に置き資料を後から貼り付ける構成は、公式ガイダンスが推奨する「資料を先、質問を最後」という並び方の逆です。ガイダンスは、質問を末尾に置くと、複数の資料を含む複雑な入力で応答品質が上がると示しています。',
-      'Putting the question first and appending documents afterward is the reverse of the “documents first, query last” ordering official guidance recommends; that guidance reports that putting the query at the end improves response quality, especially with complex multi-document inputs.',
+      '会話ログ全文をそのまま渡すと、必要な情報が長い雑談やこれまでの経緯に埋もれ、担当者は毎回探し出す手間を負います。長引いた問い合わせほど、この負担は大きくなります。',
+      'Handing over the raw log in full buries the needed information in a long back-and-forth, forcing the agent to search it out every time — worse the longer the case has run.',
     ),
     c: localized(
-      '関係箇所を先に引用させると、モデルが資料中の無関係な部分に気を取られず、根拠を明示したまま回答できます。長文資料を扱うタスク向けに公式ガイダンスが挙げている手法です。',
-      'Having the agent quote the relevant passages first keeps it from being distracted by irrelevant parts of the document and gives the answer explicit grounding. This is a technique official guidance recommends for long-document tasks.',
+      '確認済みの事項と未確認の事項を区別しておくと、担当者は本人確認などをやり直す必要があるかどうかを即座に判断できます。区別がなければ、既に済んだ確認を重複して行うか、未確認のまま処理を進めてしまう危険があります。',
+      'Separating what is already verified from what is not lets the agent immediately tell whether something like identity verification needs to be redone. Without that distinction, the risk is redoing a check that is already done, or proceeding on something that was never confirmed.',
     ),
     d: localized(
-      '資料の配置や引用の指示を工夫しない一括投入は、資料が長く複雑になるほど関連箇所が埋もれやすくなります。公式ガイダンスは配置と引用の両方を推奨しており、どちらも省略してよいとはしていません。',
-      'Dumping everything in without deliberate placement or quoting instructions makes relevant material easier to lose as documents grow longer and more complex. Official guidance recommends both placement and quoting; it does not say either can be skipped.',
+      '1段落の要約は流れを短くはしますが、どの約束が未完了か、何が確認済みかという個別の判断材料を持たないため、担当者は結局元のやり取りを読み返すことになります。',
+      'A one-paragraph summary shortens the narrative but carries none of the individual facts — which commitment is still open, what is verified — so the agent still ends up rereading the original exchange.',
     ),
   },
   'q-sc-code-conventions': {
@@ -571,12 +571,12 @@ export const choiceRationales: ChoiceRationales = {
       'A Skill’s body loads only when it is invoked, so trimming it to essentials reduces how much loads on every run. Keeping detailed reference material to what the operation actually needs avoids crowding the context of unrelated work.',
     ),
     b: localized(
-      '説明文はメタデータとして常にコンテキストに残る部分です。情報を詰め込むほど、無関係な場面でも常時保持されるコストが増え、かつ肝心の利用場面の判断材料としてはかえって埋もれます。',
-      'The description is metadata that stays resident in context at all times. Piling in information only raises the always-on cost even for unrelated situations, and buries the very cue that should signal when to use the Skill.',
+      '説明文はSkillを起動すべきかどうかをClaudeが判断する際に参照するメタデータです。情報を詰め込むほど、無関係な場面でも読み込まれる量が増え、かつ肝心の利用場面の判断材料としてはかえって埋もれます。',
+      'The description is metadata Claude consults when deciding whether to invoke the Skill. Piling in information only increases what loads even for unrelated situations, and buries the very cue that should signal when to use the Skill.',
     ),
     c: localized(
-      '説明文は、いま扱っている作業がこのSkillの対象かどうかを判断する手掛かりです。具体的で簡潔な文言にしておくと、常時保持されるコストを抑えつつ、必要な場面で正しく読み込まれる設計が成立します。',
-      'The description is the cue for judging whether the task at hand is what the Skill is for. Keeping it concrete and concise limits its always-resident cost while still letting the Skill load correctly when it applies.',
+      'SKILL.mdは概要と手順だけを持ち、詳しいテンプレートや過去ログは別ファイルへ分けて本体から参照させると、それらのファイルは実際に必要になった操作のときだけ読み込まれます。大きな参照資料を本体に書き込むと、Skillが呼び出されるたびに不要な内容まで一緒に読み込まれてしまいます。',
+      'Keeping SKILL.md to an overview plus the procedure, with detailed templates and past logs split into separate files the body references, means those files load only when the operation actually needs them. Writing large reference material directly into the body means every invocation of the Skill loads that unneeded content too.',
     ),
     d: localized(
       '本体は呼び出されたときだけ読み込まれる部分なので、事前にすべての詳細を集約しても「再度参照せずに済む」という利点にはならず、逆に呼び出しのたびに不要な情報まで読み込む設計になります。',
@@ -585,20 +585,20 @@ export const choiceRationales: ChoiceRationales = {
   },
   'q-sc-code-ci': {
     a: localized(
-      '判定基準となるサンプル集合を、プロンプトを直す前に固定しておくと、その後の変更が実際に誤検知を減らしたのかを、感触ではなく同じ物差しで確認できます。',
-      'Fixing the judgment sample set before touching the prompt gives every later change the same yardstick, so you can tell whether it actually reduced false positives instead of relying on a feel for it.',
+      '--json-schema を使うとfile・line・severityなどのフィールドを持つ構造化配列として指摘を受け取れます。severityがhighの指摘があるかどうかで終了状態を分ければ、CIは出力の文面を解釈せずに機械的に合否を判定できます。',
+      'With --json-schema, findings come back as a structured array with fields such as file, line, and severity. Branching the exit status on whether any finding has severity high lets CI decide pass/fail mechanically without parsing prose.',
     ),
     b: localized(
-      '文言・参照ドキュメント・温度を同時に変えると、誤検知が減っても増えても、どの変更が効いたのか切り分けられません。次に何を直すべきかの判断材料を失います。',
-      'Changing the wording, reference documents, and temperature together means that whether false positives go up or down, you cannot tell which change caused it — you lose the information needed to decide what to adjust next.',
+      'レビュー対象をPRの差分に絞ってClaudeへ渡すと、変更していない既存コードを毎回読み込ませずに済み、無関係な指摘や余計なコストを減らせます。',
+      'Scoping the review input to the PR diff means Claude doesn’t re-read unchanged existing code on every run, cutting irrelevant findings and unnecessary cost.',
     ),
     c: localized(
-      '以前は正しく判定できていた事例が、修正後も引き続き正しく判定されるかを毎回確認するのは回帰の検出です。誤検知を減らす修正が、別の事例で見逃しや誤検知を新たに生んでいないかを確かめます。',
-      'Checking, after every revision, that cases the prompt previously judged correctly are still judged correctly is regression detection. It confirms that a fix aimed at one kind of false positive hasn’t introduced a miss or a new false positive elsewhere.',
+      '出力を自然文の要約のままにすると、重大度の判定は人がプルリクエストを開くたびに本文を読んで行うことになり、CIが機械的に合否を判定できません。3.6が求める、出力形式と終了状態で成否を判定できるという前提が成立しません。',
+      'Leaving the output as a prose summary means severity judgment still requires a person to open and read each pull request, so CI cannot decide pass/fail mechanically. This fails the premise 3.6 requires: judging success from output format and exit behavior.',
     ),
     d: localized(
-      '出力を常に「指摘なし」に固定すると、CIは実際には何も検証していないのに成功したと判定します。3.6が求める、出力形式と終了状態でCIが機械的に成否を判定できるという前提そのものが崩れます。',
-      'Hard-coding the output to always say "no findings" makes CI report success while nothing was actually checked. It breaks the very premise 3.6 requires: that CI can judge success mechanically from the output format and exit behavior.',
+      '指摘を保存するだけでCIジョブの成否判定に使わなければ、ジョブは実際には何も検証せずに完了したことになります。指摘が機械可読であっても、それをCIの判定に結び付けなければ3.6の要件を満たしません。',
+      'Saving findings without ever using them for the CI verdict means the job effectively completes having validated nothing. Even machine-readable findings satisfy 3.6 only when the CI verdict is actually tied to them.',
     ),
   },
   'q-sc-code-mcp-config': {
@@ -621,20 +621,20 @@ export const choiceRationales: ChoiceRationales = {
   },
   'q-sc-pipe-validation': {
     a: localized(
-      '各回のパス内の検証は、その回の抽出結果がスキーマに沿っているかしか見ません。ある回の日付と別の回の日付が矛盾していないかは、複数回を横断して見る統合パスでなければ検出できません。',
-      'Validation inside a single installment’s pass only checks whether that installment’s extraction fits the schema. Whether one installment’s date contradicts another’s can only be caught by an integration pass that looks across installments.',
+      '出典位置を添えた構造化データであれば、統合パスは各値がどの回のどの記述に基づくかを保ったまま突き合わせられ、回をまたぐ矛盾を機械的に検出できます。',
+      'Structured data carrying provenance lets the integration pass cross-check while knowing which installment and passage each value came from, so it can mechanically detect cross-installment contradictions.',
     ),
     b: localized(
-      '各回のパスは局所的な抽出に専念でき、統合パスは各回の出力を突き合わせて回をまたいだ矛盾を検出する役割に専念できます。役割が分かれているため、どちらの工程も独立して検証できます。',
-      'Each installment’s pass can focus on local extraction, while the integration pass focuses on cross-checking installments for contradictions. Because the roles are separated, each stage can be verified independently.',
+      '自然文の要約は位置情報を保持しないため、統合パスはどの回のどの記述が矛盾の原因かを特定できず、修正のために元の本文を読み直す手間が生じます。',
+      'A prose summary drops the location information, so the integration pass cannot pin down which installment and passage caused a contradiction, forcing a re-read of the original text to fix it.',
     ),
     c: localized(
-      '全10回分の本文を1回のプロンプトに連結すると、複数パスに分ける目的（役割を明確にし、局所評価と全体統合を独立に検証できるようにすること）を失います。',
-      'Concatenating all 10 installments into one prompt defeats the reason for splitting into passes: giving each pass a clear role so focused evaluation and integration can be verified independently.',
+      '元の本文をそのまま統合パスへ渡すのは、各回を独立したパスで抽出するという設計そのものを無効化します。統合パスの役割は抽出済みの結果を突き合わせることであり、抽出をやり直すことではありません。',
+      'Handing the raw text to the integration pass unchanged undoes the point of extracting each installment in its own pass. The integration pass’s role is to cross-check already-extracted results, not to redo extraction.',
     ),
     d: localized(
-      '前回までの結果を引き継ぐだけでは、途中の回で生じた誤りがそのまま後の回へ受け継がれます。最終回の出力を採用するだけで全体を突き合わせる工程がないため、回をまたぐ矛盾が下流のインデクサーへ流れ込みます。',
-      'Only handing earlier results forward lets a mistake made in one installment carry into every later one. Adopting the final pass’s output with no stage that cross-checks the whole lets contradictions across installments flow straight through to the downstream indexer.',
+      '最終回のパスの結果だけを採用すると、それ以前の回で生じた誤りを突き合わせる機会がなく、統合パスが本来担うべき回をまたぐ整合確認が成立しません。',
+      'Adopting only the final installment’s result gives no chance to cross-check mistakes made in earlier installments, so the integration pass cannot perform the cross-installment consistency check it exists for.',
     ),
   },
   'q-sc-pipe-retry': {

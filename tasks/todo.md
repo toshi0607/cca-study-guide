@@ -67,7 +67,7 @@
 - [x] P1: シナリオ4つ分の下書きを並列で作る（サブエージェントが公式ページを取得・引用、scratchpad に TS 断片を出力） → 4本完了
 - [x] P2: 下書きをレビューして questions.ts / rationales.ts / scenarios.ts に適用。検証: `pnpm test` exit 0 → 2026-09-29 exit 0（676 tests）、build exit 0
 - [ ] P3: 重複の再チェック（書き直し後に新しい重複を作っていないか）と事実照合を reviewer で行う
-- [ ] P4: `pnpm build` / `pnpm test:e2e:fast` / `pnpm test:styles` exit 0
+- [x] P4: `pnpm build` / `pnpm test:e2e:fast` / `pnpm test:styles` exit 0 → build exit 0、styles exit 0、E2E（reuse, @slow 除外）106/107。失敗1件 save-failure.spec.ts:95 はガイド画面のボタン待ちタイムアウトで、単独再実行 3/3 pass（負荷起因の flaky、設問変更と無関係）
 - [ ] P5: PR 作成、CI 通過確認
 
 ## Notes
