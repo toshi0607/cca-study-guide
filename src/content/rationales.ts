@@ -629,8 +629,8 @@ export const choiceRationales: ChoiceRationales = {
       'Reusing the extraction prompt for the integration pass just repeats the same extraction work each installment’s pass already did, and does nothing toward the integration pass’s own job of catching cross-installment contradictions.',
     ),
     c: localized(
-      '統合パスという工程自体を省くと、回をまたぐ矛盾を検出する場所がどこにもなくなります。各回のパスの出力をただ連結しても、表記揺れや日付の食い違いは残ったままインデクサーへ流れ込みます。',
-      'Skipping the integration pass entirely removes the only stage that checks for cross-installment contradictions. Simply concatenating the per-installment outputs lets inconsistent spellings or clashing dates flow straight through to the indexer.',
+      '統合パスに確定済みの値の書き換えまで許すと、検証役のはずの工程が抽出結果そのものを変えてしまいます。どの値が各回のパスで確認済みなのかが分からなくなり、統合パスの役割である整合性の検証とも混ざります。',
+      'Letting the integration pass rewrite settled values turns the stage meant to check results into one that changes them. It becomes unclear which values each installment’s pass actually confirmed, and the pass’s own job of checking consistency gets mixed with editing.',
     ),
     d: localized(
       '統合パスに抽出のやり直しまで担わせると、局所的な抽出と全体の整合確認という役割の分離が崩れ、抽出のやり直しでは各回のパスの結果を壊しかねません。',

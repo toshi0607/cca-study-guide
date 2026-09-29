@@ -710,7 +710,7 @@ export const questions: ChoiceQuestion[] = [
         '本人確認や返金実行のような規定で決まった手順も、実行時にエージェントがそのつど分解の要否を判断する動的な構成にする',
         '本人確認・返金実行のように規定で決まった既知の手順は固定のワークフローにし、調査結果に応じて次の確認内容が変わる部分は実行時に動的に分解する',
         '調査で何を確認すべきかも含め、規定文書に書かれた内容をすべて事前に固定のフローチャートへ落とし込んでおく',
-        '分解の方式は各工程の性質にかかわらず常に一種類へ統一するべきであり、同一の対応フロー内で固定的な手順と動的な分解を混在させることは避けるべきである',
+        '保守を簡単にするため、同じ対応フローの中では固定の手順と動的な分解を混在させず、どちらか一方の方式に統一する',
       ],
       explanation: '本人確認から返金実行までは規定で決まった既知の手順なので、固定のワークフローにして毎回同じ順序で確実に実行するのが適切です。一方、返金理由の調査で次に何を確認すべきかは問い合わせごとに変わるため、その部分は実行時の発見に応じて動的に分解します。既知の手順まで動的にする、逆に調査結果次第の部分まで事前に固定化する、分解方式を一種類に統一するという判断は、いずれも予測可能な工程と実行時に発見される工程を区別できていません。',
     },
@@ -720,7 +720,7 @@ export const questions: ChoiceQuestion[] = [
         'Make even the policy-fixed steps, such as identity verification and refund execution, a dynamic structure where the agent decides at runtime whether to decompose them each time',
         'Make the known, policy-fixed steps — identity verification and refund execution — a fixed workflow, and decompose dynamically at runtime the part where the next thing to check depends on what the investigation finds',
         'Pre-encode everything into a fixed flowchart in advance, including what to check during the investigation',
-        'Decomposition should always be unified into exactly one single style across the whole flow regardless of what a given step is like, and fixed and dynamic decomposition should never under any circumstances be mixed within the same handling flow',
+        'To keep maintenance simple, do not mix fixed steps and dynamic decomposition within one handling flow; standardize the whole flow on one of the two styles',
       ],
       explanation: 'Identity verification through refund execution is a known procedure fixed by policy, so encoding it as a fixed workflow executed the same way every time is appropriate. What to check next while investigating the refund reason varies by inquiry, so that part should be decomposed dynamically based on what is discovered at runtime. Making the known steps dynamic, pre-fixing the investigation-dependent part, or insisting on one uniform decomposition style all fail to distinguish predictable steps from steps discovered at runtime.',
     },
@@ -761,7 +761,7 @@ export const questions: ChoiceQuestion[] = [
       choices: [
         '承認フローに回った案件全体の承認率など、全体平均の指標だけを継続的に追跡すれば十分である',
         '金額帯や返金理由の種類などカテゴリ別に判断の質を評価し、悪化しているカテゴリが見つかったらルーティング条件やエージェントのプロンプトへ反映する',
-        'レビュアーが見つけた指摘はその案件だけの個別の是正にとどめておき、ルーティング条件や返金対応エージェントのプロンプトへの恒常的な反映は一切行わない',
+        'ルールの頻繁な変更による混乱を避けるため、レビュアーの指摘はその案件の是正にとどめ、ルーティング条件やエージェントのプロンプトには反映しない',
         '過去に一度でも誤って処理された顧客の案件だけをレビュー対象にする',
       ],
       explanation: '全体平均だけでは、特定のカテゴリで悪化していても隠れてしまいます。カテゴリ別に質を測り、その結果をルーティング条件やプロンプトの改善へ戻すことで、レビューが一過性の是正で終わらず運用全体の精度を上げます。全体平均のみの追跡、指摘を個別対応で終わらせる運用、対象を過去の誤り案件だけに絞るサンプリングは、いずれもこの改善ループを成立させません。',
@@ -771,7 +771,7 @@ export const questions: ChoiceQuestion[] = [
       choices: [
         'Track only an overall-average metric, such as the approval rate across all routed cases',
         'Evaluate decision quality by category — such as amount range or refund reason — and feed findings from any category that is degrading back into the routing conditions or the agent’s prompt',
-        'Keep every reviewer finding limited strictly to correcting that one individual case at hand, and never feed any of it back into lasting changes to the routing conditions or the refund agent’s prompt',
+        'To avoid churn from frequent rule changes, limit reviewer findings to correcting that individual case and do not feed them into the routing conditions or the agent’s prompt',
         'Limit the review pool to only customers who have had a mishandled case at least once before',
       ],
       explanation: 'An overall average can hide degradation in a specific category. Measuring quality by category and feeding the results back into routing conditions or the prompt turns review into an improvement loop rather than a one-off fix, raising accuracy across the whole operation. Tracking only the overall average, treating findings as case-by-case fixes only, or restricting review to a biased sample of past-mistake customers all fail to close that loop.',
@@ -812,7 +812,7 @@ export const questions: ChoiceQuestion[] = [
     {
       stem: 'あおぞらペイでは規約をCLAUDE.mdへ集約しましたが、追加の要望が出ました。決済サービスの実装ディレクトリ（services/payments/）だけに適用したい規約があり、また各自のエディタ設定のような個人の好みはリポジトリへコミットしたくありません。この2つを、全員とCIに適用する既存の共通規約と両立させる配置として最も適切なのはどれですか？',
       choices: [
-        '個人の好みも決済サービス固有の規約も一切区別せずすべてひとまとめにして、リポジトリ直下のCLAUDE.local.mdへ漏れなく余さず書き込んでおき、あとになってから.gitignoreへ加える',
+        '共通規約と分けて管理できるよう、個人の好みと決済サービス固有の規約をリポジトリ直下のCLAUDE.local.mdへまとめて書き、そのファイルを.gitignoreへ加える',
         '決済サービス固有の規約は各自の ~/.claude/CLAUDE.md に書き、個人の好みはプロジェクトのCLAUDE.mdに書く',
         '個人の好みは各自の ~/.claude/CLAUDE.md、共通規約はプロジェクトのCLAUDE.md、決済固有の規約は services/payments/ 配下のCLAUDE.mdに書く',
         'すべての規約を1つのプロジェクトCLAUDE.mdへ書き、個人の好みもそこへ追記してバージョン管理する',
@@ -822,7 +822,7 @@ export const questions: ChoiceQuestion[] = [
     {
       stem: 'At Aozora Pay, conventions were consolidated into CLAUDE.md, but two new requests came in: rules that should apply only to the payment service’s implementation directory (services/payments/), and a wish to keep personal preferences, such as individual editor settings, out of the committed repository. Which placement best satisfies both alongside the existing shared rules for the whole team and CI?',
       choices: [
-        'Without distinguishing them, put both the personal preferences and the payments-specific rules together into a CLAUDE.local.md at the repository root, and add that file to .gitignore afterward',
+        'To manage them apart from the shared rules, put both the personal preferences and the payments-specific rules into a CLAUDE.local.md at the repository root and add that file to .gitignore',
         'Put the payments-specific rules in each developer’s ~/.claude/CLAUDE.md, and put personal preferences in the project CLAUDE.md',
         'Put personal preferences in each developer’s ~/.claude/CLAUDE.md, shared rules in the project CLAUDE.md, and payments rules in a CLAUDE.md under services/payments/',
         'Write every convention into one project CLAUDE.md, including personal preferences, and version-control all of it',
@@ -867,7 +867,7 @@ export const questions: ChoiceQuestion[] = [
         '本体は実行に必要な手順の要点にとどめ、詳しいテンプレート例や過去ログのような参照情報は減らし、Skillが実際に呼び出されたときだけ読み込まれる内容に絞る',
         'あらゆる利用場面を取りこぼさないよう、説明文(description)には思いつく限りの背景情報を書き足しておく',
         'テンプレート例や過去ログのような参照情報は本体に書き込まず、必要になったときだけ読み込まれる別ファイルに分け、本体からはそのファイルへの参照だけを残す',
-        '一度読み込んでおけば以降のやり取りで二度と参照し直さずに済むように、テンプレートや過去ログの詳細な情報も含めてすべてを本体へあらかじめ漏れなくまとめて書き込んでおく',
+        '参照先のファイルを探す手間を省くため、テンプレート例や過去のリリースノートの抜粋も含めて、必要な情報はすべてSKILL.md本体にまとめて書いておく',
       ],
       explanation: 'Skillは、起動判断に使う説明文などのメタデータと、実際に呼び出されたときだけ読み込まれる本体を分けて設計できます。本体は要点に絞り、テンプレートや過去ログのような参照資料は別ファイルへ分けて必要なときだけ読み込ませると、無関係な作業のコンテキストを圧迫しません。説明文を情報で埋め尽くす発想や、詳細をすべて本体へ事前集約する発想は、いずれもこの分離を無視しています。',
     },
@@ -877,7 +877,7 @@ export const questions: ChoiceQuestion[] = [
         'Keep the body to the essential steps needed to execute, trim reference material such as detailed templates and past logs, and keep the content to what actually needs to load when the Skill is invoked',
         'To avoid missing any use case, keep adding background information to the description for as long as you can think of more',
         'Move reference material such as template examples and past logs out of the body into separate files that load only when needed, and leave only a reference to those files in the body',
-        'Pre-consolidate absolutely everything into the body right now, including every template example and every excerpt from past release-note logs, so that nothing about releases ever needs to be looked up again in any later turn',
+        'To save the effort of looking up separate files, write everything needed into the SKILL.md body, including the template examples and excerpts from past release notes',
       ],
       explanation: 'A Skill can separate the metadata Claude consults when deciding whether to invoke it from the body, which loads only when the Skill is actually invoked. Keeping the body to essentials and splitting reference material such as templates and past logs into separate files that load only when needed avoids crowding the context of unrelated work. Piling background into the description, or pre-consolidating every detail into the body regardless, both ignore that separation.',
     },
@@ -893,7 +893,7 @@ export const questions: ChoiceQuestion[] = [
         '`--output-format json` と `--json-schema` を組み合わせ、指摘を file・line・severity を持つ配列として受け取り、severityがhighなら失敗させる',
         'レビュー対象は `git diff` で得られるPRの差分だけをClaudeへ渡し、変更していない既存ファイル全体は読み込ませない',
         'レビュー対象をリポジトリ全体に広げ、変更していない既存ファイルも含めてすべてClaudeに読み込ませることで指摘の精度を上げる',
-        '指摘の一覧はプルリクエストごとにテキストファイルへ保存するだけにとどめておき、その内容をCIジョブの成否判定には一切使わないまま運用を続ける',
+        '誤検知でジョブが止まらないよう、指摘の一覧はプルリクエストごとにテキストファイルへ保存するだけにし、CIジョブの成否判定には使わない',
       ],
       explanation: '`--output-format json` と `--json-schema` を組み合わせた構造化出力を使うと、指摘をfile・line・severityなどのフィールドを持つ配列として受け取れるため、severityを基準にCIが機械的に合否を判定できます。加えて、レビュー対象をPRの差分に絞ってClaudeへ渡すと、変更していない既存コードまで読み込ませずに済みます。レビュー対象をリポジトリ全体へ広げる、あるいは指摘を保存するだけでCIの合否に使わない設計は、いずれも3.6が求める機械判定可能なCI連携になっていません。',
     },
@@ -916,7 +916,7 @@ export const questions: ChoiceQuestion[] = [
     {
       stem: 'あおぞらペイはチケット管理MCPサーバーの接続設定を .mcp.json としてリポジトリにコミットし、プロジェクトスコープで共有しました。認証トークンは設定に直書きせず ${TICKET_API_TOKEN} という環境変数参照にしました。チームメンバーが初めてこのリポジトリを開いて対話セッションを使う場合と、来期予定のCI（claude -p によるレビュー要約ジョブ）でこの設定が使われる場合について、正しい記述はどれですか？',
       choices: [
-        'リポジトリにコミットした時点でチーム全員の承認がすでに済んだものとして扱われるようになり、対話セッションでも claude -p のような非対話実行でも、それ以降はずっと常に何の確認もなしでそのまま使われ続ける',
+        'リポジトリにコミットした時点でチームの承認が済んだものとして扱われ、対話セッションでも claude -p のような非対話実行でも、確認なしで使われる',
         '対話セッションでも claude -p のような非対話実行でも、プロジェクトスコープのMCPサーバーは常に承認プロンプトを表示し、CIのジョブも承認されるまでは使われない',
         '対話セッションでは初回、プロジェクトスコープのMCPサーバーを使う前に承認を求めるプロンプトが表示されるが、claude -p のような非対話実行ではそのプロンプトを出せず、承認なしにそのまま読み込まれる',
         '${TICKET_API_TOKEN} のような環境変数参照はClaude Codeでは展開されないため、実際のトークン文字列を設定に直接書く必要がある',
@@ -944,20 +944,20 @@ export const questions: ChoiceQuestion[] = [
       choices: [
         '統合パスには各回の抽出結果を再抽出させるのではなく、表記揺れや日付の矛盾など回をまたぐ整合性だけを検証する専用の指示を与える',
         '統合パスにも各回のパスと同じ抽出用プロンプトをそのまま使い、結合した全文に対してもう一度同じ抽出をやり直させる',
-        '統合パスという工程自体を置かず、各回のパスの出力をそのまま連結してインデクサーへ渡す',
+        '統合パスには矛盾の検出に加えて、各回で確定した値をより自然な表現へ書き直すことも任せる',
         '統合パスには各回の抽出結果に加えて全10回分の記事本文もそのまま渡してしまい、抽出のやり直しと整合性確認の両方を一度に担わせる',
       ],
-      explanation: '統合パスの役割は各回の抽出をやり直すことではなく、回をまたぐ矛盾を検出することです。何を矛盾とみなすかを定めた専用の指示を与えれば、統合パスはその役割に集中でき、各回のパスで確定した抽出結果を壊さずに済みます。抽出用プロンプトの再利用や本文の再投入は、統合パスに抽出のやり直しまで負わせて役割を曖昧にし、統合パスを省く設計はそもそも回をまたぐ矛盾を検出する工程を失います。',
+      explanation: '統合パスの役割は各回の抽出をやり直すことではなく、回をまたぐ矛盾を検出することです。何を矛盾とみなすかを定めた専用の指示を与えれば、統合パスはその役割に集中でき、各回のパスで確定した抽出結果を壊さずに済みます。抽出用プロンプトの再利用や本文の再投入は、統合パスに抽出のやり直しまで負わせて役割を曖昧にします。確定済みの値の書き換えを任せると、各回で確認した結果が検証役の工程で変わってしまいます。',
     },
     {
       stem: 'You are extracting people and events from a serialized article running across 10 installments, with each installment extracted in its own independent pass. What is the most appropriate design for the integration pass?',
       choices: [
         'Give the integration pass a dedicated instruction that checks only for cross-installment consistency, such as inconsistent spellings or clashing dates, rather than having it re-extract',
         'Reuse the same extraction prompt from the per-installment passes for the integration pass too, and have it redo the same extraction over the combined text',
-        'Skip the integration pass as a stage entirely, and simply concatenate the per-installment outputs before handing them to the indexer',
+        'Have the integration pass detect contradictions and also rewrite values already settled in each installment into more natural wording',
         'Pass the integration pass both the per-installment extraction results and the full text of all 10 installments, and have it handle re-extraction and consistency checking together',
       ],
-      explanation: 'The integration pass exists to catch cross-installment contradictions, not to redo each installment’s extraction. A dedicated instruction that states what counts as a contradiction lets the integration pass focus on that job without disturbing the extraction results each installment’s pass already settled. Reusing the extraction prompt or resubmitting the raw text saddles the integration pass with re-extraction as well, blurring its role, and skipping the stage removes the only place that checks for cross-installment contradictions at all.',
+      explanation: 'The integration pass exists to catch cross-installment contradictions, not to redo each installment’s extraction. A dedicated instruction that states what counts as a contradiction lets the integration pass focus on that job without disturbing the extraction results each installment’s pass already settled. Reusing the extraction prompt or resubmitting the raw text saddles the integration pass with re-extraction as well, blurring its role. Letting it rewrite settled values means the checking stage changes results each installment already confirmed.',
     },
     ['structured', 'evals'],
     { scenarioId: 'sc-extraction-pipeline', verifiedAt: '2026-09-29', revision: 2 },
@@ -968,7 +968,7 @@ export const questions: ChoiceQuestion[] = [
     {
       stem: 'フィールド単位の再試行を繰り返しても、ある記事だけは上限に達してもなお検証を通りません。上限に達した後の扱いとして最も適切なのはどれですか？',
       choices: [
-        '上限という仕組みそのものを無視してリトライを際限なく継続し続け、検証を通るまでは自動処理を決して止めない',
+        '記事の取りこぼしを防ぐため、上限に達しても検証を通るまで自動のリトライを続ける',
         '検証に失敗したフィールドへ無難なデフォルト値を埋め、そのままインデクサーへ投入する',
         '検証エラーの詳細（失敗したフィールド・期待条件・実際の値）を添えて人のレビュー待ちへ回す',
         '検証エラーを記録せずに当該記事を飛ばし、後続の処理には触れさせない',
@@ -978,7 +978,7 @@ export const questions: ChoiceQuestion[] = [
     {
       stem: 'Field-level retries keep running, but one article still fails validation even after the retry cap is reached. What is the most appropriate handling once the cap is hit?',
       choices: [
-        'Ignore the very idea of a cap and keep retrying indefinitely, never letting the automated process stop until validation finally passes',
+        'To avoid missing any article, keep retrying automatically past the cap until validation passes',
         'Fill the failed field with a reasonable-looking default value and let the record proceed to the indexer as is',
         'Route it to a human-review queue with the validation failure details attached (the failed field, expected condition, and actual value)',
         'Skip the article without recording the error, letting downstream processing continue untouched',

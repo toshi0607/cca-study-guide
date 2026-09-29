@@ -38,27 +38,27 @@
 各シナリオ内で format を維持する。背景に材料が足りない場合はシナリオ背景へ段落を追加し、シナリオの revision を上げる。
 
 ### sc-mcp-tool-design（d2）
-- [ ] `q-sc-mcp-carrier-error`（2.2）: 一括処理ツールの部分失敗。項目ごとの成否と再試行可否を返す（`q-d2-transient-error` は一時的か恒久的かの分類）
-- [ ] `q-sc-mcp-surface`（2.3）: 分割し過ぎによる往復コスト（`q-d2-tool-overload` は選択肢の削減）
-- [ ] `q-sc-mcp-token`（2.4）: 個人トークンを使うサーバーと共有サーバーのスコープ選択（local/project/user）
+- [x] `q-sc-mcp-carrier-error`（2.2）: 一括処理ツールの部分失敗。項目ごとの成否と再試行可否を返す（`q-d2-transient-error` は一時的か恒久的かの分類）
+- [x] `q-sc-mcp-surface`（2.3）: 分割し過ぎによる往復コスト（`q-d2-tool-overload` は選択肢の削減）
+- [x] `q-sc-mcp-token`（2.4）: 個人トークンを使うサーバーと共有サーバーのスコープ選択（local/project/user）
 - 維持: `q-sc-mcp-args`（シナリオを最低3問に保つため。重複が残ることは PR に記載）
 
 ### sc-code-rollout（d3, d2）
-- [ ] `q-sc-code-conventions`（3.1 維持・hands-on 参照あり）: CLAUDE.md の階層と優先関係（個人・プロジェクト・サブディレクトリ）
-- [ ] `q-sc-code-skill`（3.2）: SKILL.md を小さく保つ（段階的な読み込み・参照資源への分離）
-- [ ] `q-sc-code-e2e-rules`（3.3）: glob が意図したファイルに一致するかの検証・全体指示との重複
-- [ ] `q-sc-code-ci`（3.6 維持・hands-on 参照あり、3.5 を追加）: レビュー用プロンプトの反復改善（評価基準を先に決め、変更ごとに回帰を確認）
-- [ ] `q-sc-code-mcp-config`（2.4）: プロジェクトスコープの `.mcp.json` を共有したときの承認・信頼境界
+- [x] `q-sc-code-conventions`（3.1 維持・hands-on 参照あり）: CLAUDE.md の階層と優先関係（個人・プロジェクト・サブディレクトリ）
+- [x] `q-sc-code-skill`（3.2）: SKILL.md を小さく保つ（段階的な読み込み・参照資源への分離）
+- [x] `q-sc-code-e2e-rules`（3.3）: glob が意図したファイルに一致するかの検証・全体指示との重複
+- [x] `q-sc-code-ci`（3.6 維持・hands-on 参照あり、3.5 を追加）: レビュー用プロンプトの反復改善（評価基準を先に決め、変更ごとに回帰を確認）
+- [x] `q-sc-code-mcp-config`（2.4）: プロジェクトスコープの `.mcp.json` を共有したときの承認・信頼境界
 
 ### sc-extraction-pipeline（d4, d5）
-- [ ] `q-sc-pipe-validation`（4.3→4.6）: 長い文書を複数パスで抽出し、統合時に全体の整合を検証する
-- [ ] `q-sc-pipe-retry`（4.4）: 再試行上限に達した後のフォールバック（人のレビュー待ちへ回す等）
-- [ ] `q-sc-pipe-batch`（4.5）: バッチ結果の部分失敗。custom_id で対応付け、失敗・期限切れ分だけ再投入する
+- [x] `q-sc-pipe-validation`（4.3→4.6）: 長い文書を複数パスで抽出し、統合時に全体の整合を検証する
+- [x] `q-sc-pipe-retry`（4.4）: 再試行上限に達した後のフォールバック（人のレビュー待ちへ回す等）
+- [x] `q-sc-pipe-batch`（4.5）: バッチ結果の部分失敗。custom_id で対応付け、失敗・期限切れ分だけ再投入する
 
 ### sc-support-agents（d1, d5）
-- [ ] `q-sc-support-context`（5.1）: 長い入力での情報配置と、再開に必要な状態の明示
-- [ ] `q-sc-support-escalation`（5.2/5.5 維持・hands-on 参照あり）: エスカレーション結果を分類別に見て改善ループへ戻す
-- [ ] `q-sc-support-parallel`（1.2/1.6）: 固定フローと動的分解の使い分け（既知の返金手順は固定、調査分岐は動的）
+- [x] `q-sc-support-context`（5.1）: 長い入力での情報配置と、再開に必要な状態の明示
+- [x] `q-sc-support-escalation`（5.2/5.5 維持・hands-on 参照あり）: エスカレーション結果を分類別に見て改善ループへ戻す
+- [x] `q-sc-support-parallel`（1.2/1.6）: 固定フローと動的分解の使い分け（既知の返金手順は固定、調査分岐は動的）
 - 維持: `q-sc-support-worker-contract`
 
 ## 手順
@@ -66,7 +66,7 @@
 - [x] P0: `question()` ヘルパーに revision を渡せるようにする（`extra.revision`）。検証: `pnpm test` exit 0 → 2026-09-29 exit 0（32 files / 676 tests）
 - [x] P1: シナリオ4つ分の下書きを並列で作る（サブエージェントが公式ページを取得・引用、scratchpad に TS 断片を出力） → 4本完了
 - [x] P2: 下書きをレビューして questions.ts / rationales.ts / scenarios.ts に適用。検証: `pnpm test` exit 0 → 2026-09-29 exit 0（676 tests）、build exit 0
-- [ ] P3: 重複の再チェック（書き直し後に新しい重複を作っていないか）と事実照合を reviewer で行う
+- [x] P3: 重複の再チェック（書き直し後に新しい重複を作っていないか）と事実照合を reviewer で行う → 3回目で mergeable（BLOCKER/MAJOR なし）
 - [x] P4: `pnpm build` / `pnpm test:e2e:fast` / `pnpm test:styles` exit 0 → build exit 0、styles exit 0、E2E（reuse, @slow 除外）106/107。失敗1件 save-failure.spec.ts:95 はガイド画面のボタン待ちタイムアウトで、単独再実行 3/3 pass（負荷起因の flaky、設問変更と無関係）
 - [ ] P5: PR 作成、CI 通過確認
 
@@ -83,4 +83,8 @@
 
 ## Review
 
-（P3 の結果をここに記録）
+- 1回目（56c578d 対象）: BLOCKER 1（mcp-token 誤答根拠の事実誤り）、MAJOR 6（code-ci / pipe-validation / support-context の重複・不一致、選択肢長の偏り、出典）→ ac114cf で対応
+- 2回目: pipe-validation が出典系と、support-context が q-d1-handoff-data と重複。英語版の長さの偏り → facfb6f で対応
+- 3回目: mergeable。残った MINOR（長さ調整のための強調語「一切」「決して」等、pipe-validation の誤答 c が q-d4-multipass の誤答の裏返し）は最終コミットで対応
+- 最終検証: `pnpm test` 676/676 exit 0、`pnpm build` exit 0、`pnpm test:styles` exit 0、`pnpm test:e2e:reuse`（全件）159/159 exit 0
+- 既知の残り: `q-sc-mcp-args` と `q-sc-support-worker-contract` は重複を残したまま（シナリオ最低3問の維持と範囲の都合）。「受け直しても同じ60問」はバンク拡張の別タスク
