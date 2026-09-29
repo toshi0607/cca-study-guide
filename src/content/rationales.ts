@@ -513,26 +513,26 @@ export const choiceRationales: ChoiceRationales = {
   },
   'q-sc-support-context': {
     a: localized(
-      '顧客にすでに約束した対応と次に取るべき行動を明示しておけば、翌日の担当者は会話を読み返さなくても何をすべきかを正確に把握できます。',
-      'Making explicit what was already promised to the customer and the concrete next step lets the next day’s agent know exactly what to do without re-reading the conversation.',
+      '顧客への約束や注文IDのような値は、後から取り直す方法がありません。要約に紛れ込ませず記録へそのまま残しておけば、翌日の担当者は一字違いの取り違えなく正確な値を引き継げます。',
+      'Values such as a promise made to the customer or the order ID have no way to be recovered afterward if lost. Keeping them out of a summary and in the record verbatim lets the next day’s agent inherit the exact value without a one-character slip.',
     ),
     b: localized(
-      '会話ログ全文をそのまま渡すと、必要な情報が長い雑談やこれまでの経緯に埋もれ、担当者は毎回探し出す手間を負います。長引いた問い合わせほど、この負担は大きくなります。',
-      'Handing over the raw log in full buries the needed information in a long back-and-forth, forcing the agent to search it out every time — worse the longer the case has run.',
+      '配送状況や在庫数は業務システムに照会すれば最新の値を取り直せます。前日時点の値を記録に固定してしまうと、状況が変わっていても古い値がそのまま使われてしまいます。',
+      'Delivery status or stock levels can be re-obtained with a fresh lookup against the backend system. Fixing yesterday’s value into the record risks it being used as-is even after the real state has changed.',
     ),
     c: localized(
-      '確認済みの事項と未確認の事項を区別しておくと、担当者は本人確認などをやり直す必要があるかどうかを即座に判断できます。区別がなければ、既に済んだ確認を重複して行うか、未確認のまま処理を進めてしまう危険があります。',
-      'Separating what is already verified from what is not lets the agent immediately tell whether something like identity verification needs to be redone. Without that distinction, the risk is redoing a check that is already done, or proceeding on something that was never confirmed.',
+      '会話ログ全文をそのまま渡すと、やり直しの効かない事実（顧客への約束や注文ID）と、照会し直せば済む情報（配送状況など）の区別が担当者に丸投げされ、長い履歴の中から毎回選り分ける手間が生じます。',
+      'Handing over the raw log in full dumps the job of separating facts that cannot be redone — a promise, an order ID — from information that a fresh lookup would resolve — delivery status — onto the agent, who then has to sort them out of the long history every time.',
     ),
     d: localized(
-      '1段落の要約は流れを短くはしますが、どの約束が未完了か、何が確認済みかという個別の判断材料を持たないため、担当者は結局元のやり取りを読み返すことになります。',
-      'A one-paragraph summary shortens the narrative but carries none of the individual facts — which commitment is still open, what is verified — so the agent still ends up rereading the original exchange.',
+      '前日の照会結果を「現在の状況」として固定すると、実際には状況が変わっていても記録上の古い値がそのまま正として使われ続けます。取り直せる情報はその場で照会し直すべきで、記録に凍結してはいけません。',
+      'Freezing yesterday’s lookup result as “the current status” keeps the record’s stale value treated as authoritative even after the real situation has moved on. Information that can be re-obtained should be looked up fresh, not frozen into the record.',
     ),
   },
   'q-sc-code-conventions': {
     a: localized(
-      'CLAUDE.local.mdはプロジェクト直下に置く個人用ファイルで、.gitignoreの対象になり他の開発者やCIには渡りません。決済サービス固有の規約をここへ置くと、チームの誰にも適用されなくなります。',
-      'CLAUDE.local.md is a personal file at the project root that is gitignored and never reaches other developers or CI. Putting the payments-specific rules there means no one on the team ever gets them.',
+      'CLAUDE.local.mdはプロジェクト直下に置く個人用ファイルで、他の開発者やCIには渡りません。しかも個人の好みと決済サービス固有の規約を区別せずに1つへまとめてしまうと、決済サービス固有の規約もチームの誰にも適用されなくなります。',
+      'CLAUDE.local.md is a personal file at the project root that never reaches other developers or CI. Lumping personal preferences together with the payments-specific rules without distinguishing them also means no one on the team ever gets the payments-specific rules either.',
     ),
     b: localized(
       '配置が入れ替わっています。~/.claude/CLAUDE.mdは各自の環境にしか存在しないため、決済サービス固有の規約を置いても他の開発者やCIには適用されません。逆にプロジェクトCLAUDE.mdは全員へ配られるため、個人の好みまで共有されてしまいます。',
@@ -585,16 +585,16 @@ export const choiceRationales: ChoiceRationales = {
   },
   'q-sc-code-ci': {
     a: localized(
-      '--json-schema を使うとfile・line・severityなどのフィールドを持つ構造化配列として指摘を受け取れます。severityがhighの指摘があるかどうかで終了状態を分ければ、CIは出力の文面を解釈せずに機械的に合否を判定できます。',
-      'With --json-schema, findings come back as a structured array with fields such as file, line, and severity. Branching the exit status on whether any finding has severity high lets CI decide pass/fail mechanically without parsing prose.',
+      '--output-format json と --json-schema を組み合わせると、file・line・severityなどのフィールドを持つ構造化配列として指摘を受け取れます。severityがhighの指摘があるかどうかで終了状態を分ければ、CIは出力の文面を解釈せずに機械的に合否を判定できます。',
+      'Combining --output-format json with --json-schema returns findings as a structured array with fields such as file, line, and severity. Branching the exit status on whether any finding has severity high lets CI decide pass/fail mechanically without parsing prose.',
     ),
     b: localized(
-      'レビュー対象をPRの差分に絞ってClaudeへ渡すと、変更していない既存コードを毎回読み込ませずに済み、無関係な指摘や余計なコストを減らせます。',
-      'Scoping the review input to the PR diff means Claude doesn’t re-read unchanged existing code on every run, cutting irrelevant findings and unnecessary cost.',
+      'レビュー対象をPRの差分に絞ってClaudeへ渡すと、変更していない既存コードを毎回読み込ませずに済みます。',
+      'Scoping the review input to the PR diff means Claude doesn’t have to re-read unchanged existing code on every run.',
     ),
     c: localized(
-      '出力を自然文の要約のままにすると、重大度の判定は人がプルリクエストを開くたびに本文を読んで行うことになり、CIが機械的に合否を判定できません。3.6が求める、出力形式と終了状態で成否を判定できるという前提が成立しません。',
-      'Leaving the output as a prose summary means severity judgment still requires a person to open and read each pull request, so CI cannot decide pass/fail mechanically. This fails the premise 3.6 requires: judging success from output format and exit behavior.',
+      'レビュー対象をリポジトリ全体へ広げても、severityを基準に機械的に合否判定するという3.6の要件には関係がなく、変更していないファイルまで読み込ませる分だけコストが増えます。',
+      'Broadening the review target to the whole repository has nothing to do with 3.6’s requirement of judging pass/fail mechanically by severity, and only adds cost from reading files that were never changed.',
     ),
     d: localized(
       '指摘を保存するだけでCIジョブの成否判定に使わなければ、ジョブは実際には何も検証せずに完了したことになります。指摘が機械可読であっても、それをCIの判定に結び付けなければ3.6の要件を満たしません。',
@@ -621,20 +621,20 @@ export const choiceRationales: ChoiceRationales = {
   },
   'q-sc-pipe-validation': {
     a: localized(
-      '出典位置を添えた構造化データであれば、統合パスは各値がどの回のどの記述に基づくかを保ったまま突き合わせられ、回をまたぐ矛盾を機械的に検出できます。',
-      'Structured data carrying provenance lets the integration pass cross-check while knowing which installment and passage each value came from, so it can mechanically detect cross-installment contradictions.',
+      '統合パス専用の指示で「何を矛盾とみなすか」を定めておけば、統合パスは各回の抽出結果をやり直すことなく、回をまたぐ整合性の検証だけに専念できます。各回のパスが確定させた値もそのまま活かされます。',
+      'A dedicated instruction stating what counts as a contradiction lets the integration pass focus solely on cross-installment consistency without redoing each installment’s extraction, and keeps the values each installment’s pass already settled intact.',
     ),
     b: localized(
-      '自然文の要約は位置情報を保持しないため、統合パスはどの回のどの記述が矛盾の原因かを特定できず、修正のために元の本文を読み直す手間が生じます。',
-      'A prose summary drops the location information, so the integration pass cannot pin down which installment and passage caused a contradiction, forcing a re-read of the original text to fix it.',
+      '抽出用プロンプトをそのまま統合パスでも使うと、統合パスは各回のパスと同じ抽出作業を繰り返すだけになり、回をまたぐ矛盾を検出するという固有の役割を果たせません。',
+      'Reusing the extraction prompt for the integration pass just repeats the same extraction work each installment’s pass already did, and does nothing toward the integration pass’s own job of catching cross-installment contradictions.',
     ),
     c: localized(
-      '元の本文をそのまま統合パスへ渡すのは、各回を独立したパスで抽出するという設計そのものを無効化します。統合パスの役割は抽出済みの結果を突き合わせることであり、抽出をやり直すことではありません。',
-      'Handing the raw text to the integration pass unchanged undoes the point of extracting each installment in its own pass. The integration pass’s role is to cross-check already-extracted results, not to redo extraction.',
+      '統合パスという工程自体を省くと、回をまたぐ矛盾を検出する場所がどこにもなくなります。各回のパスの出力をただ連結しても、表記揺れや日付の食い違いは残ったままインデクサーへ流れ込みます。',
+      'Skipping the integration pass entirely removes the only stage that checks for cross-installment contradictions. Simply concatenating the per-installment outputs lets inconsistent spellings or clashing dates flow straight through to the indexer.',
     ),
     d: localized(
-      '最終回のパスの結果だけを採用すると、それ以前の回で生じた誤りを突き合わせる機会がなく、統合パスが本来担うべき回をまたぐ整合確認が成立しません。',
-      'Adopting only the final installment’s result gives no chance to cross-check mistakes made in earlier installments, so the integration pass cannot perform the cross-installment consistency check it exists for.',
+      '統合パスに抽出のやり直しまで担わせると、局所的な抽出と全体の整合確認という役割の分離が崩れ、抽出のやり直しでは各回のパスの結果を壊しかねません。',
+      'Loading the integration pass with re-extraction as well collapses the separation between local extraction and global consistency checking, and redoing the extraction risks overwriting what each installment’s pass already got right.',
     ),
   },
   'q-sc-pipe-retry': {

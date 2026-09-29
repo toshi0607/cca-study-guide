@@ -76,7 +76,10 @@
 - 「受け直しても同じ60問」という問題は今回の範囲外。バンク拡張は別タスクとして提案する。
 - シナリオ背景は validate で最大4段落。sc-mcp-tool-design と sc-code-rollout は追加分を第4段落へ結合した。背景を変えた3シナリオは revision 2。
 - 下書きの修正: pipe-validation の選択肢 d が a とほぼ同じだったため「前回までの結果を順に引き継ぐ」誤りへ差し替え。出典のない主張（長い入力で精度低下、バッチに自動再試行なし、質問の文脈が薄れる）を削除し、公式の表現へ寄せた。
-- 設計判断の問題（公式ドキュメントに直接記述がなく試験ガイドの task statement 文言に依拠）: q-sc-pipe-validation, q-sc-pipe-retry, q-sc-support-escalation, q-sc-support-parallel, q-sc-code-ci の手順部分。
+- 設計判断の問題（公式ドキュメントに直接記述がなく試験ガイドの task statement 文言に依拠）: q-sc-pipe-validation, q-sc-pipe-retry, q-sc-support-escalation, q-sc-support-parallel, q-sc-support-context, q-sc-mcp-carrier-error の選択肢 d。q-sc-mcp-surface の往復コストは tool-use ページの記述で裏付け済み。
+- hands-on 参照のため残した objectiveIds のうち、q-sc-support-escalation の 5.2 と q-sc-support-parallel の 1.2 は名目上のタグになった（設問は 5.5 / 1.6 を測る）。PR に明記する。
+- レビュー1回目（ac114cf で対応）: mcp-token 誤答の事実誤り、code-ci と q-d3-iterative-eval の重複、pipe-validation と q-d4-multipass の重複、support-context の task statement 不一致、正答だけ長い選択肢。
+- レビュー2回目: pipe-validation が出典系（q-d5-provenance, q-sc-pipe-provenance）と、support-context が q-d1-handoff-data と重複。英語版の長さの偏り。
 
 ## Review
 
