@@ -90,7 +90,7 @@ export const officialScenarios: OfficialScenario[] = Object.values(officialScena
 export const scenarios: Scenario[] = [
   {
     id: 'sc-mcp-tool-design',
-    revision: 1,
+    revision: 2,
     title: localized(
       '物流SaaSのMCPサーバー設計相談',
       'Designing an MCP server for a logistics SaaS',
@@ -99,12 +99,14 @@ export const scenarios: Scenario[] = [
       [
         '架空の物流SaaS企業「北斗ロジスティクス」は、配送管理プラットフォームの機能をAIエージェントから操作できるようにするため、MCPサーバーの開発を始めた。最初の実装では、既存のREST APIの約40エンドポイントを1対1でそのままツール化した。「createShipment」「updateShipmentStatusV2」「listShipmentsByWarehouseId」など、社内APIの命名がそのままツール名になっている。',
         '社内検証では問題が多発した。エージェントは似た名前のツールをしばしば取り違え、日付やIDの引数を誤った形式で渡す。外部の配送業者APIが混雑時間帯にレート制限を返すと、ツールは例外のスタックトレースをそのまま文字列で返し、エージェントは同じ呼び出しを何度も繰り返した。',
-        'さらに、チーム展開の段階で設定共有の問題も見つかった。検証用に作った設定ファイルには配送業者APIのトークンが直接書かれており、そのファイルがそのまま社内リポジトリへコミットされていた。プラットフォームチームは、ツール設計と運用の両面を見直すことにした。',
+        'さらに、チーム展開の段階で設定共有の問題も見つかった。検証用に作った設定ファイルには配送業者APIのトークンが直接書かれており、そのファイルがそのまま社内リポジトリへコミットされていた。この秘密の是正と並行して、MCPサーバーの公開範囲も整理することになった。ある開発者は、配送業者が提供するサンドボックス環境を自分の個人アカウントで動作確認するためだけにMCPサーバーへつないでおり、この認証情報は他のメンバーには意味を持たない。一方、本番の配送業者APIに接続するMCPサーバーは、チーム全員が同じツール定義を使えるようにしたい。プラットフォームチームは、ツール設計と運用の両面を見直すことにした。',
+        'その後、複数の配送データをまとめて登録する一括登録ツール「registerShipmentsBulk」を追加した。10件をまとめて送信すると、配送業者APIが混雑時間帯のレート制限で一部の項目だけを拒否することがある。現行実装は、1件でも拒否されると呼び出し全体を「失敗」として返しており、エージェントは成功した項目も含めて10件すべてを最初から再送していた。',
       ],
       [
         'Hokuto Logistics, a fictional logistics SaaS company, has started building an MCP server so AI agents can operate its delivery-management platform. The first implementation exposed roughly forty REST API endpoints as tools one-to-one: internal API names such as “createShipment”, “updateShipmentStatusV2”, and “listShipmentsByWarehouseId” became the tool names unchanged.',
         'Internal testing surfaced many problems. The agent frequently confused similarly named tools and passed dates and IDs in the wrong format. When the external carrier API returned rate-limit errors during busy hours, the tools returned raw exception stack traces as strings, and the agent kept repeating the same call.',
-        'Rolling the server out to the wider team exposed a configuration problem as well: a validation config file contained the carrier API token in plain text and had been committed to the internal repository as-is. The platform team decided to rework both the tool design and the operational setup.',
+        'Rolling the server out to the wider team exposed a configuration problem as well: a validation config file contained the carrier API token in plain text and had been committed to the internal repository as-is. Alongside fixing that leaked secret, the team also needed to sort out MCP server exposure. One developer had connected an MCP server to the carrier’s sandbox environment purely to test things under their own personal account — that credential means nothing to anyone else on the team. Meanwhile, the MCP server that talks to the production carrier API is one the whole team should be able to use with the same tool definitions. The platform team decided to rework both the tool design and the operational setup.',
+        'The team later added a bulk registration tool, “registerShipmentsBulk”, for submitting multiple shipments in one call. When ten records are sent together, the carrier API sometimes rejects only some of them during a rate-limit window. The current implementation returns the whole call as a single "failure" if even one record is rejected, so the agent resubmitted all ten records from scratch, including the ones that had already succeeded.',
       ],
     ),
     domainIds: ['d2'],
@@ -114,7 +116,7 @@ export const scenarios: Scenario[] = [
   },
   {
     id: 'sc-support-agents',
-    revision: 1,
+    revision: 2,
     title: localized(
       'ECカスタマーサポートのエージェント構成選定',
       'Choosing an agent architecture for e-commerce support',
@@ -124,11 +126,13 @@ export const scenarios: Scenario[] = [
         '架空のEC企業「さくらマーケット」は、問い合わせ対応の一次処理をエージェントに任せる計画を進めている。問い合わせの多くは、注文状況・配送・返金・アカウントの4分類に収まる。返金には社内規定があり、一定額を超える場合や本人確認が済んでいない場合は、必ず人間の承認者に回さなければならない。',
         '現在の試作は、すべての業務ツールを1つのエージェントに与えた単一構成で、注文と配送の照会のような互いに独立した調べ物でも1つずつ順番に実行している。対応が長引いた問い合わせでは会話履歴が肥大化し、初期に確認した注文番号や顧客の希望をエージェントが取り違える事象も報告された。',
         '開発チームは、オーケストレーター型の構成への移行と、エスカレーション条件・長時間セッションの状態管理の再設計を検討している。',
+        '対応が長引く問い合わせの一部は当日中に解決せず、翌日は別の担当者が引き継ぐことになる。現在のプロトタイプは、引き継ぎのたびに前日の会話ログをそのままコピーして新しい担当者に渡すだけで、顧客にすでに約束した対応や、本人確認など何が確認済みで何が未確認かは、担当者が会話を読み返して探し出す必要がある。',
       ],
       [
         'Sakura Market, a fictional e-commerce company, plans to let an agent handle the first pass of customer inquiries. Most inquiries fall into four categories: order status, delivery, refunds, and accounts. Refunds are governed by an internal policy: any case above a set amount, or without completed identity verification, must go to a human approver.',
         'The current prototype is a single agent holding every business tool, and it runs even mutually independent lookups — such as an order check and a delivery check — one at a time in sequence. In long-running cases the conversation history balloons, and the team has seen the agent mix up order numbers and customer preferences that were confirmed early in the conversation.',
         'The development team is now evaluating a move to an orchestrator-style architecture, together with a redesign of the escalation conditions and of state management for long sessions.',
+        'Some inquiries that run long are not resolved the same day, and a different agent picks the case up the next day. The current prototype simply copies the previous day’s chat log as-is to the new agent at each handoff, leaving them to comb back through the conversation to find any commitments already made to the customer and which facts — such as identity verification — are already confirmed versus still open.',
       ],
     ),
     domainIds: ['d1', 'd5'],
@@ -138,7 +142,7 @@ export const scenarios: Scenario[] = [
   },
   {
     id: 'sc-code-rollout',
-    revision: 1,
+    revision: 2,
     title: localized(
       'フィンテック開発チームへのClaude Code導入',
       'Rolling out Claude Code to a fintech team',
@@ -148,13 +152,13 @@ export const scenarios: Scenario[] = [
         '架空のフィンテック企業「あおぞらペイ」の開発チーム（20名）は、Claude Codeを全員の開発フローに導入することにした。パイロット期間中、各自が口頭やチャットでコーディング規約を毎回プロンプトに貼り付けており、規約の適用は人によってばらばらだった。E2Eテストにだけ適用したい記述規約もあるが、置き場所が決まっていない。',
         'また、リリースノートの下書き作成という定型作業を繰り返し依頼しており、毎回同じ長い手順をプロンプトへ貼っている。手順には参照すべきテンプレートファイルと整形スクリプトが付随する。',
         '社内のチケット管理システムをMCPサーバー経由で全員の環境から使えるようにする計画もあるが、接続設定の配布方法と認証トークンの置き場所が決まっていない。',
-        '次の四半期にはCIパイプラインへの組み込みも予定している。CIでは、プルリクエストの静的チェック結果を要約するジョブを毎回自動で実行したい。セキュリティチームからは、CI実行環境に与える権限と実行形態について事前レビューを求められている。',
+        '次の四半期にはCIパイプラインへの組み込みも予定している。CIでは、プルリクエストの静的チェック結果を要約するジョブを毎回自動で実行したい。セキュリティチームからは、CI実行環境に与える権限と実行形態について事前レビューを求められている。パイロットが進むにつれ、決済サービスの実装ディレクトリ（services/payments/）だけに適用したい追加の規約や、各自のエディタ設定のような個人の好みをリポジトリにコミットしたくないという要望も出てきた。CIのジョブは静的チェックの要約に加えてAIによるレビューコメントも生成する設計にしたが、稼働開始の直後から指摘の誤検知（false positive）が多いという報告が相次いだ。',
       ],
       [
         'The 20-person development team at Aozora Pay, a fictional fintech company, has decided to adopt Claude Code across everyone’s workflow. During the pilot, each developer pasted the coding conventions into prompts by hand, so how the conventions were applied varied from person to person. Some writing conventions should apply only to E2E test files, but the team has not decided where to put them.',
         'The team also repeatedly requests the same routine task — drafting release notes — pasting the same long procedure into the prompt every time. The procedure comes with a template file and a formatting script that should be used together.',
         'There is also a plan to make the internal ticket system available from everyone’s environment through an MCP server, but the team has not decided how to distribute the connection settings or where the auth token should live.',
-        'Next quarter the team plans to integrate Claude Code into the CI pipeline, running a job on every pull request that summarizes static-check results. The security team has asked for an upfront review of the permissions and execution mode granted to the CI environment.',
+        'Next quarter the team plans to integrate Claude Code into the CI pipeline, running a job on every pull request that summarizes static-check results. The security team has asked for an upfront review of the permissions and execution mode granted to the CI environment. As the pilot progressed, requests also came in for additional conventions that should apply only to the payment service’s implementation directory (services/payments/), and for keeping personal preferences, such as individual editor settings, out of the committed repository. The CI job was designed to generate AI-written review comments in addition to summarizing static checks, but soon after launch the team reported a high rate of false-positive findings.',
       ],
     ),
     domainIds: ['d3', 'd2'],

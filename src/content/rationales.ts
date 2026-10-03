@@ -387,20 +387,20 @@ export const choiceRationales: ChoiceRationales = {
   },
   'q-sc-mcp-surface': {
     a: localized(
-      '取り違えの原因は「updateShipmentStatusV2」のような似た名前が並んでいることであり、略語化はその区別をさらに難しくします。名前や説明が短くなるほど、どのツールがどの場面用かの手掛かりが減ります。',
-      'The mix-ups come from near-identical names such as “updateShipmentStatusV2” sitting next to each other, and abbreviating makes them harder to tell apart. Shorter names and descriptions leave fewer cues about which tool fits which situation.',
+      '責任の明確さは分割の利点の一つですが、操作のたびにエージェント間の呼び出しが発生する往復コストとは別の軸です。上限なく分割を進めると、典型的な作業が何往復も要するようになります。',
+      'Clearer responsibility is one benefit of splitting, but it is a different axis from the round-trip cost of an inter-agent call on every operation. Splitting without any cap makes a typical task take many round trips to finish.',
     ),
     b: localized(
-      '選択肢を1つにしても、40エンドポイントぶんの分岐は汎用ツールの引数へ移るだけです。スキーマで表現できる制約が薄くなり、誤りの発生箇所が引数生成へ移動します。',
-      'Collapsing the choice does not remove the forty-way decision; it relocates it into the arguments of one tool. Less of the contract can be expressed in the schema, so the errors simply move from selection to argument construction.',
+      '往復のたびに待ち時間とハンドオフの手間が積み上がるため、典型的な作業をいくつのツール呼び出しで終えられるかを基準に、往復が作業を遅くしない粒度を選ぶのが分割の判断軸になります。',
+      'Every round trip adds latency and handoff overhead, so the number of tool calls a typical task needs is the right basis: pick a granularity where the added round trips do not slow that task down.',
     ),
     c: localized(
-      '取り違えは、内部APIの構造をそのまま写した結果として似た粒度・似た名前のツールが大量に並んでいることから生じています。エージェントの仕事の単位でまとめ直せば、同時に見える候補が減り、候補どうしの違いも説明しやすくなります。',
-      'The confusion follows directly from mirroring the internal API: forty tools at the same granularity with similar names. Grouping them by the agent’s units of work shrinks the candidate set visible at once and makes the remaining candidates easier to describe distinctly.',
+      '専門エージェントへ分割しても、似た名前・似た粒度の操作が並べば取り違えは残り得ます。分割は取り違えを減らす一手ですが、それだけで問題が消えるとは限らず、往復コストという新たな副作用も生まれます。',
+      'Splitting into specialized agents does not guarantee mix-ups disappear if similarly named, similarly grained operations still sit next to each other. Splitting helps, but it is not a guaranteed fix, and it introduces a new side effect: round-trip cost.',
     ),
     d: localized(
-      '温度はサンプリングの分散に影響するだけで、候補どうしが区別しにくいという状態は変わりません。区別できない選択肢の中から、より確信を持って誤る方向に働くこともあります。',
-      'Temperature affects sampling spread, not whether two candidates are distinguishable. Between options the model cannot tell apart, it may simply pick the wrong one more consistently.',
+      '温度はサンプリングの分散に影響するだけで、分割によって増える往復回数やハンドオフの手間には触れません。分割数を無視してよい理由にはなりません。',
+      'Temperature affects sampling spread only; it says nothing about the extra round trips and handoff overhead that come from splitting further. It is not a reason to ignore how far the split goes.',
     ),
   },
   'q-sc-mcp-args': {
@@ -423,56 +423,56 @@ export const choiceRationales: ChoiceRationales = {
   },
   'q-sc-mcp-carrier-error': {
     a: localized(
-      'レート制限は混雑時間帯に限って起きる一時的な失敗なので、一時的か恒久的かと再試行可能かどうかが分かれば、待って再試行するという正しい回復行動を選べます。分類が構造化されていれば、エージェント側の分岐条件としても使えます。',
-      'A rate limit is a transient failure tied to busy hours, so knowing the category and whether the call is retryable points the agent at the correct recovery: back off and try again. Because the category is structured, it can be branched on rather than parsed out of prose.',
+      '成功した項目まで含めて全件を再送すると、同じ配送データが二重登録される可能性があり、レート制限にも再び触れやすくなります。1件の拒否が残り9件の成否情報を消してしまう設計です。',
+      'Resubmitting all ten records, including the ones that already succeeded, risks double-registering shipments and makes hitting the rate limit again more likely. One rejection erases the success information for the other nine.',
     ),
     b: localized(
-      '現行実装がスタックトレースをそのまま文字列で返した結果、エージェントは同じ呼び出しを繰り返していました。加えて認証ヘッダーを含めることは、配送業者APIの資格情報をモデルの文脈と会話ログへ流し込むことになります。',
-      'Returning raw stack traces as strings is what the current implementation already does, and the agent responded by repeating the same call. Including auth headers additionally pushes the carrier API credentials into the model context and the conversation logs.',
+      '項目ごとの成否と再試行可能性が分かれば、エージェントは失敗した項目だけを再試行対象として選べます。構造化されたデータなのでプログラム側の分岐条件としても使えます。',
+      'Knowing each record’s outcome and retryability lets the agent select only the failed records for retry. Because the data is structured, it can also be branched on programmatically.',
     ),
     c: localized(
-      '内部実装に踏み込まずに「何が起きたか」と「次に何ができるか」を伝えれば、待機して再試行するか別手段へ切り替えるかをエージェントが判断できます。秘密や実装詳細を露出せずに回復に必要な情報だけを渡せます。',
-      'Describing what happened and what options remain, without exposing internals, is enough for the agent to choose between waiting and switching approaches. It supplies the information recovery needs while keeping secrets and implementation detail out of the response.',
+      '成功として返すと、エージェントは10件すべて登録済みとして次の処理へ進みます。拒否された項目は配送データベースに存在しないまま扱われ、次回の定期同期を待つ間に整合性の崩れた状態が続きます。',
+      'Reporting success makes the agent proceed as if all ten records were registered. The rejected ones remain absent from the shipment database, and the inconsistency persists until the next scheduled sync catches up.',
     ),
     d: localized(
-      '失敗を成功として返すと、エージェントは配送情報が取得できたものとして次の処理へ進みます。レート制限が解消していないため、後続で誤った結果を出すか、同じ呼び出しを繰り返すことになります。',
-      'Reporting a failure as success makes the agent proceed as though shipment data had been retrieved. The rate limit is still in effect, so the run either produces a wrong result downstream or loops back into the same call.',
+      '項目ごとの識別子を添えて返せば、エージェントは10件のうちどれが失敗した項目かを取り違えずに特定でき、再送の対象を正確に絞り込めます。識別子がなければ、項目ごとの成否だけを見ても、実際に何を再送すべきかをエージェントが正しく突き合わせられません。',
+      'Returning the per-record identifier lets the agent pinpoint exactly which of the ten records failed without mixing it up with another, and target the resubmission precisely. Without an identifier, knowing each record’s success or failure alone does not let the agent correctly match what to actually resend.',
     ),
   },
   'q-sc-mcp-token': {
     a: localized(
-      'コミット済みのトークンは履歴に残るため、無効化と再発行で漏えいした値そのものを使えなくするのが起点になります。そのうえで接続定義だけを共有ファイルに残し、値は環境変数や秘密管理から参照させれば、チームへ配布できる設定と秘密を分離できます。',
-      'A committed token stays in history, so revocation is what actually ends the exposure, and reissuing keeps the integration working. Leaving only the connection definition in the shared file and resolving the value from the environment or a secrets manager gives the team something safe to distribute.',
+      '認証情報を `.mcp.json` に書くと、個人のサンドボックスの資格情報も本番用の資格情報も、プロジェクトを共有する全員に配布されてしまいます。接続定義と秘密情報を同じ場所に置く設計です。',
+      'Writing the credential into `.mcp.json` distributes both the personal sandbox credential and the production credential to everyone who shares the project. It puts the connection definition and the secret in the same place.',
     ),
     b: localized(
-      'リポジトリの公開範囲は、閲覧できる人数を絞るだけで、すでに書き込まれた値の有効性には影響しません。社内リポジトリのクローンやCIログ経由でも露出し得るため、失効させない限り漏えいは続いています。',
-      'Repository visibility limits who can browse the code; it does nothing to the validity of a value already written into it. Clones and CI logs can still surface the token, so the leak remains live until the token is revoked.',
+      '本番用サーバーをlocal scopeに留めると、チーム全員が同じツール定義を使えず、各自が個別に接続設定をやり直すことになります。チーム共有が必要な接続定義まで個人専用にしてしまう設計です。',
+      'Keeping the production server at local scope means the team cannot share one tool definition; everyone has to set up the connection separately. It makes even the connection definition that needs sharing personal-only.',
     ),
     c: localized(
-      'base64は誰でも復号できる可逆な符号化で、暗号化でもアクセス制御でもありません。ファイルを読めた相手はそのままトークンを取り出せるため、平文で置くのと危険性は変わりません。',
-      'base64 is a reversible encoding that anyone can undo — it is neither encryption nor access control. Whoever can read the file can still recover the token, so the exposure is unchanged.',
+      '本番用の接続定義はプロジェクトスコープで共有しつつ認証情報は各自の環境変数から解決させ、個人のサンドボックス用サーバーは共有スコープに置かないという判断は、チーム共有が必要な範囲と個人だけに意味のある範囲を分けています。',
+      'Sharing the production connection definition at project scope while resolving the credential from each person’s environment, and keeping the personal sandbox server out of the shared scope, separates what needs team-wide sharing from what is meaningful to only one person.',
     ),
     d: localized(
-      'グローバル設定へ移すと、この配送業者トークンが本来関係のないプロジェクトの作業からも参照可能になります。適用範囲を広げる方向の変更で、漏えいしたトークンが失効していない点も未解決のままです。',
-      'A global configuration widens the blast radius: work in projects that have nothing to do with logistics could reach the carrier token. It also leaves the original problem untouched, since the committed token is still valid.',
+      '個人のサンドボックスアカウントの認証情報が意味を持つのは本人だけです。それを `.mcp.json` にコミットしてプロジェクトスコープで共有すると、意味のない認証情報が他のメンバー全員に配布されてしまい、本番用の認証情報を各自の環境変数から解決させるという運用とも矛盾します。',
+      'A personal sandbox account’s credential is meaningful only to the person who owns it. Committing it into `.mcp.json` and sharing it at project scope distributes that meaningless credential to everyone on the project, and it also conflicts with resolving the production credential from each person’s own environment.',
     ),
   },
   'q-sc-support-parallel': {
     a: localized(
-      '本人確認は返金実行の前提であり、この2つを同時に走らせると未確認のまま返金が進み得ます。速度のために社内規定が要求する順序を壊す設計です。',
-      'Identity verification is a precondition for executing a refund. Running the two concurrently allows a refund to proceed before verification completes, trading a required policy order for latency.',
+      '本人確認や返金実行は規定によって手順と順序が確定しているので、実行のたびに分解方式を判断させる動的な構成にすると、無用な揺れと確認漏れのリスクが生じます。',
+      'Identity verification and refund execution already have a fixed procedure and order under policy, so making the agent re-decide the decomposition every run introduces needless variation and a risk of skipped checks.',
     ),
     b: localized(
-      '逐次実行はデバッグしやすい一方、注文照会と配送照会のように依存のない作業まで待たせ続けます。試作で問題になっている待ち時間がそのまま残るため、移行の目的を満たしません。',
-      'Sequential execution is easier to trace, but it also makes independent lookups wait on each other. The latency problem that motivated the migration would survive untouched.',
+      '既知で予測可能な手順は固定のワークフローに、調査結果に応じて変わる部分は実行時の動的な分解にすることで、確実に守るべき手順と、ケースごとに変わる部分を両立できます。',
+      'Putting the known, predictable steps into a fixed workflow and decomposing the investigation-dependent part dynamically at runtime lets a mandatory procedure and case-by-case variation coexist.',
     ),
     c: localized(
-      'サブタスクの件数は、その作業同士が独立かどうかを示しません。件数だけを見て並列化すると、本人確認と返金実行のように順序が必須の組み合わせも同時に走らせてしまいます。',
-      'The number of subtasks says nothing about whether they depend on each other. Using count as the trigger will parallelize ordered pairs such as verify-then-refund along with the safe ones.',
+      '調査で何を確認すべきかは問い合わせごとに変わるため、事前にすべてを固定のフローチャートへ落とし込むと、想定外のケースに対応できません。',
+      'What to check during the investigation varies by inquiry, so pre-encoding everything into a fixed flowchart cannot handle cases the flowchart did not anticipate.',
     ),
     d: localized(
-      '判断の基準はサブタスク間の依存関係です。注文照会と配送照会は互いの結果を必要としないため並列にfan-outでき、本人確認から返金実行へ進む流れは逐次に保てば規定も守れます。',
-      'Dependency between subtasks is the criterion. Order and delivery lookups need nothing from each other and can fan out, while the verify-then-refund chain stays sequential and keeps the refund policy intact.',
+      '固定と動的の使い分けは工程の性質で決まるものです。一種類に統一すると、既知の手順まで無駄に動的化するか、逆に調査依存の部分まで無理に固定化するかのどちらかになります。',
+      'Choosing fixed vs. dynamic depends on the nature of each step. Forcing one uniform style either dynamically re-decides steps that are already known, or forces the investigation-dependent part into a rigid fixed shape.',
     ),
   },
   'q-sc-support-worker-contract': {
@@ -495,182 +495,182 @@ export const choiceRationales: ChoiceRationales = {
   },
   'q-sc-support-escalation': {
     a: localized(
-      '自己申告の確信度は生成のたびに揺れる主観的な値で、外部から検証できません。高額返金でもエージェントが自信を持てば承認を素通りするため、規定の適用が確率的になります。',
-      'Self-reported confidence is a subjective number that varies between runs and cannot be checked from outside. A large refund would skip approval whenever the agent happens to feel sure, making policy compliance probabilistic.',
+      '全体平均の承認率だけでは、特定の金額帯や理由のカテゴリで判断が悪化していても、他のカテゴリの結果に埋もれて見えなくなります。分類別に見て初めて悪化に気づけます。',
+      'An overall approval rate alone can hide decisions degrading in a specific amount range or reason category — the drop gets averaged away by other categories. Only a category-level view surfaces it.',
     ),
     b: localized(
-      '失敗後の引き継ぎでは、規定に反した返金が成功してしまったケースを止められません。人間の承認は事後のリカバリではなく、実行前に置くべき関門です。',
-      'Recovery after a failure cannot undo a refund that succeeded in violation of the policy. Human approval belongs in front of the action, not behind it.',
+      'カテゴリ別に質を評価し、悪化が見つかったカテゴリの指摘をルーティング条件やプロンプトへ反映すると、レビューが一過性の是正で終わらず、運用全体の精度を継続的に引き上げる改善ループになります。',
+      'Evaluating quality by category and feeding findings from a degrading category back into the routing conditions or the prompt turns review into an ongoing improvement loop rather than a one-off correction, continuously raising overall accuracy.',
     ),
     c: localized(
-      '規定が定めている条件は金額と本人確認状態で、どちらも処理前に確定していて外部から検証できます。この2つを分岐条件にすれば、該当ケースは必ず承認フローへ入り、エージェントの判断のばらつきに左右されません。',
-      'The policy is stated in terms of amount and verification status, both of which are known before the refund runs and verifiable outside the model. Branching on them guarantees that matching cases enter the approval flow regardless of how the agent reasons.',
+      '個別案件の是正だけで終わらせると、同じ種類の誤りが繰り返し起こります。レビューの価値は、恒常的なルールやプロンプトの改善に反映して初めて運用全体に及びます。',
+      'Stopping at correcting the individual case lets the same kind of error recur. Review only benefits the whole operation once its findings feed into lasting changes to the rules or prompt.',
     ),
     d: localized(
-      'プロンプトでの強調は、モデルが従いやすくなる働きかけであって、実行を止める仕組みではありません。判断をエージェントに委ねている限り、規定違反の返金が通る経路が残ります。',
-      'Emphasis in a prompt increases the odds of compliance but does not stop execution. As long as the agent decides, there is still a path along which a non-compliant refund goes through.',
+      '過去に誤りがあった顧客だけをレビュー対象にすると、それ以外の顧客で新たに生じている悪化を見逃します。レビュー対象は特定の顧客ではなく、カテゴリや重大度といった観点で選ぶ必要があります。',
+      'Reviewing only customers who had a past mistake misses new degradation affecting other customers. The review pool should be chosen by dimensions like category and severity, not by which specific customers had trouble before.',
     ),
   },
   'q-sc-support-context': {
     a: localized(
-      '全文保持は履歴の肥大化という試作の前提をそのまま放置します。関連の薄いやり取りが増えるほど重要な事実が埋もれ、取り違えは減らないうえにコストだけが増えます。',
-      'Keeping everything preserves the ballooning history the prototype already struggles with. More loosely related turns means the important facts are harder to find, so the mix-ups persist while cost climbs.',
+      '顧客への約束や注文IDのような値は、後から取り直す方法がありません。要約に紛れ込ませず記録へそのまま残しておけば、翌日の担当者は一字違いの取り違えなく正確な値を引き継げます。',
+      'Values such as a promise made to the customer or the order ID have no way to be recovered afterward if lost. Keeping them out of a summary and in the record verbatim lets the next day’s agent inherit the exact value without a one-character slip.',
     ),
     b: localized(
-      '注文番号や顧客の希望を会話文から取り出して構造化した状態に置けば、参照先が1か所に定まり、長い履歴を読み直して拾い直す必要がなくなります。取り違えの原因そのものに効きます。',
-      'Lifting order numbers and stated preferences out of the prose into structured state gives the agent one authoritative place to read them, instead of re-deriving them from a long transcript. That addresses the cause of the mix-ups directly.',
+      '配送状況や在庫数は業務システムに照会すれば最新の値を取り直せます。前日時点の値を記録に固定してしまうと、状況が変わっていても古い値がそのまま使われてしまいます。',
+      'Delivery status or stock levels can be re-obtained with a fresh lookup against the backend system. Fixing yesterday’s value into the record risks it being used as-is even after the real state has changed.',
     ),
     c: localized(
-      '経過時間だけを基準に消すと、初期に確認した注文番号のように、いま対応を続けるために必要な事実まで失われます。古いことと不要であることは別の性質です。',
-      'Deleting by age alone discards facts the case still depends on, such as the order number confirmed in the first few turns. Old is not the same property as irrelevant.',
+      '会話ログ全文をそのまま渡すと、やり直しの効かない事実（顧客への約束や注文ID）と、照会し直せば済む情報（配送状況など）の区別が担当者に丸投げされ、長い履歴の中から毎回選り分ける手間が生じます。',
+      'Handing over the raw log in full dumps the job of separating facts that cannot be redone — a promise, an order ID — from information that a fresh lookup would resolve — delivery status — onto the agent, who then has to sort them out of the long history every time.',
     ),
     d: localized(
-      '圧縮は履歴を短く保つ手段ですが、要約は細部を落とします。継続に必要な事実を要約とは別に保全しておけば、履歴を短くしつつ注文番号や決定事項は確実に残せます。',
-      'Compaction keeps the history short, but a summary necessarily loses detail. Preserving continuation-critical facts outside the summary lets the history shrink while order numbers and decisions survive intact.',
+      '前日の照会結果を「現在の状況」として固定すると、実際には状況が変わっていても記録上の古い値がそのまま正として使われ続けます。取り直せる情報はその場で照会し直すべきで、記録に凍結してはいけません。',
+      'Freezing yesterday’s lookup result as “the current status” keeps the record’s stale value treated as authoritative even after the real situation has moved on. Information that can be re-obtained should be looked up fresh, not frozen into the record.',
     ),
   },
   'q-sc-code-conventions': {
     a: localized(
-      '個人用のグローバル設定はリポジトリの外にあり、20名それぞれが手作業で同期する前提になります。更新の取りこぼしが起き、CI実行環境には誰の個人設定も存在しません。',
-      'Personal global settings live outside the repository and would rely on twenty developers syncing them by hand. Updates get missed, and the CI environment has no developer’s personal settings at all.',
+      'CLAUDE.local.mdはプロジェクト直下に置く個人用ファイルで、他の開発者やCIには渡りません。しかも個人の好みと決済サービス固有の規約を区別せずに1つへまとめてしまうと、決済サービス固有の規約もチームの誰にも適用されなくなります。',
+      'CLAUDE.local.md is a personal file at the project root that never reaches other developers or CI. Lumping personal preferences together with the payments-specific rules without distinguishing them also means no one on the team ever gets the payments-specific rules either.',
     ),
     b: localized(
-      'プロジェクト層のCLAUDE.mdはリポジトリの一部としてクローンされるため、チーム全員とCIが同じ内容を読み込みます。バージョン管理されるので、規約の変更もレビューを通して同じタイミングで全員に反映されます。',
-      'A project-level CLAUDE.md travels with the repository, so every teammate and CI read the same text. Version control also means a change to the conventions lands for everyone at once, through review.',
+      '配置が入れ替わっています。~/.claude/CLAUDE.mdは各自の環境にしか存在しないため、決済サービス固有の規約を置いても他の開発者やCIには適用されません。逆にプロジェクトCLAUDE.mdは全員へ配られるため、個人の好みまで共有されてしまいます。',
+      'The placements are swapped. ~/.claude/CLAUDE.md exists only on each person’s machine, so payments-specific rules placed there never reach other developers or CI. Conversely, the project CLAUDE.md is distributed to everyone, so personal preferences placed there get shared as well.',
     ),
     c: localized(
-      '共有ドキュメントは規約の正本にはなりますが、適用は毎回の貼り付け作業に依存したままです。貼り忘れや貼る範囲の違いという、パイロットで実際に起きたばらつきの原因が残ります。',
-      'A shared document can be the canonical text, but applying it still depends on someone pasting it correctly every time. That is precisely the manual step that produced the inconsistency during the pilot.',
+      '個人の好みは各自の~/.claude/CLAUDE.md、チーム共通規約はバージョン管理されるプロジェクトCLAUDE.md、特定ディレクトリだけの規約はそのディレクトリ配下のCLAUDE.mdに置くと、適用範囲と共有先が要望どおりになります。これらはCLAUDE.mdの階層として上書きではなく連結して読み込まれるため、互いを消し合いません。',
+      'Personal preferences in each developer’s ~/.claude/CLAUDE.md, shared rules in the version-controlled project CLAUDE.md, and directory-only rules in a CLAUDE.md under that directory match the requested scope and audience for each. The CLAUDE.md hierarchy loads these concatenated rather than overriding one another, so none of them erases the others.',
     ),
     d: localized(
-      'READMEは人間向けの説明として置かれるファイルで、指示として常時読み込まれる場所ではありません。ここに書いても、規約が確実に適用される保証は得られません。',
-      'The README is documentation written for people, not an instruction source that is always loaded. Putting the conventions there gives no guarantee that they are applied.',
+      '1つのファイルへ集約すると、決済サービス固有の規約が無関係な作業にも常に適用されるうえ、個人の好みまでバージョン管理下に入り全員へ配られます。要望のどちらも満たせません。',
+      'Consolidating into one file applies the payments-specific rules to unrelated work as well, and puts personal preferences under version control where everyone receives them. Neither request is satisfied.',
     ),
   },
   'q-sc-code-e2e-rules': {
     a: localized(
-      '全体規約へ追記すると、E2Eと無関係な実装作業でもこの規約が読み込まれます。適用したい範囲より広く効いてしまい、他の作業への不要な干渉を招きます。',
-      'General conventions are read during unrelated implementation work too. The rules would take effect far beyond E2E tests and interfere with tasks they were never meant for.',
+      'globの修正だけでこの規約自体は正しく発火するようになりますが、全体規約との重複を放置すると、どちらかを更新したときに内容が食い違い、実装者がどちらに従うべきか判断できなくなるリスクが残ります。',
+      'Fixing only the glob does make this rule fire correctly on its own, but leaving the duplication with the general conventions means the two can drift apart after either is updated, leaving no clear answer for which one to follow.',
     ),
     b: localized(
-      'リポジトリ分割はビルドや依存関係まで巻き込む大きな構成変更で、記述規約の適用範囲を絞るという目的に対して代償が大きすぎます。テストと実装が離れる副作用も伴います。',
-      'A repository split drags in build and dependency changes, which is a heavy price for scoping a writing convention. It also separates the tests from the code they exercise.',
+      'globを実際のE2Eテストの場所に一致させると、パス固有ルールが意図したファイルを扱うときにだけ適用されるようになります。全体規約との重複も合わせて取り除くことで、規約が的確に発火し、かつ矛盾のもとになる二重管理も解消されます。',
+      'Matching the glob to the E2E specs’ real location makes the path-specific rule apply exactly when the intended files are in play. Removing the duplication with the general conventions at the same time both makes the rule fire correctly and eliminates the double-maintenance that could cause the two to contradict each other.',
     ),
     c: localized(
-      'globで対象パスを指定すれば、規約はE2Eテストファイルを扱うときだけ適用されます。求めている適用範囲と設定の適用範囲が一致し、他の作業には影響しません。指定したglobが意図したファイルに一致するかは確認が必要です。',
-      'A glob ties the rules to the E2E test paths, so they apply when those files are in play and nowhere else. The scope of the configuration matches the scope the team actually wants; the glob itself still needs checking against the real paths.',
+      '重複を消しても、globが実際のE2Eテストの場所と一致していない限り、この規約はそもそも一度も適用されません。根本原因である場所の不一致がそのまま残ります。',
+      'Removing the duplication does nothing about the fact that the rule never applies in the first place as long as the glob doesn’t match where the E2E specs actually live — the root cause of the path mismatch survives untouched.',
     ),
     d: localized(
-      '個人設定は各開発者の環境にとどまり、20名で同じ規約が適用される保証がありません。貼り付け運用と同じく、人手に依存したばらつきが残ります。',
-      'Personal settings stay on each machine, so there is no guarantee that all twenty developers end up with the same rules. It reproduces the same human-dependent variance as pasting by hand.',
+      '全体規約へ統合すると常にすべての作業でこの内容が読み込まれるようになり、E2E以外の実装作業にも無関係な規約が影響します。パスで絞り込むという本来の目的に反します。',
+      'Merging into the general conventions makes this content load for every task, so unrelated implementation work outside E2E is now affected by rules that don’t apply to it — the opposite of the original point of scoping by path.',
     ),
   },
   'q-sc-code-skill': {
     a: localized(
-      '毎回貼り付けている長い手順と、それに付随するテンプレートファイル・整形スクリプトを1つの単位にまとめられます。20名が同じ資源を同じ手順で使えるようになり、貼り付け作業自体がなくなります。',
-      'The long procedure and the files it depends on — the template and the formatting script — become one unit instead of something each developer pastes by hand. All 20 people then work from the same resources in the same order.',
+      'Skillの本体は呼び出されたときだけ読み込まれるため、要点に絞ると起動のたびに読み込まれる量を減らせます。詳しい参照情報は必要な操作にとどめ、無関係な作業のコンテキストを圧迫しない設計になります。',
+      'A Skill’s body loads only when it is invoked, so trimming it to essentials reduces how much loads on every run. Keeping detailed reference material to what the operation actually needs avoids crowding the context of unrelated work.',
     ),
     b: localized(
-      'CLAUDE.mdは全セッションで読み込まれるため、リリースノート作成と無関係な作業のときにも長い手順がコンテキストを占有します。特定の定型作業の手順を置く場所としては範囲が広すぎます。',
-      'CLAUDE.md is loaded in every session, so a long release-notes procedure would occupy context during unrelated work. It is too broad a home for the steps of one specific routine task.',
+      '説明文はSkillを起動すべきかどうかをClaudeが判断する際に参照するメタデータです。情報を詰め込むほど、無関係な場面でも読み込まれる量が増え、かつ肝心の利用場面の判断材料としてはかえって埋もれます。',
+      'The description is metadata Claude consults when deciding whether to invoke the Skill. Piling in information only increases what loads even for unrelated situations, and buries the very cue that should signal when to use the Skill.',
     ),
     c: localized(
-      '起動方法の周知そのものは無害ですが、前提にある「明示的に名前を入力したときだけ使われる」という理解が誤りです。この前提で運用すると、Skillを用意しても呼ばれない場面が生じます。',
-      'Telling the team how to invoke a Skill does no harm, but the premise here is wrong: usage is not restricted to a user typing the name. Operating on that premise leaves the Skill unused in cases where it applies.',
+      'SKILL.mdは概要と手順だけを持ち、詳しいテンプレートや過去ログは別ファイルへ分けて本体から参照させると、それらのファイルは実際に必要になった操作のときだけ読み込まれます。大きな参照資料を本体に書き込むと、Skillが呼び出されるたびに不要な内容まで一緒に読み込まれてしまいます。',
+      'Keeping SKILL.md to an overview plus the procedure, with detailed templates and past logs split into separate files the body references, means those files load only when the operation actually needs them. Writing large reference material directly into the body means every invocation of the Skill loads that unneeded content too.',
     ),
     d: localized(
-      '説明文は、いま扱っている作業がその手順の対象かどうかを判断する手掛かりになります。「リリースノートの下書き」のような利用場面を書いておくと、必要なときに読み込まれる設計が成立します。',
-      'The description is what makes it possible to judge whether the task at hand is covered by the procedure. Naming situations such as “drafting release notes” is what lets it be picked up when it is actually needed.',
+      '本体は呼び出されたときだけ読み込まれる部分なので、事前にすべての詳細を集約しても「再度参照せずに済む」という利点にはならず、逆に呼び出しのたびに不要な情報まで読み込む設計になります。',
+      'The body only loads when the Skill is invoked, so pre-consolidating every detail does not actually save a future lookup — it just means every invocation loads information that is not always needed.',
     ),
   },
   'q-sc-code-ci': {
     a: localized(
-      '失敗を減らす目的は理解できますが、セキュリティチームがレビュー対象としているのはCI実行環境に与える権限そのものです。開発者端末の権限をそのまま持ち込むと、要約ジョブに不要な操作までCIから実行可能になります。',
-      'Avoiding failures is a reasonable goal, but the permissions given to the CI environment are exactly what the security team asked to review. Carrying workstation-level access into CI makes operations far beyond a summarization job reachable from the pipeline.',
+      '--output-format json と --json-schema を組み合わせると、file・line・severityなどのフィールドを持つ構造化配列として指摘を受け取れます。severityがhighの指摘があるかどうかで終了状態を分ければ、CIは出力の文面を解釈せずに機械的に合否を判定できます。',
+      'Combining --output-format json with --json-schema returns findings as a structured array with fields such as file, line, and severity. Branching the exit status on whether any finding has severity high lets CI decide pass/fail mechanically without parsing prose.',
     ),
     b: localized(
-      '人の応答を待たない実行形態と、要約ジョブが必要とする範囲に絞った権限は、プルリクエストごとの自動実行とセキュリティレビューの両方を同時に満たします。',
-      'An execution mode that never waits for a human, combined with permissions scoped to what the summarization job actually needs, satisfies both per-pull-request automation and the security review at once.',
+      'レビュー対象をPRの差分に絞ってClaudeへ渡すと、変更していない既存コードを毎回読み込ませずに済みます。',
+      'Scoping the review input to the PR diff means Claude doesn’t have to re-read unchanged existing code on every run.',
     ),
     c: localized(
-      '確認待ちが発生するとジョブはその場で止まり、プルリクエストごとの自動実行が成立しません。担当者がランナーへ入って応答する運用は、自動化の目的自体を打ち消します。',
-      'Any confirmation prompt halts the job where it stands, which defeats running it automatically on every pull request. Having someone log into the runner to answer prompts cancels out the reason for automating it.',
+      'レビュー対象をリポジトリ全体へ広げても、severityを基準に機械的に合否判定するという3.6の要件には関係がなく、変更していないファイルまで読み込ませる分だけコストが増えます。',
+      'Broadening the review target to the whole repository has nothing to do with 3.6’s requirement of judging pass/fail mechanically by severity, and only adds cost from reading files that were never changed.',
     ),
     d: localized(
-      '要約の出力形式と終了状態が固定されていれば、CIは人の目視を介さずにジョブの成否を判定できます。プルリクエストごとに自動で回すための前提条件です。',
-      'With a fixed output format and exit behavior, CI can decide pass or fail without a human reading the summary — a prerequisite for running the job on every pull request.',
+      '指摘を保存するだけでCIジョブの成否判定に使わなければ、ジョブは実際には何も検証せずに完了したことになります。指摘が機械可読であっても、それをCIの判定に結び付けなければ3.6の要件を満たしません。',
+      'Saving findings without ever using them for the CI verdict means the job effectively completes having validated nothing. Even machine-readable findings satisfy 3.6 only when the CI verdict is actually tied to them.',
     ),
   },
   'q-sc-code-mcp-config': {
     a: localized(
-      '共有してよい情報（どのサーバーへどう繋ぐか）と、共有してはいけない情報（認証トークン）を別々の置き場所へ分けています。前者はバージョン管理で20名に同一に配られ、後者は各自の手元に留まります。',
-      'What may be shared — which server to reach and how — is separated from what must not be: the credential. The former is distributed identically to all 20 members through version control, while the latter stays on each machine.',
+      'リポジトリへのコミットは承認の代わりにはなりません。対話セッションでは、コミット済みの.mcp.jsonであっても最初の利用時に承認プロンプトが表示されます。',
+      'Committing to the repository is not a substitute for approval. Even for an already-committed .mcp.json, an interactive session shows an approval prompt the first time it is used.',
     ),
     b: localized(
-      'リポジトリがプライベートでも、トークンは閲覧権限を持つ全員とコミット履歴に残り続けます。アクセス制御は秘密情報の管理方法の代わりにはなりません。',
-      'Even in a private repository, the token remains visible to everyone with read access and persists in the commit history. Access control does not substitute for handling secrets as secrets.',
+      'claude -p のような非対話実行では、そもそも承認プロンプトを表示する手段がありません。「承認するまで使われない」という前提のまま非対話実行に組み込むと、CIジョブはMCPサーバーに到達する前に動かなくなります。',
+      'A non-interactive run such as claude -p has no way to show an approval prompt at all. Assuming it always waits for approval and then wiring it into non-interactive execution would leave the CI job unable to reach the MCP server.',
     ),
     c: localized(
-      'トークンを設定と同じ場所へ置いている点は選択肢bと同じ問題を抱え、さらにグローバルスコープはチケット管理を使わないプロジェクトにまで接続定義を広げます。',
-      'Keeping the token in the configuration repeats the problem of option b, and the global scope additionally pushes the connection definition into projects that have nothing to do with the ticket system.',
+      '対話セッションでは初回に承認プロンプトが表示されて安全に運用でき、claude -p のような非対話実行ではそのプロンプトを出せないため承認なしで読み込まれます。この非対話時の挙動を前提にCIへ組み込む必要があります。',
+      'An interactive session shows an approval prompt the first time, keeping the flow safe, while a non-interactive run like claude -p cannot show that prompt and loads the server without approval. CI integration needs to be designed around that non-interactive behavior.',
     ),
     d: localized(
-      '手順書からの手動設定は、各自の設定内容が食い違っても気づけず、更新のたびに20名へ再周知が必要です。共有設定として配る方法が既にある状況では選ぶ理由がありません。',
-      'Manual setup from a chat message leaves divergent configurations that nobody notices, and every change has to be re-announced to 20 people. There is no reason to choose it when a shared, distributable setting exists.',
+      '${VAR}形式の環境変数参照は command・args・env・url・headers などで展開されます。展開されないという前提でトークンを直書きすると、秘密情報を設定ファイルに直書きしないという運用に反します。',
+      '${VAR}-style environment-variable references are expanded in fields such as command, args, env, url, and headers. Assuming they aren’t expanded and writing the token directly would violate the practice of keeping secrets out of the configuration file.',
     ),
   },
   'q-sc-pipe-validation': {
     a: localized(
-      '日付が創刊より前かどうかは、しののめニュース固有の業務知識に依存する判断です。スキーマが表現しているのは型や必須項目といった形であり、この値が成り立たないことをスキーマは知りません。',
-      'Whether a date precedes the paper’s founding depends on knowledge specific to Shinonome News. A schema describes shape — types and required fields — and has no way to know that this particular value is impossible.',
+      '統合パス専用の指示で「何を矛盾とみなすか」を定めておけば、統合パスは各回の抽出結果をやり直すことなく、回をまたぐ整合性の検証だけに専念できます。各回のパスが確定させた値もそのまま活かされます。',
+      'A dedicated instruction stating what counts as a contradiction lets the integration pass focus solely on cross-installment consistency without redoing each installment’s extraction, and keeps the values each installment’s pass already settled intact.',
     ),
     b: localized(
-      '制約を外せばエラー表示は消えますが、成り立たない値はそのまま下流のインデクサーへ流れ込みます。検出できていた問題を見えなくするだけの対応です。',
-      'Removing the constraint silences the error while the impossible value flows straight into the downstream indexer. It hides a problem that was already being detected.',
+      '抽出用プロンプトをそのまま統合パスでも使うと、統合パスは各回のパスと同じ抽出作業を繰り返すだけになり、回をまたぐ矛盾を検出するという固有の役割を果たせません。',
+      'Reusing the extraction prompt for the integration pass just repeats the same extraction work each installment’s pass already did, and does nothing toward the integration pass’s own job of catching cross-installment contradictions.',
     ),
     c: localized(
-      'プロンプトの強調は出力の傾向に影響し得るだけで、個々の値が創刊日より後かを検査する仕組みにはなりません。数万件を自動処理する経路には検査そのものが必要です。',
-      'Prompt emphasis can only nudge the tendency of the output; it never becomes a check that compares each date against the founding date. A path processing tens of thousands of items needs the check itself.',
+      '統合パスに確定済みの値の書き換えまで許すと、検証役のはずの工程が抽出結果そのものを変えてしまいます。どの値が各回のパスで確認済みなのかが分からなくなり、統合パスの役割である整合性の検証とも混ざります。',
+      'Letting the integration pass rewrite settled values turns the stage meant to check results into one that changes them. It becomes unclear which values each installment’s pass actually confirmed, and the pass’s own job of checking consistency gets mixed with editing.',
     ),
     d: localized(
-      '創刊日との前後比較のようなルールは、アーカイブ側の事実を参照して初めて判定できます。スキーマ検証の後段に業務ルール検証の層を置けば、インデクサー投入前に確実に弾けます。',
-      'A rule like comparing against the founding date can only be evaluated against facts the archive side holds. Placing that layer after schema validation stops such records before they reach the indexer.',
+      '統合パスに抽出のやり直しまで担わせると、局所的な抽出と全体の整合確認という役割の分離が崩れ、抽出のやり直しでは各回のパスの結果を壊しかねません。',
+      'Loading the integration pass with re-extraction as well collapses the separation between local extraction and global consistency checking, and redoing the extraction risks overwriting what each installment’s pass already got right.',
     ),
   },
   'q-sc-pipe-retry': {
     a: localized(
-      '失敗したのは1フィールドだけなので、そのフィールドと期待条件・実際の値を返せば修正対象が特定されます。上限とフォールバックがあるため、直らない記事が夜間ジョブを占有し続けることもありません。',
-      'Only one field failed, so naming that field along with the expected condition and the actual value pins down what has to change. The cap and fallback keep a stubborn article from consuming the overnight job indefinitely.',
+      '同じ検証に通らない原因が解消されないまま繰り返すと、1件の記事が夜間ジョブを無期限に占有しかねません。上限を設ける目的そのものを無効化します。',
+      'Repeating the same retry without addressing why validation keeps failing risks letting one article hold the overnight job hostage indefinitely. It defeats the very purpose of having a cap.',
     ),
     b: localized(
-      '入力もプロンプトも変わらないまま繰り返すため、同じ検証失敗を再現する可能性が高いままです。上限がないので、1件の失敗が夜間ジョブ全体を止め得ます。',
-      'With the input and the prompt unchanged, the same validation failure is likely to recur, and without a cap a single problematic article can hold up the whole overnight run.',
+      'デフォルト値は検証を通すための埋め合わせであり、記事の事実を表しません。誤った値が検証を素通りしてそのままインデクサーへ入ります。',
+      'A default value only papers over the validation failure; it does not represent a fact about the article. The wrong value slides past validation straight into the indexer.',
     ),
     c: localized(
-      '検証を通っていた他のフィールドまで作り直すことになり、正しかった抽出結果が変わってしまう恐れがあります。1フィールドの修正に対して処理量も過大です。',
-      'Fields that already passed validation get rebuilt too, so correct extractions can change on the way. It is also a disproportionate amount of work for a one-field correction.',
+      '上限に達した記事は自動処理では解決できないと分かった時点で、これ以上の自動リトライを止め、失敗の詳細を添えて人へ引き継ぐのが妥当です。詳細を残すことで、レビューする人が同じ調査をやり直さずに済みます。',
+      'Once an article has proven unsolvable by automation up to the cap, the right move is to stop further automated retries and hand off to a person with the failure detail attached. Carrying that detail means the reviewer does not have to redo the same investigation.',
     ),
     d: localized(
-      'ルールを消せば失敗は記録されなくなりますが、値が正しくなるわけではありません。検出されなくなった誤りがそのままインデクサーへ入ります。',
-      'Removing the rule stops the failure from being recorded but does nothing to the value itself. The error simply reaches the indexer undetected.',
+      '記録を残さずに飛ばすと、その記事が抽出されなかったこと自体に誰も気づけません。インデックスは欠落したまま気づかれずに残ります。',
+      'Skipping without a record means no one notices that the article was never extracted at all. The index is left silently incomplete.',
     ),
   },
   'q-sc-pipe-batch': {
     a: localized(
-      '夜間ジョブでは即時応答が不要なので、1件ごとのレイテンシを詰めても得るものがありません。数万件を逐次に回すこと自体が処理時間の制約になります。',
-      'The overnight job needs no immediate response, so tuning per-item latency buys nothing, and running tens of thousands of items one after another becomes the limiting factor on total runtime.',
+      'custom_idは結果とリクエストを結びつける唯一の手がかりです。succeeded以外の3種別だけを対象にすれば、既に成功した記事を無駄に再処理せずに済みます。',
+      'custom_id is the one reliable link between a result and its request. Targeting only the three non-succeeded types avoids wastefully reprocessing articles that already succeeded.',
     ),
     b: localized(
-      '即時応答が不要な大量処理という条件に非同期のバッチ処理が合致し、リクエストと結果の対応付けによって、どの記事の抽出が失敗したかを後から特定できます。',
-      'Asynchronous bulk processing matches the stated conditions — high volume, no need for immediate responses — and keeping request-to-result associations makes it possible to identify afterwards which article failed extraction.',
+      'バッチ結果は投入順で返る保証がありません。インデックス位置で対応付けると、公式ドキュメントが明示する挙動に反し、記事を取り違えたまま処理が進みます。',
+      'Batch results carry no guarantee of returning in submission order. Matching by index position contradicts the documented behavior and lets articles get silently mismatched.',
     ),
     c: localized(
-      'まとめて投入しても、個々のリクエストは検証失敗やエラーで完了しないことがあります。追跡を省くと、抽出されなかった記事に気づかないままインデックスが欠けます。',
-      'Submitting requests together does not stop individual ones from ending in validation failures or errors. Without tracking, articles that were never extracted go unnoticed and the index silently has gaps.',
+      '1件のリクエストの失敗は他のリクエストの処理に影響しません。成功済みの記事まで含めて全件を再投入するのは、無駄な処理とコストを生むだけです。',
+      'One request failing does not affect the processing of the others. Resubmitting everything, including already-succeeded articles, only creates wasted processing and cost.',
     ),
     d: localized(
-      '数万件分の記事本文は1回の呼び出しに収まらず、仮に収まっても、どの出力がどの記事に対応するのかを保証できません。1回の失敗で全件を失う構成でもあります。',
-      'The full text of tens of thousands of articles will not fit in a single call, and even if it did, nothing guarantees which output belongs to which article. A single failure would also cost the entire run.',
+      '公式ドキュメントは、失敗したリクエストには呼び出し側で再試行の処理を実装するよう勧めています。追跡と再投入を怠ると、それらの記事は検索基盤に永久に反映されないままになります。',
+      'The official guidance recommends implementing retry logic for failed requests on the caller’s side. Skipping tracking and resubmission leaves those articles permanently missing from the search platform.',
     ),
   },
   'q-sc-pipe-provenance': {
