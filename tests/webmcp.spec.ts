@@ -10,9 +10,9 @@ const section = studyGuideSections[0];
 
 // The package's ModelContext type does not declare executeTool, so the tests
 // name the surface they use. The spec's form takes an input object; the bridge's
-// takes and returns JSON strings (Chrome's modelContextTesting convention).
+// takes an input object too but returns a JSON string.
 type SpecModelContext = { getTools(): Promise<{ name: string }[]>; executeTool(tool: { name: string }, input: object): Promise<unknown> };
-type BridgeModelContext = { getTools(): Promise<{ name: string }[]>; executeTool(tool: { name: string }, inputJson: string): Promise<string | null> };
+type BridgeModelContext = { getTools(): Promise<{ name: string }[]>; executeTool(tool: { name: string }, input: object): Promise<string | null> };
 
 // Records every request — and every WebSocket, which `request` does not report —
 // that leaves the page's own origin from now on.
@@ -26,12 +26,12 @@ function trackExternalRequests(page: Page): string[] {
   return external;
 }
 
-// Runs one tool through the bridge's Chrome-style executeTool (JSON in, JSON out).
+// Runs one tool through the bridge's Chrome-style executeTool (object in, JSON out).
 async function executeThroughBridge<T>(page: Page, name: string, input: Record<string, unknown>): Promise<T | null> {
   return page.evaluate(async ([toolName, toolInput]) => {
     const context = document.modelContext as unknown as BridgeModelContext;
     const tool = (await context.getTools()).find((candidate) => candidate.name === toolName)!;
-    const raw = await context.executeTool(tool, JSON.stringify(toolInput));
+    const raw = await context.executeTool(tool, toolInput);
     return raw === null ? null : JSON.parse(raw) as T;
   }, [name, input] as const);
 }

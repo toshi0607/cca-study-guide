@@ -19,10 +19,6 @@ export async function registerWebMcpTools(bridge: WebMcpBridge, signal: AbortSig
       // own postMessage, so a script the page itself runs can observe it — the
       // same trust boundary `document.modelContext` already has.
       transport: { tabServer: { allowedOrigins: [window.location.origin] }, iframeServer: false },
-      // `navigator.modelContextTesting` was a Chromium preview API that has
-      // since been removed; the spec surface on `document.modelContext` is
-      // the one agents are expected to use.
-      installTestingShim: false,
     });
     // Aborting unregisters the tools; the bridge's own teardown (restore the
     // previous `document.modelContext`, close the transport) rides the same signal.
