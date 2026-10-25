@@ -15,8 +15,8 @@ importers:
         specifier: ^6.1.0
         version: 6.1.0(@babel/core@7.29.7)(@types/node@26.6.3)(esbuild@0.28.2)(preact@10.29.8)(rollup@4.62.2)(yaml@2.9.1)
       '@mcp-b/global':
-        specifier: 5.1.0
-        version: 5.1.0
+        specifier: 6.0.3
+        version: 6.0.3
       astro:
         specifier: ^7.4.0
         version: 7.4.0(@types/node@26.6.3)(esbuild@0.28.2)(yaml@2.9.1)
@@ -721,24 +721,20 @@ packages:
   '@jridgewell/trace-mapping@0.3.31':
     resolution: {integrity: sha512-zzNR+SdQSDJzc8joaeP8QQoCQr8NuYx2dIIytl1QeBEZHJ9uW6hebsrYgbz8hJwUQao3TWCMtmfV8Nu1twOLAw==}
 
-  '@mcp-b/global@5.1.0':
-    resolution: {integrity: sha512-svEHmo31XhPluoA5HJ+F2jGQ+O6Cx7Kpo6dFgI/pGC1g0knvrMOAq9Wb2+9fJycgOFqKcMsYAvM7qTusY5lmsQ==}
+  '@mcp-b/global@6.0.3':
+    resolution: {integrity: sha512-ga4Z92+gAgFjy9mlGiYK5HQ6fLXTsWjIuaAQbGBtzPmB8IaFm1hFMb4PCJtiGmjrZStjbRSKEeuyQJ5Q11n5mw==}
     engines: {node: '>=20'}
 
-  '@mcp-b/transports@5.1.0':
-    resolution: {integrity: sha512-x+Czu2ZcUaLuiVAzViFMfno2NwPkHIfmUVYP3VeCa0tbAuZ8jRPrgboUuk86bVF0FI3qZ8u7OX7UUR3WmwVsKw==}
+  '@mcp-b/transports@6.0.3':
+    resolution: {integrity: sha512-j+HReArxaFmgdPY21T1ZzFDJSBf66yEOUmCUkKUZS147uL9J6DLjHUTWpzWT2NIa4ub2x4QAb49ITbohPQINjg==}
     engines: {node: '>=20'}
 
-  '@mcp-b/webmcp-polyfill@5.1.0':
-    resolution: {integrity: sha512-KL09hniFssPY8HBO3qzurWPqm+1JYRwV3wx6x2XSySgo+6BL1XHGsHGIoAO7U9zzigv7TA5keNBoZ+3P1jq18g==}
+  '@mcp-b/webmcp-polyfill@6.0.3':
+    resolution: {integrity: sha512-pD8iKBXpDKLeYyqDcWPiNFI0JuK7/f+/RxspA6qW81kcDdabWUTt7A0fH+cJx6EIjpoHkk4o3QPci7yQPuHofA==}
     engines: {node: '>=20'}
 
-  '@mcp-b/webmcp-ts-sdk@5.1.0':
-    resolution: {integrity: sha512-iCR6Vzz6zpoWW2w0NRidlxw54mH0a/HhseCAzVaZsPjPm5o2VMQ+AJbZlFoYnNwCiqMFrba9/OQO33xO2RdNGQ==}
-    engines: {node: '>=20'}
-
-  '@mcp-b/webmcp-types@5.1.0':
-    resolution: {integrity: sha512-twOKDUr7al60K890HvRcNvoHSfQ2rnGeKJiQs6eUr+Leg+LQ6K+yz3F4K70jykMK1a09ZIgYb3Oc7mAypuKPig==}
+  '@mcp-b/webmcp-ts-sdk@6.0.3':
+    resolution: {integrity: sha512-KNbsRW/lE05vE2lSrxNMgZuufuNyXYPRYMqoeKoFX3Se+9KzAOXdniTeGCIyoHJZbn6Zl0WQgDtijqgJmGLrHA==}
     engines: {node: '>=20'}
 
   '@modelcontextprotocol/core@2.0.0':
@@ -2623,6 +2619,9 @@ packages:
   webdriver-bidi-protocol@0.4.3:
     resolution: {integrity: sha512-uuN0goWfxP22B7J/uAgBpOYNPttC+XVseYE+rSY5+rQ+YBeVz/VORw8WbmLVcqW78zNg5A4qnjNXYUWR3il2ig==}
 
+  webmcp-types@0.1.9:
+    resolution: {integrity: sha512-ibdkppgRDkQ/nvH541YS48kVt96OiuDr+d9JHnirAtI5k0coaFdo2QqCipbXyfwrteDC6xXwPoUGC9uS5ZGwfw==}
+
   when-exit@2.1.5:
     resolution: {integrity: sha512-VGkKJ564kzt6Ms1dbgPP/yuIoQCrsFAnRbptpC5wOEsDaNsbCB2bnfnaA8i/vRs5tjUSEOtIuvl9/MyVsvQZCg==}
 
@@ -3348,33 +3347,28 @@ snapshots:
       '@jridgewell/resolve-uri': 3.1.2
       '@jridgewell/sourcemap-codec': 1.6.0
 
-  '@mcp-b/global@5.1.0':
+  '@mcp-b/global@6.0.3':
     dependencies:
-      '@mcp-b/transports': 5.1.0
-      '@mcp-b/webmcp-polyfill': 5.1.0
-      '@mcp-b/webmcp-ts-sdk': 5.1.0
-      '@mcp-b/webmcp-types': 5.1.0
+      '@mcp-b/transports': 6.0.3
+      '@mcp-b/webmcp-polyfill': 6.0.3
+      '@mcp-b/webmcp-ts-sdk': 6.0.3
       '@modelcontextprotocol/server': 2.0.0
 
-  '@mcp-b/transports@5.1.0':
+  '@mcp-b/transports@6.0.3':
     dependencies:
       '@modelcontextprotocol/core': 2.0.0
       '@modelcontextprotocol/server': 2.0.0
 
-  '@mcp-b/webmcp-polyfill@5.1.0':
+  '@mcp-b/webmcp-polyfill@6.0.3':
     dependencies:
-      '@mcp-b/webmcp-types': 5.1.0
+      webmcp-types: 0.1.9
+
+  '@mcp-b/webmcp-ts-sdk@6.0.3':
+    dependencies:
+      '@mcp-b/webmcp-polyfill': 6.0.3
+      '@modelcontextprotocol/server': 2.0.0
       '@standard-schema/spec': 1.1.0
-
-  '@mcp-b/webmcp-ts-sdk@5.1.0':
-    dependencies:
-      '@mcp-b/webmcp-polyfill': 5.1.0
-      '@mcp-b/webmcp-types': 5.1.0
-      '@modelcontextprotocol/server': 2.0.0
-
-  '@mcp-b/webmcp-types@5.1.0':
-    dependencies:
-      '@modelcontextprotocol/server': 2.0.0
+      webmcp-types: 0.1.9
 
   '@modelcontextprotocol/core@2.0.0':
     dependencies:
@@ -5194,6 +5188,8 @@ snapshots:
   web-features@3.40.0: {}
 
   webdriver-bidi-protocol@0.4.3: {}
+
+  webmcp-types@0.1.9: {}
 
   when-exit@2.1.5: {}
 
