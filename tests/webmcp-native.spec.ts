@@ -16,7 +16,7 @@ test.use({ launchOptions: { args: ['--enable-experimental-web-platform-features'
 
 type NativeModelContext = {
   getTools(): Promise<{ name: string }[]>;
-  executeTool(tool: { name: string }, inputJson: string): Promise<string>;
+  executeTool(tool: { name: string }, input: object): Promise<string>;
 };
 
 test('registers on Chromium\'s native API and answers through the browser\'s own tool runner', async ({ page }) => {
@@ -33,7 +33,7 @@ test('registers on Chromium\'s native API and answers through the browser\'s own
   const stats = await page.evaluate(async () => {
     const context = document.modelContext as unknown as NativeModelContext;
     const tool = (await context.getTools()).find((candidate) => candidate.name === 'get_domain_stats')!;
-    return JSON.parse(await context.executeTool(tool, '{}')) as { domains: { id: string }[]; note: string };
+    return JSON.parse(await context.executeTool(tool, {})) as { domains: { id: string }[]; note: string };
   });
   // #then
   expect(stats.domains.map((domain) => domain.id)).toEqual(['d1', 'd2', 'd3', 'd4', 'd5']);
