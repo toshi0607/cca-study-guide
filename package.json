@@ -24,9 +24,9 @@
     "verify:production": "node scripts/verify-production-deployment.mjs"
   },
   "dependencies": {
-    "@astrojs/preact": "^6.1.0",
+    "@astrojs/preact": "^6.1.1",
     "@mcp-b/global": "6.0.3",
-    "astro": "^7.4.0",
+    "astro": "^7.4.2",
     "preact": "^10.29.8",
     "zod": "^4.6.7"
   },
