@@ -1,4 +1,4 @@
-import type { MutableRef } from 'preact/hooks';
+import type { RefObject } from 'preact';
 import type { Locale } from '../../i18n/locales';
 import type { UiCopy } from '../../i18n/ui';
 import type { MockExamAttempt } from '../../lib/mock-exam';
@@ -11,7 +11,7 @@ import { formatDate } from '../app/format';
 // trend analysis (that is deliberately out of scope for this task).
 export function MockExamHistory({ attempts, headingRef, locale, copy, onOpen, onBack, onOpenAnalysis }: {
   attempts: readonly MockExamAttempt[];
-  headingRef: MutableRef<HTMLHeadingElement | null>;
+  headingRef: RefObject<HTMLHeadingElement | null>;
   locale: Locale;
   copy: UiCopy;
   onOpen: (attempt: MockExamAttempt) => void;

@@ -1,4 +1,4 @@
-import type { MutableRef } from 'preact/hooks';
+import type { RefObject } from 'preact';
 import { useEffect, useMemo, useState } from 'preact/hooks';
 import { domains } from '../../content/domains';
 import { questions } from '../../content/questions';
@@ -20,7 +20,7 @@ export type MockExamAnalysisProps = {
   locale: Locale;
   copy: UiCopy;
   attempts: readonly MockExamAttempt[];
-  headingRef: MutableRef<HTMLHeadingElement | null>;
+  headingRef: RefObject<HTMLHeadingElement | null>;
   onOpenPractice: (domainId?: string) => void;
   onTakeAnother: () => void;
   onBack: () => void;

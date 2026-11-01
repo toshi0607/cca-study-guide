@@ -1,4 +1,4 @@
-import type { MutableRef } from 'preact/hooks';
+import type { RefObject } from 'preact';
 import { useRef, useState } from 'preact/hooks';
 import { formatDate } from '../app/format';
 import { SourceLinks } from '../app/SourceLinks';
@@ -26,7 +26,7 @@ export function QuizQuestion({
   answered: boolean;
   currentResult: QuizResult | undefined;
   rationalesState: RationalesState;
-  feedbackRef: MutableRef<HTMLDivElement | null>;
+  feedbackRef: RefObject<HTMLDivElement | null>;
   onSelectSingle: (choiceId: string) => void;
   onToggleMultiple: (choiceId: string) => void;
   onSubmitMultiple: () => void;

@@ -1,4 +1,4 @@
-import type { MutableRef } from 'preact/hooks';
+import type { RefObject } from 'preact';
 import { formatDate } from '../app/format';
 import { SourceLinks } from '../app/SourceLinks';
 import type { Card } from '../../content/types';
@@ -13,7 +13,7 @@ export function CardAnswer({ card, review, locale, copy, id, onRate, answerRef }
   copy: UiCopy;
   id: string;
   onRate: (rating: Rating) => void;
-  answerRef?: MutableRef<HTMLDivElement | null>;
+  answerRef?: RefObject<HTMLDivElement | null>;
 }) {
   return (
     <div class="answer" id={id} ref={answerRef} tabIndex={answerRef ? -1 : undefined}>

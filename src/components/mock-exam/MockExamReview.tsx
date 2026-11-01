@@ -1,5 +1,5 @@
 import { useState } from 'preact/hooks';
-import type { MutableRef } from 'preact/hooks';
+import type { RefObject } from 'preact';
 import type { ChoiceQuestion } from '../../content/types';
 import type { Locale } from '../../i18n/locales';
 import { localize, type UiCopy } from '../../i18n/ui';
@@ -19,7 +19,7 @@ type ReviewFilter = 'all' | 'incorrect' | 'unanswered' | 'flagged';
 export function MockExamReview({ attempt, questionById, headingRef, locale, copy, onBack }: {
   attempt: MockExamAttempt;
   questionById: ReadonlyMap<string, ChoiceQuestion>;
-  headingRef: MutableRef<HTMLHeadingElement | null>;
+  headingRef: RefObject<HTMLHeadingElement | null>;
   locale: Locale;
   copy: UiCopy;
   onBack: () => void;
