@@ -1,4 +1,4 @@
-import type { MutableRef } from 'preact/hooks';
+import type { RefObject } from 'preact';
 import type { ChoiceQuestion } from '../../content/types';
 import type { Locale } from '../../i18n/locales';
 import { localize, type UiCopy } from '../../i18n/ui';
@@ -14,7 +14,7 @@ export function MockExamQuestion({ question, selected, flagged, locale, copy, he
   flagged: boolean;
   locale: Locale;
   copy: UiCopy;
-  headingRef: MutableRef<HTMLHeadingElement | null>;
+  headingRef: RefObject<HTMLHeadingElement | null>;
   onSelect: (choiceId: string) => void;
   onToggleFlag: () => void;
 }) {

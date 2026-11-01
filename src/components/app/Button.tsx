@@ -1,7 +1,7 @@
-import type { ComponentChildren, JSX } from 'preact';
+import type { ButtonHTMLAttributes, ComponentChildren } from 'preact';
 import { buttonClass, type ButtonVariant } from './ui';
 
-type ButtonProps = Omit<JSX.HTMLAttributes<HTMLButtonElement>, 'class' | 'type'> & {
+type ButtonProps = Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'class' | 'type'> & {
   variant?: ButtonVariant;
   wide?: boolean;
   type?: 'button' | 'submit' | 'reset';

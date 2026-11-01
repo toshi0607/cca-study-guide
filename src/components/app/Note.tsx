@@ -1,8 +1,8 @@
 import { createElement } from 'preact';
-import type { ComponentChildren, JSX } from 'preact';
+import type { ComponentChildren, HTMLAttributes } from 'preact';
 import { noteClass, type NoteKind } from './ui';
 
-type NoteProps = Omit<JSX.HTMLAttributes<HTMLElement>, 'class'> & {
+type NoteProps = Omit<HTMLAttributes<HTMLElement>, 'class'> & {
   // Most notes are a <p>; the ones that wrap a paragraph plus an action (retry,
   // recommendation) are a <div>.
   as?: 'p' | 'div';

@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
-import type { MutableRef } from 'preact/hooks';
+import type { RefObject } from 'preact';
 
 // Drives a native <dialog> from an `open` boolean. showModal() gives a real
 // focus trap, initial focus, and Escape handling for free — the browser owns the
 // hard parts. The effect only opens/closes to match `open`; the caller wires the
 // dialog's onClose/onCancel to flip `open` back so Escape and backdrop dismissal
 // stay in sync with React state. Returns the ref to attach to the <dialog>.
-export function useModalDialog(open: boolean): MutableRef<HTMLDialogElement | null> {
+export function useModalDialog(open: boolean): RefObject<HTMLDialogElement | null> {
   const ref = useRef<HTMLDialogElement | null>(null);
   useEffect(() => {
     const element = ref.current;

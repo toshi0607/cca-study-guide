@@ -1,4 +1,4 @@
-import type { MutableRef } from 'preact/hooks';
+import type { RefObject } from 'preact';
 import { domains } from '../../content/domains';
 import { skillById } from '../../content/skills';
 import { questionDifficulties, type Skill } from '../../content/types';
@@ -34,7 +34,7 @@ export function MockExamResult({ attempt, result, stale, headingRef, locale, cop
   attempt: MockExamAttempt;
   result: MockExamResultType;
   stale: boolean;
-  headingRef: MutableRef<HTMLHeadingElement | null>;
+  headingRef: RefObject<HTMLHeadingElement | null>;
   locale: Locale;
   copy: UiCopy;
   onReview: () => void;
