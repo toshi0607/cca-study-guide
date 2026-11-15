@@ -36,7 +36,7 @@ test('switches between complete localized routes and searches active-locale cont
   await page.locator('.rail .language-switcher a[lang="ja"]').click();
   await expect(page).toHaveURL(/\/$/);
   await expect(page.locator('html')).toHaveAttribute('lang', 'ja');
-  await expect(page.getByRole('heading', { name: '思い出してから、 答えを開く。' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: '思い出してから 答えを開く。' })).toBeVisible();
 });
 
 test('publishes canonical social metadata and public icon assets', async ({ page }) => {

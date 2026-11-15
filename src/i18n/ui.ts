@@ -712,7 +712,7 @@ export const ui = {
     },
     today: {
       eyebrow: 'TODAY',
-      titleLead: '思い出してから、',
+      titleLead: '思い出してから',
       titleEmphasis: '答えを開く。',
       introduction: '公開されている出題範囲を、短い想起練習にしました。カードはすべて独自作成です。',
       dueTitle: '今日の復習',
