@@ -24,10 +24,10 @@
     "verify:production": "node scripts/verify-production-deployment.mjs"
   },
   "dependencies": {
-    "@astrojs/preact": "^6.1.1",
-    "@mcp-b/global": "6.0.3",
-    "astro": "^7.4.4",
-    "preact": "^11.1.0",
+    "@astrojs/preact": "^6.1.5",
+    "@mcp-b/global": "6.2.0",
+    "astro": "^7.4.11",
+    "preact": "^11.2.0",
     "zod": "^4.6.7"
   },
   "devDependencies": {
@@ -48,7 +48,8 @@
   "pnpm": {
     "overrides": {
       "nanoid": ">=3.3.17 <4",
-      "preact-render-to-string": ">=6.8.2"
+      "preact-render-to-string": ">=6.8.2",
+      "@emnapi/runtime": "1.11.3"
     }
   }
 }
