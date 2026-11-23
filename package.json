@@ -48,7 +48,8 @@
   "pnpm": {
     "overrides": {
       "nanoid": ">=3.3.17 <4",
-      "preact-render-to-string": ">=6.8.2"
+      "preact-render-to-string": ">=6.8.2",
+      "@emnapi/runtime": "1.11.3"
     }
   }
 }
